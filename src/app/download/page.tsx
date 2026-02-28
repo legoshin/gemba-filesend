@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check,
   Download,
@@ -43,13 +43,11 @@ export default function DownloadPage() {
   const [progress, setProgress] = useState(0);
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
 
-  const handleFetchInfo = () => {
-    if (!link.trim()) return;
-
+  const fetchFileInfo = (shareLink: string) => {
     // Determine if password is required from the share link
     let isPasswordProtected = false;
     try {
-      const url = new URL(link);
+      const url = new URL(shareLink);
       isPasswordProtected = url.searchParams.get("pw") === "1";
     } catch {
       // If the link is not a valid URL, default to no password
@@ -66,6 +64,22 @@ export default function DownloadPage() {
       passwordProtected: isPasswordProtected,
     });
   };
+
+  const handleFetchInfo = () => {
+    if (!link.trim()) return;
+    fetchFileInfo(link);
+  };
+
+  // Auto-fetch file info when the page is opened with a share link
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("id")) {
+      const currentUrl = window.location.href;
+      setLink(currentUrl);
+      fetchFileInfo(currentUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDownload = () => {
     if (fileInfo?.passwordProtected && !password) {
