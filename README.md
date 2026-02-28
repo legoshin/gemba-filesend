@@ -139,31 +139,303 @@ Once finished, you will see a **Download Complete** confirmation with the file n
 
 ---
 
-## Development
+## Installation
 
 ### Prerequisites
 
-- Node.js 18+
-- npm, yarn, pnpm, or bun
+Before you begin, make sure you have the following installed on your system:
 
-### Getting Started
+| Requirement | Minimum Version | Check Command |
+|---|---|---|
+| **Node.js** | 18.0 or higher | `node --version` |
+| **npm** | 9.0 or higher | `npm --version` |
+| **Git** | any recent version | `git --version` |
+
+> **Note:** You can use **yarn**, **pnpm**, or **bun** as alternatives to npm. The instructions below use npm, but equivalent commands are provided where they differ.
+
+#### Installing Node.js
+
+If you don't have Node.js installed:
+
+- **macOS** (Homebrew): `brew install node`
+- **macOS / Windows**: Download the installer from [nodejs.org](https://nodejs.org/)
+- **Ubuntu / Debian**: `curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs`
+- **Fedora / RHEL**: `sudo dnf install nodejs`
+- **Any OS** (nvm -- recommended for managing multiple versions):
+  ```bash
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+  nvm install 22
+  nvm use 22
+  ```
+
+---
+
+### Step 1: Clone the Repository
 
 ```bash
-# Install dependencies
-npm install
+git clone https://github.com/legoshin/gemba-filesend.git
+cd gemba-filesend
+```
 
-# Run the development server
+Or, if you have a fork:
+
+```bash
+git clone https://github.com/<your-username>/gemba-filesend.git
+cd gemba-filesend
+```
+
+---
+
+### Step 2: Install Dependencies
+
+```bash
+npm install
+```
+
+<details>
+<summary>Using other package managers</summary>
+
+```bash
+# yarn
+yarn install
+
+# pnpm
+pnpm install
+
+# bun
+bun install
+```
+
+</details>
+
+This installs all required packages listed in `package.json`, including Next.js, React, Tailwind CSS, shadcn/ui components, and all other dependencies.
+
+---
+
+### Step 3: Run the Development Server
+
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Build for Production
+<details>
+<summary>Using other package managers</summary>
 
 ```bash
-npm run build
-npm start
+yarn dev
+pnpm dev
+bun dev
 ```
+
+</details>
+
+The app will start at **[http://localhost:3000](http://localhost:3000)**. Open this URL in your browser.
+
+- The development server supports **hot reload** -- changes to source files are reflected instantly in the browser without a manual refresh.
+- Press `Ctrl+C` in the terminal to stop the server.
+
+---
+
+### Step 4: Build for Production
+
+When you are ready to deploy:
+
+```bash
+# Create an optimized production build
+npm run build
+
+# Start the production server
+npm run start
+```
+
+The production server runs on **[http://localhost:3000](http://localhost:3000)** by default. To use a different port:
+
+```bash
+PORT=8080 npm run start
+```
+
+---
+
+### Step 5: Lint the Code
+
+Run ESLint to check for code quality issues:
+
+```bash
+npm run lint
+```
+
+---
+
+### Deploying to Vercel
+
+The easiest way to deploy is with [Vercel](https://vercel.com):
+
+1. Push your code to a GitHub repository.
+2. Go to [vercel.com/new](https://vercel.com/new) and import the repository.
+3. Vercel auto-detects Next.js and configures the build. Click **Deploy**.
+4. Your app will be live at a `*.vercel.app` URL within minutes.
+
+No environment variables or special configuration is required.
+
+---
+
+### Deploying with Docker
+
+You can containerize the app for deployment on any Docker-compatible platform:
+
+```dockerfile
+# Dockerfile
+FROM node:22-alpine AS base
+
+# Install dependencies
+FROM base AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Build the application
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+USER nextjs
+EXPOSE 3000
+ENV PORT=3000
+CMD ["node", "server.js"]
+```
+
+> **Note:** To use standalone output with Docker, add `output: "standalone"` to `next.config.ts` first.
+
+Build and run:
+
+```bash
+docker build -t gemba-filesend .
+docker run -p 3000:3000 gemba-filesend
+```
+
+---
+
+### Deploying to a VPS or Bare-Metal Server
+
+For a self-hosted setup (e.g., on a Linux VPS):
+
+```bash
+# 1. Clone and install
+git clone https://github.com/legoshin/gemba-filesend.git
+cd gemba-filesend
+npm ci
+
+# 2. Build
+npm run build
+
+# 3. Run with a process manager (keeps the app running after you disconnect)
+npm install -g pm2
+pm2 start npm --name "gemba-filesend" -- start
+pm2 save
+pm2 startup   # follow the printed instructions to enable auto-start on reboot
+```
+
+To put it behind a reverse proxy (recommended for HTTPS), use **nginx** or **Caddy**:
+
+<details>
+<summary>Example nginx configuration</summary>
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        client_max_body_size 16G;
+    }
+}
+```
+
+Then enable HTTPS with Let's Encrypt:
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com
+```
+
+</details>
+
+<details>
+<summary>Example Caddy configuration</summary>
+
+```
+your-domain.com {
+    reverse_proxy localhost:3000
+}
+```
+
+Caddy handles HTTPS automatically.
+
+</details>
+
+---
+
+### Project Structure
+
+```
+gemba-filesend/
+├── src/
+│   ├── app/
+│   │   ├── page.tsx           # Home / landing page
+│   │   ├── layout.tsx         # Root layout with theme provider
+│   │   ├── globals.css        # Global styles and CSS variables
+│   │   ├── upload/
+│   │   │   └── page.tsx       # Upload page
+│   │   └── download/
+│   │       └── page.tsx       # Download page
+│   ├── components/
+│   │   ├── file-dropzone.tsx  # Drag-and-drop file selector
+│   │   ├── header.tsx         # Navigation header
+│   │   ├── theme-provider.tsx # Dark/light theme wrapper
+│   │   ├── theme-toggle.tsx   # Theme switch button
+│   │   └── ui/               # shadcn/ui component library
+│   └── lib/
+│       └── utils.ts           # Utility functions
+├── public/                    # Static assets
+├── package.json
+├── next.config.ts
+├── tsconfig.json
+├── postcss.config.mjs
+└── components.json            # shadcn/ui configuration
+```
+
+---
+
+### Troubleshooting Installation
+
+| Problem | Solution |
+|---|---|
+| `npm install` fails with permission errors | Don't use `sudo` with npm. Fix permissions: `npm config set prefix ~/.npm-global` and add `~/.npm-global/bin` to your PATH. Or use nvm. |
+| `npm run dev` shows "port already in use" | Another process is using port 3000. Stop it or use a different port: `PORT=3001 npm run dev` |
+| Node version too old | Upgrade Node.js to v18+. Check with `node --version`. |
+| `next: command not found` | Run `npm install` first. Next.js runs via `npx` from `node_modules`, not as a global command. |
+| Build fails with TypeScript errors | Run `npm run lint` to identify issues. Ensure all files in `src/` have valid TypeScript. |
+| Styles not loading | Make sure `postcss.config.mjs` exists and contains the Tailwind plugin. Run `npm install` to ensure `@tailwindcss/postcss` is installed. |
 
 ## License
 
