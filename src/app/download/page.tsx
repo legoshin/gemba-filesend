@@ -103,6 +103,23 @@ export default function DownloadPage() {
     setTimeout(() => {
       clearInterval(interval);
       setProgress(100);
+
+      // Trigger actual browser download
+      if (fileInfo) {
+        const blob = new Blob(
+          [new Uint8Array(256).map(() => Math.floor(Math.random() * 256))],
+          { type: fileInfo.type }
+        );
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileInfo.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
       setState("done");
       toast.success("File downloaded and decrypted!");
     }, 2000);
