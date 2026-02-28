@@ -65,7 +65,9 @@ export default function UploadPage() {
       setUploadState("done");
       const id = Math.random().toString(36).substring(2, 10);
       const key = Math.random().toString(36).substring(2, 14);
-      setShareLink(`${window.location.origin}/download?id=${id}#${key}`);
+      const params = new URLSearchParams({ id });
+      if (usePassword) params.set("pw", "1");
+      setShareLink(`${window.location.origin}/download?${params}#${key}`);
       toast.success("Files uploaded successfully!");
     }, 2500);
   };

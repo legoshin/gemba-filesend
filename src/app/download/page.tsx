@@ -46,6 +46,15 @@ export default function DownloadPage() {
   const handleFetchInfo = () => {
     if (!link.trim()) return;
 
+    // Determine if password is required from the share link
+    let isPasswordProtected = false;
+    try {
+      const url = new URL(link);
+      isPasswordProtected = url.searchParams.get("pw") === "1";
+    } catch {
+      // If the link is not a valid URL, default to no password
+    }
+
     // Simulate fetching file info
     setState("preview");
     setFileInfo({
@@ -54,7 +63,7 @@ export default function DownloadPage() {
       type: "application/zip",
       downloadsRemaining: 3,
       expiresIn: "18 hours",
-      passwordProtected: true,
+      passwordProtected: isPasswordProtected,
     });
   };
 
