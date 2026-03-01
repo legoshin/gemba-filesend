@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FileDropzone } from "@/components/file-dropzone";
 import { toast } from "sonner";
+import { storeFile } from "@/lib/file-store";
 
 type UploadState = "idle" | "uploading" | "done";
 
@@ -47,7 +48,6 @@ export default function UploadPage() {
     setUploadState("uploading");
     setUploadProgress(0);
 
-    // Simulate upload with progress
     const interval = setInterval(() => {
       setUploadProgress((prev) => {
         if (prev >= 100) {
@@ -58,18 +58,37 @@ export default function UploadPage() {
       });
     }, 200);
 
-    // Simulate completion
-    setTimeout(() => {
+    try {
+      const file = files[0];
+      const data = await file.arrayBuffer();
+      const id = Math.random().toString(36).substring(2, 10);
+
+      await storeFile({
+        id,
+        name: file.name,
+        size: file.size,
+        type: file.type || "application/octet-stream",
+        data,
+        passwordProtected: usePassword,
+        downloadsRemaining: Number(downloadLimit) || 1,
+        expiresAt: Date.now() + (Number(expiryHours) || 24) * 3600_000,
+      });
+
       clearInterval(interval);
       setUploadProgress(100);
       setUploadState("done");
-      const id = Math.random().toString(36).substring(2, 10);
+
       const key = Math.random().toString(36).substring(2, 14);
       const params = new URLSearchParams({ id });
       if (usePassword) params.set("pw", "1");
       setShareLink(`${window.location.origin}/download?${params}#${key}`);
       toast.success("Files uploaded successfully!");
-    }, 2500);
+    } catch (err) {
+      clearInterval(interval);
+      setUploadState("idle");
+      setUploadProgress(0);
+      toast.error("Upload failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
   };
 
   const handleCopy = async () => {

@@ -24,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { getFile, type StoredFile } from "@/lib/file-store";
 
 type DownloadState = "input" | "preview" | "downloading" | "done";
 
@@ -42,26 +43,52 @@ export default function DownloadPage() {
   const [state, setState] = useState<DownloadState>("input");
   const [progress, setProgress] = useState(0);
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
+  const [storedFile, setStoredFile] = useState<StoredFile | null>(null);
 
-  const fetchFileInfo = (shareLink: string) => {
-    // Determine if password is required from the share link
-    let isPasswordProtected = false;
+  const formatSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const fetchFileInfo = async (shareLink: string) => {
+    let fileId = "";
     try {
       const url = new URL(shareLink);
-      isPasswordProtected = url.searchParams.get("pw") === "1";
+      fileId = url.searchParams.get("id") ?? "";
     } catch {
-      // If the link is not a valid URL, default to no password
+      toast.error("Invalid share link");
+      return;
     }
 
-    // Simulate fetching file info
+    if (!fileId) {
+      toast.error("No file ID found in link");
+      return;
+    }
+
+    const file = await getFile(fileId);
+    if (!file) {
+      toast.error("File not found or has expired");
+      return;
+    }
+
+    if (file.expiresAt < Date.now()) {
+      toast.error("This file has expired");
+      return;
+    }
+
+    setStoredFile(file);
+
+    const hoursLeft = Math.max(1, Math.round((file.expiresAt - Date.now()) / 3600_000));
+
     setState("preview");
     setFileInfo({
-      name: "project-assets.zip",
-      size: "24.7 MB",
-      type: "application/zip",
-      downloadsRemaining: 3,
-      expiresIn: "18 hours",
-      passwordProtected: isPasswordProtected,
+      name: file.name,
+      size: formatSize(file.size),
+      type: file.type,
+      downloadsRemaining: file.downloadsRemaining,
+      expiresIn: `${hoursLeft} hour${hoursLeft !== 1 ? "s" : ""}`,
+      passwordProtected: file.passwordProtected,
     });
   };
 
@@ -104,16 +131,13 @@ export default function DownloadPage() {
       clearInterval(interval);
       setProgress(100);
 
-      // Trigger actual browser download
-      if (fileInfo) {
-        const blob = new Blob(
-          [new Uint8Array(256).map(() => Math.floor(Math.random() * 256))],
-          { type: fileInfo.type }
-        );
+      // Trigger actual browser download with real file data
+      if (storedFile) {
+        const blob = new Blob([storedFile.data], { type: storedFile.type });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = fileInfo.name;
+        a.download = storedFile.name;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -131,6 +155,7 @@ export default function DownloadPage() {
     setState("input");
     setProgress(0);
     setFileInfo(null);
+    setStoredFile(null);
   };
 
   return (
