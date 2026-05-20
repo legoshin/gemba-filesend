@@ -30,13 +30,21 @@ import { toast } from "sonner";
 import { storeFile } from "@/lib/file-store";
 
 type UploadState = "idle" | "uploading" | "done";
+type ExpiryUnit = "hours" | "days" | "months";
+
+const EXPIRY_UNIT_MS: Record<ExpiryUnit, number> = {
+  hours: 3600_000,
+  days: 24 * 3600_000,
+  months: 30 * 24 * 3600_000,
+};
 
 export default function UploadPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [password, setPassword] = useState("");
   const [usePassword, setUsePassword] = useState(false);
   const [downloadLimit, setDownloadLimit] = useState("1");
-  const [expiryHours, setExpiryHours] = useState("24");
+  const [expiryValue, setExpiryValue] = useState("1");
+  const [expiryUnit, setExpiryUnit] = useState<ExpiryUnit>("days");
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [shareLink, setShareLink] = useState("");
@@ -71,7 +79,8 @@ export default function UploadPage() {
         data,
         passwordProtected: usePassword,
         downloadsRemaining: Number(downloadLimit) || 1,
-        expiresAt: Date.now() + (Number(expiryHours) || 24) * 3600_000,
+        expiresAt:
+          Date.now() + (Number(expiryValue) || 1) * EXPIRY_UNIT_MS[expiryUnit],
       });
 
       clearInterval(interval);
@@ -106,7 +115,8 @@ export default function UploadPage() {
     setPassword("");
     setUsePassword(false);
     setDownloadLimit("1");
-    setExpiryHours("24");
+    setExpiryValue("1");
+    setExpiryUnit("days");
   };
 
   return (
@@ -162,7 +172,10 @@ export default function UploadPage() {
               </Badge>
               <Badge variant="secondary" className="gap-1">
                 <Timer className="h-3 w-3" />
-                Expires in {expiryHours}h
+                Expires in {expiryValue}{" "}
+                {Number(expiryValue) === 1
+                  ? expiryUnit.slice(0, -1)
+                  : expiryUnit}
               </Badge>
             </div>
 
@@ -251,16 +264,30 @@ export default function UploadPage() {
                 <div className="space-y-2">
                   <Label htmlFor="expiry" className="flex items-center gap-2">
                     <Timer className="h-4 w-4 text-muted-foreground" />
-                    Expires After (hours)
+                    Expires After
                   </Label>
-                  <Input
-                    id="expiry"
-                    type="number"
-                    min="1"
-                    max="168"
-                    value={expiryHours}
-                    onChange={(e) => setExpiryHours(e.target.value)}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="expiry"
+                      type="number"
+                      min="1"
+                      value={expiryValue}
+                      onChange={(e) => setExpiryValue(e.target.value)}
+                      className="flex-1"
+                    />
+                    <select
+                      aria-label="Expiry unit"
+                      value={expiryUnit}
+                      onChange={(e) =>
+                        setExpiryUnit(e.target.value as ExpiryUnit)
+                      }
+                      className="dark:bg-input/30 border-input h-9 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                    >
+                      <option value="hours">Hours</option>
+                      <option value="days">Days</option>
+                      <option value="months">Months</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </CardContent>
