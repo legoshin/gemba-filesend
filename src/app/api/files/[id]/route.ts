@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { Readable } from "node:stream";
+import { get as blobGet } from "@vercel/blob";
 import {
   blobSize,
   openBlobReadStream,
@@ -17,6 +18,10 @@ import { sha256Hex } from "@/lib/crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Streaming the (private) blob runs through this function, so let it run
+// long enough for big files. Vercel caps this at 60s on hobby, 300s default
+// on pro, configurable up to 900s.
+export const maxDuration = 300;
 
 async function checkPassword(
   meta: StoredMeta,
@@ -49,15 +54,25 @@ async function handleBlobDownload(
   if (pwFail) return pwFail;
   if (!meta.blobUrl) return new Response("blob missing", { status: 500 });
 
+  // Decrement first so concurrent requests see the lower count. Don't delete
+  // the blob yet — the stream below needs it. A subsequent request that finds
+  // downloadsRemaining <= 0 will clean it up.
   const remaining = meta.downloadsRemaining - 1;
-  if (remaining === 0) {
-    await blobDeleteEntry(meta);
-  } else {
-    await blobWriteMeta({ ...meta, downloadsRemaining: remaining });
+  await blobWriteMeta({ ...meta, downloadsRemaining: remaining });
+
+  const result = await blobGet(meta.blobUrl, { access: "private" });
+  if (!result || result.statusCode !== 200) {
+    return new Response("blob missing", { status: 500 });
   }
 
-  // 302 redirect to the public, random-suffix Blob URL.
-  return Response.redirect(meta.blobUrl, 302);
+  return new Response(result.stream, {
+    status: 200,
+    headers: {
+      "content-type": "application/octet-stream",
+      "content-length": String(result.blob.size),
+      "cache-control": "no-store",
+    },
+  });
 }
 
 async function handleFsDownload(

@@ -222,7 +222,7 @@ export default function UploadPage() {
         });
 
         await upload(`gemba/blob/${id}.bin`, encryptedBlob, {
-          access: "public",
+          access: "private",
           handleUploadUrl: "/api/files",
           clientPayload,
           contentType: "application/octet-stream",
