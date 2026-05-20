@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { CloudUpload, File, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,33 @@ export function FileDropzone({
   maxSizeMb = 15360,
 }: FileDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
+
+  const maxSizeBytes = maxSizeMb * 1024 * 1024;
+
+  const filterBySize = useCallback(
+    (incoming: File[]): File[] => {
+      const accepted: File[] = [];
+      const rejected: string[] = [];
+      for (const f of incoming) {
+        if (f.size > maxSizeBytes) {
+          rejected.push(f.name);
+        } else {
+          accepted.push(f);
+        }
+      }
+      if (rejected.length > 0) {
+        const label =
+          maxSizeMb >= 1024 ? `${maxSizeMb / 1024} GB` : `${maxSizeMb} MB`;
+        toast.error(
+          rejected.length === 1
+            ? `"${rejected[0]}" exceeds the ${label} per-file limit`
+            : `${rejected.length} files exceed the ${label} per-file limit`,
+        );
+      }
+      return accepted;
+    },
+    [maxSizeBytes, maxSizeMb],
+  );
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -43,22 +71,26 @@ export function FileDropzone({
       e.stopPropagation();
       setIsDragging(false);
 
-      const droppedFiles = Array.from(e.dataTransfer.files);
-      if (droppedFiles.length > 0) {
-        onFilesChange([...files, ...droppedFiles]);
+      const dropped = Array.from(e.dataTransfer.files);
+      const accepted = filterBySize(dropped);
+      if (accepted.length > 0) {
+        onFilesChange([...files, ...accepted]);
       }
     },
-    [files, onFilesChange]
+    [files, onFilesChange, filterBySize],
   );
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
-        const selectedFiles = Array.from(e.target.files);
-        onFilesChange([...files, ...selectedFiles]);
+        const selected = Array.from(e.target.files);
+        const accepted = filterBySize(selected);
+        if (accepted.length > 0) {
+          onFilesChange([...files, ...accepted]);
+        }
       }
     },
-    [files, onFilesChange]
+    [files, onFilesChange, filterBySize],
   );
 
   const removeFile = useCallback(
