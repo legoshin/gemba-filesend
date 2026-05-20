@@ -2,57 +2,91 @@ import { NextRequest } from "next/server";
 import { Readable } from "node:stream";
 import {
   blobSize,
-  deleteEntry,
   openBlobReadStream,
-  readMeta,
-  writeMeta,
+  readMeta as fsReadMeta,
+  deleteEntry as fsDeleteEntry,
+  writeMeta as fsWriteMeta,
 } from "@/lib/server-storage";
+import {
+  readMeta as blobReadMeta,
+  writeMeta as blobWriteMeta,
+  deleteEntry as blobDeleteEntry,
+} from "@/lib/blob-storage";
+import { getStorageMode, type StoredMeta } from "@/lib/storage";
 import { sha256Hex } from "@/lib/crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-): Promise<Response> {
-  const { id } = await params;
-  const meta = await readMeta(id);
-  if (!meta) {
-    return new Response("not found", { status: 404 });
+async function checkPassword(
+  meta: StoredMeta,
+  provided: string | null,
+): Promise<Response | null> {
+  if (!meta.passwordHash) return null;
+  if (!provided) return new Response("password required", { status: 401 });
+  const candidate = await sha256Hex(provided + (meta.salt ?? ""));
+  if (candidate !== meta.passwordHash) {
+    return new Response("invalid password", { status: 403 });
   }
+  return null;
+}
+
+async function handleBlobDownload(
+  req: NextRequest,
+  id: string,
+): Promise<Response> {
+  const meta = await blobReadMeta(id);
+  if (!meta) return new Response("not found", { status: 404 });
   if (meta.expiresAt < Date.now()) {
-    await deleteEntry(id);
+    await blobDeleteEntry(meta);
     return new Response("expired", { status: 410 });
   }
   if (meta.downloadsRemaining <= 0) {
-    await deleteEntry(id);
+    await blobDeleteEntry(meta);
     return new Response("exhausted", { status: 410 });
   }
-
-  if (meta.passwordHash) {
-    const provided = req.headers.get("x-password") ?? "";
-    if (!provided) {
-      return new Response("password required", { status: 401 });
-    }
-    const candidate = await sha256Hex(provided + (meta.salt ?? ""));
-    if (candidate !== meta.passwordHash) {
-      return new Response("invalid password", { status: 403 });
-    }
-  }
-
-  const onDiskSize = await blobSize(id);
-  if (onDiskSize == null) {
-    return new Response("not found", { status: 404 });
-  }
+  const pwFail = await checkPassword(meta, req.headers.get("x-password"));
+  if (pwFail) return pwFail;
+  if (!meta.blobUrl) return new Response("blob missing", { status: 500 });
 
   const remaining = meta.downloadsRemaining - 1;
-  await writeMeta({ ...meta, downloadsRemaining: remaining });
+  if (remaining === 0) {
+    await blobDeleteEntry(meta);
+  } else {
+    await blobWriteMeta({ ...meta, downloadsRemaining: remaining });
+  }
+
+  // 302 redirect to the public, random-suffix Blob URL.
+  return Response.redirect(meta.blobUrl, 302);
+}
+
+async function handleFsDownload(
+  req: NextRequest,
+  id: string,
+): Promise<Response> {
+  const meta = await fsReadMeta(id);
+  if (!meta) return new Response("not found", { status: 404 });
+  if (meta.expiresAt < Date.now()) {
+    await fsDeleteEntry(id);
+    return new Response("expired", { status: 410 });
+  }
+  if (meta.downloadsRemaining <= 0) {
+    await fsDeleteEntry(id);
+    return new Response("exhausted", { status: 410 });
+  }
+  const pwFail = await checkPassword(meta, req.headers.get("x-password"));
+  if (pwFail) return pwFail;
+
+  const onDiskSize = await blobSize(id);
+  if (onDiskSize == null) return new Response("not found", { status: 404 });
+
+  const remaining = meta.downloadsRemaining - 1;
+  await fsWriteMeta({ ...meta, downloadsRemaining: remaining });
 
   const nodeStream = openBlobReadStream(id);
   if (remaining === 0) {
     nodeStream.on("close", () => {
-      void deleteEntry(id);
+      void fsDeleteEntry(id);
     });
   }
   const webStream = Readable.toWeb(nodeStream) as unknown as ReadableStream<Uint8Array>;
@@ -65,4 +99,13 @@ export async function GET(
       "cache-control": "no-store",
     },
   });
+}
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  const { id } = await params;
+  if (getStorageMode() === "blob") return handleBlobDownload(req, id);
+  return handleFsDownload(req, id);
 }

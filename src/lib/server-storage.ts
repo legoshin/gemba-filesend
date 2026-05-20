@@ -2,22 +2,10 @@ import { mkdir, readFile, writeFile, unlink, access, stat } from "node:fs/promis
 import { createReadStream, createWriteStream } from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
+import type { StoredMeta } from "@/lib/storage";
 
 const STORAGE_DIR =
   process.env.GEMBA_STORAGE_DIR ?? path.join(process.cwd(), "data");
-
-export interface StoredMeta {
-  id: string;
-  name: string;
-  type: string;
-  /** Original (plaintext) file size in bytes — used for display. */
-  size: number;
-  passwordHash?: string;
-  salt?: string;
-  downloadsRemaining: number;
-  expiresAt: number;
-  createdAt: number;
-}
 
 async function ensureStorageDir(): Promise<void> {
   await mkdir(STORAGE_DIR, { recursive: true });
