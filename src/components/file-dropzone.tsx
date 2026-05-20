@@ -110,7 +110,7 @@ export function FileDropzone({
 
   return (
     <div className="space-y-4">
-      <div
+      <label
         onDragEnter={handleDragIn}
         onDragLeave={handleDragOut}
         onDragOver={handleDrag}
@@ -126,21 +126,22 @@ export function FileDropzone({
           type="file"
           multiple
           onChange={handleFileSelect}
-          className="absolute inset-0 cursor-pointer opacity-0"
+          className="sr-only"
         />
         <CloudUpload
+          aria-hidden="true"
           className={cn(
-            "mb-4 h-10 w-10",
+            "pointer-events-none mb-4 h-10 w-10",
             isDragging ? "text-primary" : "text-muted-foreground"
           )}
         />
-        <p className="text-sm font-medium">
+        <p className="pointer-events-none text-sm font-medium">
           {isDragging ? "Drop files here" : "Drag & drop files here"}
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="pointer-events-none mt-1 text-xs text-muted-foreground">
           or click to browse &middot; Max {maxSizeMb >= 1024 ? `${maxSizeMb / 1024} GB` : `${maxSizeMb} MB`} per file
         </p>
-      </div>
+      </label>
 
       {files.length > 0 && (
         <div className="space-y-2">
