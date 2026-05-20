@@ -24,6 +24,12 @@
 .DS_Store
 *.pem
 
+# uploaded file storage
+/data/
+
+# local tool state
+/.omc/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

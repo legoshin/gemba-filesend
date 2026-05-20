@@ -7,7 +7,6 @@ import {
   Download,
   Link2,
   Lock,
-  QrCode,
   Timer,
   Upload,
 } from "lucide-react";
@@ -27,9 +26,15 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FileDropzone } from "@/components/file-dropzone";
 import { toast } from "sonner";
-import { storeFile } from "@/lib/file-store";
+import {
+  encryptPacked,
+  exportKeyBase64,
+  generateKey,
+  randomSaltBase64,
+  sha256Hex,
+} from "@/lib/crypto";
 
-type UploadState = "idle" | "uploading" | "done";
+type UploadState = "idle" | "preparing" | "uploading" | "done";
 type ExpiryUnit = "hours" | "days" | "months";
 
 const EXPIRY_UNIT_MS: Record<ExpiryUnit, number> = {
@@ -37,6 +42,91 @@ const EXPIRY_UNIT_MS: Record<ExpiryUnit, number> = {
   days: 24 * 3600_000,
   months: 30 * 24 * 3600_000,
 };
+
+interface UploadMetaPayload {
+  name: string;
+  type: string;
+  size: number;
+  passwordHash?: string;
+  salt?: string;
+  downloadsRemaining: number;
+  expiresAt: number;
+}
+
+function uploadWithProgress(
+  body: BlobPart,
+  meta: UploadMetaPayload,
+  onProgress: (loaded: number, total: number) => void,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/files");
+
+    const metaJson = JSON.stringify(meta);
+    const metaB64 = btoa(unescape(encodeURIComponent(metaJson)));
+    xhr.setRequestHeader("x-meta", metaB64);
+    xhr.setRequestHeader("content-type", "application/octet-stream");
+
+    xhr.upload.onprogress = (e: ProgressEvent) => {
+      if (e.lengthComputable) onProgress(e.loaded, e.total);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const resp = JSON.parse(xhr.responseText) as { id?: string };
+          if (!resp.id) {
+            reject(new Error("server returned no id"));
+            return;
+          }
+          resolve(resp.id);
+        } catch {
+          reject(new Error("invalid server response"));
+        }
+      } else {
+        reject(
+          new Error(
+            `upload failed: HTTP ${xhr.status} ${xhr.responseText || ""}`.trim(),
+          ),
+        );
+      }
+    };
+    xhr.onerror = () => reject(new Error("network error during upload"));
+    xhr.onabort = () => reject(new Error("upload aborted"));
+
+    xhr.send(body as XMLHttpRequestBodyInit);
+  });
+}
+
+async function buildPayload(
+  files: File[],
+): Promise<{ data: ArrayBuffer; name: string; type: string; size: number }> {
+  if (files.length === 1) {
+    const f = files[0];
+    const data = await f.arrayBuffer();
+    return {
+      data,
+      name: f.name,
+      type: f.type || "application/octet-stream",
+      size: f.size,
+    };
+  }
+
+  const { zipSync } = await import("fflate");
+  const entries: Record<string, Uint8Array> = {};
+  for (const f of files) {
+    entries[f.name] = new Uint8Array(await f.arrayBuffer());
+  }
+  const zipped = zipSync(entries, { level: 0 });
+  return {
+    data: zipped.buffer.slice(
+      zipped.byteOffset,
+      zipped.byteOffset + zipped.byteLength,
+    ) as ArrayBuffer,
+    name: `gemba-bundle-${Date.now()}.zip`,
+    type: "application/zip",
+    size: zipped.byteLength,
+  };
+}
 
 export default function UploadPage() {
   const [files, setFiles] = useState<File[]>([]);
@@ -47,56 +137,82 @@ export default function UploadPage() {
   const [expiryUnit, setExpiryUnit] = useState<ExpiryUnit>("days");
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("");
   const [shareLink, setShareLink] = useState("");
   const [copied, setCopied] = useState(false);
 
   const handleUpload = async () => {
     if (files.length === 0) return;
+    if (usePassword && password.length === 0) {
+      toast.error("Enter a password or disable password protection");
+      return;
+    }
 
-    setUploadState("uploading");
+    setUploadState("preparing");
+    setProgressLabel(
+      files.length > 1 ? "Bundling & encrypting…" : "Encrypting…",
+    );
     setUploadProgress(0);
 
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + Math.random() * 15;
-      });
-    }, 200);
-
     try {
-      const file = files[0];
-      const data = await file.arrayBuffer();
-      const id = Math.random().toString(36).substring(2, 10);
+      const payload = await buildPayload(files);
 
-      await storeFile({
-        id,
-        name: file.name,
-        size: file.size,
-        type: file.type || "application/octet-stream",
-        data,
-        passwordProtected: usePassword,
-        downloadsRemaining: Number(downloadLimit) || 1,
+      const key = await generateKey();
+      const keyB64 = await exportKeyBase64(key);
+      const encrypted = await encryptPacked(payload.data, key);
+
+      let passwordHash: string | undefined;
+      let salt: string | undefined;
+      if (usePassword) {
+        salt = randomSaltBase64();
+        passwordHash = await sha256Hex(password + salt);
+      }
+
+      const meta: UploadMetaPayload = {
+        name: payload.name,
+        type: payload.type,
+        size: payload.size,
+        passwordHash,
+        salt,
+        downloadsRemaining: Math.max(
+          1,
+          Math.min(100, Number(downloadLimit) || 1),
+        ),
         expiresAt:
-          Date.now() + (Number(expiryValue) || 1) * EXPIRY_UNIT_MS[expiryUnit],
-      });
+          Date.now() +
+          Math.max(1, Number(expiryValue) || 1) * EXPIRY_UNIT_MS[expiryUnit],
+      };
 
-      clearInterval(interval);
-      setUploadProgress(100);
-      setUploadState("done");
+      setUploadState("uploading");
+      setProgressLabel("Uploading…");
+      setUploadProgress(0);
 
-      const key = Math.random().toString(36).substring(2, 14);
+      const id = await uploadWithProgress(
+        new Blob([encrypted]),
+        meta,
+        (loaded, total) => {
+          if (total > 0) setUploadProgress((loaded / total) * 100);
+        },
+      );
+
       const params = new URLSearchParams({ id });
       if (usePassword) params.set("pw", "1");
-      setShareLink(`${window.location.origin}/download?${params}#${key}`);
-      toast.success("Files uploaded successfully!");
+      setShareLink(`${window.location.origin}/download?${params}#${keyB64}`);
+      setUploadState("done");
+      setUploadProgress(100);
+      toast.success(
+        files.length > 1
+          ? `${files.length} files uploaded as bundle`
+          : "File uploaded",
+      );
     } catch (err) {
-      clearInterval(interval);
       setUploadState("idle");
       setUploadProgress(0);
-      toast.error("Upload failed: " + (err instanceof Error ? err.message : "Unknown error"));
+      setProgressLabel("");
+      toast.error(
+        "Upload failed: " +
+          (err instanceof Error ? err.message : "Unknown error"),
+      );
     }
   };
 
@@ -111,6 +227,7 @@ export default function UploadPage() {
     setFiles([]);
     setUploadState("idle");
     setUploadProgress(0);
+    setProgressLabel("");
     setShareLink("");
     setPassword("");
     setUsePassword(false);
@@ -118,6 +235,8 @@ export default function UploadPage() {
     setExpiryValue("1");
     setExpiryUnit("days");
   };
+
+  const isBusy = uploadState === "preparing" || uploadState === "uploading";
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
@@ -199,6 +318,7 @@ export default function UploadPage() {
               <CardTitle className="text-lg">Select Files</CardTitle>
               <CardDescription>
                 Files are encrypted in your browser before uploading.
+                Multiple files are bundled into a zip.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -293,17 +413,25 @@ export default function UploadPage() {
             </CardContent>
           </Card>
 
-          {uploadState === "uploading" && (
+          {isBusy && (
             <Card>
               <CardContent className="pt-6">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">Encrypting & uploading...</span>
+                    <span className="font-medium">{progressLabel}</span>
                     <span className="text-muted-foreground">
-                      {Math.min(Math.round(uploadProgress), 100)}%
+                      {uploadState === "uploading"
+                        ? `${Math.min(Math.round(uploadProgress), 100)}%`
+                        : "…"}
                     </span>
                   </div>
-                  <Progress value={Math.min(uploadProgress, 100)} />
+                  <Progress
+                    value={
+                      uploadState === "uploading"
+                        ? Math.min(uploadProgress, 100)
+                        : undefined
+                    }
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -312,13 +440,15 @@ export default function UploadPage() {
           <Button
             size="lg"
             className="w-full gap-2 text-base"
-            disabled={files.length === 0 || uploadState === "uploading"}
+            disabled={files.length === 0 || isBusy}
             onClick={handleUpload}
           >
             <Upload className="h-4 w-4" />
-            {uploadState === "uploading"
-              ? "Uploading..."
-              : `Upload ${files.length > 0 ? `${files.length} file${files.length > 1 ? "s" : ""}` : ""}`}
+            {uploadState === "preparing"
+              ? "Preparing…"
+              : uploadState === "uploading"
+                ? "Uploading…"
+                : `Upload ${files.length > 0 ? `${files.length} file${files.length > 1 ? "s" : ""}` : ""}`}
           </Button>
         </div>
       )}
