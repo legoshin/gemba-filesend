@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 const MAX_DOWNLOADS = 100;
 const MAX_EXPIRY_MS = 365 * 24 * 3600_000;
-const MAX_BLOB_BYTES = 16 * 1024 ** 3; // 16 GiB
+const MAX_BLOB_BYTES = 15 * 1024 ** 3; // 15 GiB
 
 interface ClientPayload {
   id: string;
