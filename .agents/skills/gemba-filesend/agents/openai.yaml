@@ -1,0 +1,6 @@
+interface:
+  display_name: "Gemba Filesend"
+  short_description: "Repo-specific patterns and workflows for gemba-filesend"
+  default_prompt: "Use the gemba-filesend repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true
