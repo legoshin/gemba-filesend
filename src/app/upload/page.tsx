@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check,
   Copy,
@@ -10,6 +10,7 @@ import {
   Timer,
   Upload,
 } from "lucide-react";
+import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -36,6 +37,7 @@ import {
 
 type UploadState = "idle" | "preparing" | "uploading" | "done";
 type ExpiryUnit = "hours" | "days" | "months";
+type StorageMode = "blob" | "fs";
 
 const EXPIRY_UNIT_MS: Record<ExpiryUnit, number> = {
   hours: 3600_000,
@@ -43,7 +45,7 @@ const EXPIRY_UNIT_MS: Record<ExpiryUnit, number> = {
   months: 30 * 24 * 3600_000,
 };
 
-interface UploadMetaPayload {
+interface DirectMetaPayload {
   name: string;
   type: string;
   size: number;
@@ -53,9 +55,9 @@ interface UploadMetaPayload {
   expiresAt: number;
 }
 
-function uploadWithProgress(
-  body: BlobPart,
-  meta: UploadMetaPayload,
+function uploadDirect(
+  body: Blob,
+  meta: DirectMetaPayload,
   onProgress: (loaded: number, total: number) => void,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -85,7 +87,7 @@ function uploadWithProgress(
       } else {
         reject(
           new Error(
-            `upload failed: HTTP ${xhr.status} ${xhr.responseText || ""}`.trim(),
+            `HTTP ${xhr.status} ${xhr.responseText || ""}`.trim(),
           ),
         );
       }
@@ -93,8 +95,16 @@ function uploadWithProgress(
     xhr.onerror = () => reject(new Error("network error during upload"));
     xhr.onabort = () => reject(new Error("upload aborted"));
 
-    xhr.send(body as XMLHttpRequestBodyInit);
+    xhr.send(body);
   });
+}
+
+function generateClientId(): string {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 async function buildPayload(
@@ -140,11 +150,30 @@ export default function UploadPage() {
   const [progressLabel, setProgressLabel] = useState("");
   const [shareLink, setShareLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [storageMode, setStorageMode] = useState<StorageMode | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/storage-mode");
+        if (!res.ok) return;
+        const data = (await res.json()) as { mode: StorageMode };
+        setStorageMode(data.mode);
+      } catch {
+        // assume fs if config endpoint unreachable
+        setStorageMode("fs");
+      }
+    })();
+  }, []);
 
   const handleUpload = async () => {
     if (files.length === 0) return;
     if (usePassword && password.length === 0) {
       toast.error("Enter a password or disable password protection");
+      return;
+    }
+    if (!storageMode) {
+      toast.error("Still initialising — please try again in a moment");
       return;
     }
 
@@ -160,40 +189,74 @@ export default function UploadPage() {
       const key = await generateKey();
       const keyB64 = await exportKeyBase64(key);
       const encrypted = await encryptPacked(payload.data, key);
+      const encryptedBlob = new Blob([encrypted], {
+        type: "application/octet-stream",
+      });
 
-      let passwordHash: string | undefined;
-      let salt: string | undefined;
-      if (usePassword) {
-        salt = randomSaltBase64();
-        passwordHash = await sha256Hex(password + salt);
-      }
-
-      const meta: UploadMetaPayload = {
-        name: payload.name,
-        type: payload.type,
-        size: payload.size,
-        passwordHash,
-        salt,
-        downloadsRemaining: Math.max(
-          1,
-          Math.min(100, Number(downloadLimit) || 1),
-        ),
-        expiresAt:
-          Date.now() +
-          Math.max(1, Number(expiryValue) || 1) * EXPIRY_UNIT_MS[expiryUnit],
-      };
-
-      setUploadState("uploading");
-      setProgressLabel("Uploading…");
-      setUploadProgress(0);
-
-      const id = await uploadWithProgress(
-        new Blob([encrypted]),
-        meta,
-        (loaded, total) => {
-          if (total > 0) setUploadProgress((loaded / total) * 100);
-        },
+      const downloadsRemaining = Math.max(
+        1,
+        Math.min(100, Number(downloadLimit) || 1),
       );
+      const expiresAt =
+        Date.now() +
+        Math.max(1, Number(expiryValue) || 1) * EXPIRY_UNIT_MS[expiryUnit];
+
+      let id: string;
+
+      if (storageMode === "blob") {
+        // Generate ID client-side so we know the share URL up front; server
+        // validates it via the handleUpload hook.
+        id = generateClientId();
+        setUploadState("uploading");
+        setProgressLabel("Uploading…");
+        setUploadProgress(0);
+
+        const clientPayload = JSON.stringify({
+          id,
+          name: payload.name,
+          type: payload.type,
+          size: payload.size,
+          password: usePassword ? password : undefined,
+          downloadsRemaining,
+          expiresAt,
+        });
+
+        await upload(`gemba/blob/${id}.bin`, encryptedBlob, {
+          access: "public",
+          handleUploadUrl: "/api/files",
+          clientPayload,
+          contentType: "application/octet-stream",
+          multipart: true,
+          onUploadProgress: (e) => {
+            setUploadProgress(e.percentage);
+          },
+        });
+      } else {
+        let passwordHash: string | undefined;
+        let salt: string | undefined;
+        if (usePassword) {
+          salt = randomSaltBase64();
+          passwordHash = await sha256Hex(password + salt);
+        }
+
+        const meta: DirectMetaPayload = {
+          name: payload.name,
+          type: payload.type,
+          size: payload.size,
+          passwordHash,
+          salt,
+          downloadsRemaining,
+          expiresAt,
+        };
+
+        setUploadState("uploading");
+        setProgressLabel("Uploading…");
+        setUploadProgress(0);
+
+        id = await uploadDirect(encryptedBlob, meta, (loaded, total) => {
+          if (total > 0) setUploadProgress((loaded / total) * 100);
+        });
+      }
 
       const params = new URLSearchParams({ id });
       if (usePassword) params.set("pw", "1");
@@ -440,7 +503,7 @@ export default function UploadPage() {
           <Button
             size="lg"
             className="w-full gap-2 text-base"
-            disabled={files.length === 0 || isBusy}
+            disabled={files.length === 0 || isBusy || !storageMode}
             onClick={handleUpload}
           >
             <Upload className="h-4 w-4" />
