@@ -175,6 +175,16 @@ export default function DownloadPage() {
         throw new Error(text || `HTTP ${res.status}`);
       }
 
+      // Defence in depth: if the server returned 200 but with a content-type
+      // that isn't the encrypted binary stream, treat the body as a text
+      // error rather than feeding it to AES-GCM (which would surface as a
+      // cryptic "payload too short" or auth-tag failure).
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.includes("octet-stream")) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Unexpected response (${contentType})`);
+      }
+
       const total =
         Number(res.headers.get("content-length")) || fileInfo.sizeBytes || 0;
       if (!res.body) throw new Error("Empty response body");
@@ -197,6 +207,23 @@ export default function DownloadPage() {
       for (const c of chunks) {
         encrypted.set(c, offset);
         offset += c.byteLength;
+      }
+
+      // An AES-GCM encrypted payload is at minimum IV (12) + auth tag (16)
+      // = 28 bytes. Anything shorter is a truncated or wrong-shaped
+      // response, not a valid ciphertext.
+      if (encrypted.byteLength < 28) {
+        const preview = new TextDecoder("utf-8", { fatal: false }).decode(
+          encrypted,
+        );
+        throw new Error(
+          `Server returned only ${encrypted.byteLength} bytes${preview ? `: "${preview}"` : ""}. The file may have expired, been exhausted, or the link is invalid.`,
+        );
+      }
+      if (total > 0 && encrypted.byteLength < total) {
+        throw new Error(
+          `Download truncated: received ${encrypted.byteLength} of ${total} bytes. Try again.`,
+        );
       }
 
       setProgressLabel("Decrypting…");
