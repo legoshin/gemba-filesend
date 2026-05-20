@@ -160,25 +160,37 @@ export default function DownloadPage() {
       const headers: Record<string, string> = {};
       if (fileInfo.passwordProtected) headers["x-password"] = password;
 
-      const res = await fetch(
+      // Step 1: ask our API for a presigned download URL. The function
+      // enforces password + counter checks and returns { url } pointing at
+      // the Blob CDN. Errors (401/403/404/410) come back as non-2xx.
+      const authRes = await fetch(
         `/api/files/${encodeURIComponent(fileInfo.id)}`,
         { headers },
       );
 
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        if (res.status === 401 || res.status === 403) {
+      if (!authRes.ok) {
+        const text = await authRes.text().catch(() => "");
+        if (authRes.status === 401 || authRes.status === 403) {
           throw new Error("Incorrect password");
         }
-        if (res.status === 404) throw new Error("File not found");
-        if (res.status === 410) throw new Error("File expired or exhausted");
-        throw new Error(text || `HTTP ${res.status}`);
+        if (authRes.status === 404) throw new Error("File not found");
+        if (authRes.status === 410) {
+          throw new Error("File expired or exhausted");
+        }
+        throw new Error(text || `HTTP ${authRes.status}`);
       }
 
-      // Defence in depth: if the server returned 200 but with a content-type
-      // that isn't the encrypted binary stream, treat the body as a text
-      // error rather than feeding it to AES-GCM (which would surface as a
-      // cryptic "payload too short" or auth-tag failure).
+      const auth = (await authRes.json()) as { url?: string };
+      if (!auth.url) throw new Error("Server did not return a download URL");
+
+      // Step 2: fetch the encrypted bytes directly from the Blob CDN.
+      const res = await fetch(auth.url);
+      if (!res.ok) {
+        throw new Error(
+          `Blob CDN returned HTTP ${res.status}. The presigned URL may have expired — try again.`,
+        );
+      }
+
       const contentType = res.headers.get("content-type") ?? "";
       if (!contentType.includes("octet-stream")) {
         const text = await res.text().catch(() => "");

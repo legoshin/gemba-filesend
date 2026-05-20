@@ -60,8 +60,10 @@ async function handleBlobDownload(
   await blobWriteMeta({ ...meta, downloadsRemaining: remaining });
 
   // Mint a short-lived presigned URL the client can fetch directly from the
-  // Blob CDN. This bypasses Vercel's function response body limit, which is
-  // what truncates large files to 0 bytes when we tried to proxy via get().
+  // Blob CDN. Returning it in JSON rather than via 302 redirect avoids
+  // ambiguity around same-origin -> cross-origin redirect handling in some
+  // browsers, and lets the client surface a clearer error if the second
+  // fetch (to the CDN) fails.
   let pathname: string;
   try {
     pathname = new URL(meta.blobUrl).pathname.replace(/^\//, "");
@@ -81,7 +83,7 @@ async function handleBlobDownload(
     validUntil,
   });
 
-  return Response.redirect(presignedUrl, 302);
+  return Response.json({ url: presignedUrl });
 }
 
 async function handleFsDownload(
