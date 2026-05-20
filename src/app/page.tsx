@@ -38,12 +38,6 @@ const features = [
       "Streaming architecture ensures fast uploads and downloads with minimal memory footprint.",
   },
   {
-    icon: Download,
-    title: "No Account Required",
-    description:
-      "Start sharing immediately. No sign-up, no email verification, no personal data collected.",
-  },
-  {
     icon: Upload,
     title: "Large File Support",
     description:
@@ -91,8 +85,7 @@ export default function Home() {
             </h1>
             <p className="mt-6 text-lg leading-8 text-muted-foreground sm:text-xl">
               Upload your files with client-side encryption, share a link, and
-              let your recipient download with ease. No accounts, no tracking,
-              no compromises.
+              let your recipient download with ease.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link href="/upload">
@@ -182,7 +175,7 @@ export default function Home() {
               Ready to share securely?
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Start uploading files right now. No sign-up required.
+              Start uploading files right now.
             </p>
             <div className="mt-8">
               <Link href="/upload">

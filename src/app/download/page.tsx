@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Check,
   Download,
@@ -24,17 +24,44 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { getFile, type StoredFile } from "@/lib/file-store";
+import { decryptPacked, importKeyBase64 } from "@/lib/crypto";
 
 type DownloadState = "input" | "preview" | "downloading" | "done";
 
 interface FileInfo {
+  id: string;
   name: string;
-  size: string;
   type: string;
+  sizeBytes: number;
+  size: string;
   downloadsRemaining: number;
   expiresIn: string;
   passwordProtected: boolean;
+  keyBase64: string;
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function formatExpiresIn(expiresAt: number): string {
+  const ms = expiresAt - Date.now();
+  if (ms <= 0) return "expired";
+  const hours = ms / 3600_000;
+  if (hours < 1) {
+    const minutes = Math.max(1, Math.round(ms / 60_000));
+    return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
+  }
+  if (hours < 48) {
+    const h = Math.round(hours);
+    return `${h} hour${h !== 1 ? "s" : ""}`;
+  }
+  const days = Math.round(hours / 24);
+  return `${days} day${days !== 1 ? "s" : ""}`;
 }
 
 export default function DownloadPage() {
@@ -42,111 +69,162 @@ export default function DownloadPage() {
   const [password, setPassword] = useState("");
   const [state, setState] = useState<DownloadState>("input");
   const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("Downloading…");
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
-  const [storedFile, setStoredFile] = useState<StoredFile | null>(null);
 
-  const formatSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const fetchFileInfo = async (shareLink: string) => {
-    let fileId = "";
+  const fetchFileInfo = useCallback(async (shareLink: string) => {
+    let id = "";
+    let keyBase64 = "";
     try {
       const url = new URL(shareLink);
-      fileId = url.searchParams.get("id") ?? "";
+      id = url.searchParams.get("id") ?? "";
+      keyBase64 = url.hash.replace(/^#/, "");
     } catch {
       toast.error("Invalid share link");
       return;
     }
-
-    if (!fileId) {
+    if (!id) {
       toast.error("No file ID found in link");
       return;
     }
-
-    const file = await getFile(fileId);
-    if (!file) {
-      toast.error("File not found or has expired");
+    if (!keyBase64) {
+      toast.error("Missing decryption key in link fragment");
       return;
     }
 
-    if (file.expiresAt < Date.now()) {
-      toast.error("This file has expired");
+    let res: Response;
+    try {
+      res = await fetch(`/api/files/${encodeURIComponent(id)}/meta`);
+    } catch {
+      toast.error("Network error fetching file info");
       return;
     }
 
-    setStoredFile(file);
+    if (!res.ok) {
+      if (res.status === 404) toast.error("File not found");
+      else if (res.status === 410)
+        toast.error("This file has expired or been fully downloaded");
+      else toast.error(`Failed to fetch file info (HTTP ${res.status})`);
+      return;
+    }
 
-    const hoursLeft = Math.max(1, Math.round((file.expiresAt - Date.now()) / 3600_000));
+    const data = (await res.json()) as {
+      name: string;
+      type: string;
+      size: number;
+      passwordProtected: boolean;
+      downloadsRemaining: number;
+      expiresAt: number;
+    };
 
-    setState("preview");
     setFileInfo({
-      name: file.name,
-      size: formatSize(file.size),
-      type: file.type,
-      downloadsRemaining: file.downloadsRemaining,
-      expiresIn: `${hoursLeft} hour${hoursLeft !== 1 ? "s" : ""}`,
-      passwordProtected: file.passwordProtected,
+      id,
+      name: data.name,
+      type: data.type,
+      sizeBytes: data.size,
+      size: formatSize(data.size),
+      downloadsRemaining: data.downloadsRemaining,
+      expiresIn: formatExpiresIn(data.expiresAt),
+      passwordProtected: data.passwordProtected,
+      keyBase64,
     });
-  };
+    setState("preview");
+  }, []);
 
   const handleFetchInfo = () => {
     if (!link.trim()) return;
-    fetchFileInfo(link);
+    void fetchFileInfo(link);
   };
 
-  // Auto-fetch file info when the page is opened with a share link
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("id")) {
       const currentUrl = window.location.href;
       setLink(currentUrl);
-      fetchFileInfo(currentUrl);
+      void fetchFileInfo(currentUrl);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchFileInfo]);
 
-  const handleDownload = () => {
-    if (fileInfo?.passwordProtected && !password) {
+  const handleDownload = async () => {
+    if (!fileInfo) return;
+    if (fileInfo.passwordProtected && !password) {
       toast.error("Please enter the password to download");
       return;
     }
 
     setState("downloading");
     setProgress(0);
+    setProgressLabel("Downloading…");
 
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
+    try {
+      const headers: Record<string, string> = {};
+      if (fileInfo.passwordProtected) headers["x-password"] = password;
+
+      const res = await fetch(
+        `/api/files/${encodeURIComponent(fileInfo.id)}`,
+        { headers },
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("Incorrect password");
         }
-        return prev + Math.random() * 20;
-      });
-    }, 150);
+        if (res.status === 404) throw new Error("File not found");
+        if (res.status === 410) throw new Error("File expired or exhausted");
+        throw new Error(text || `HTTP ${res.status}`);
+      }
 
-    setTimeout(() => {
-      clearInterval(interval);
+      const total =
+        Number(res.headers.get("content-length")) || fileInfo.sizeBytes || 0;
+      if (!res.body) throw new Error("Empty response body");
+
+      const reader = res.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let received = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          chunks.push(value);
+          received += value.byteLength;
+          if (total > 0) setProgress((received / total) * 100);
+        }
+      }
+
+      const encrypted = new Uint8Array(received);
+      let offset = 0;
+      for (const c of chunks) {
+        encrypted.set(c, offset);
+        offset += c.byteLength;
+      }
+
+      setProgressLabel("Decrypting…");
       setProgress(100);
 
-      // Trigger actual browser download with real file data
-      if (storedFile) {
-        const blob = new Blob([storedFile.data], { type: storedFile.type });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = storedFile.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
+      const key = await importKeyBase64(fileInfo.keyBase64);
+      const decrypted = await decryptPacked(encrypted.buffer, key);
+
+      const blob = new Blob([decrypted], { type: fileInfo.type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileInfo.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
       setState("done");
       toast.success("File downloaded and decrypted!");
-    }, 2000);
+    } catch (err) {
+      setState("preview");
+      setProgress(0);
+      toast.error(
+        "Download failed: " +
+          (err instanceof Error ? err.message : "Unknown error"),
+      );
+    }
   };
 
   const handleReset = () => {
@@ -154,8 +232,8 @@ export default function DownloadPage() {
     setPassword("");
     setState("input");
     setProgress(0);
+    setProgressLabel("Downloading…");
     setFileInfo(null);
-    setStoredFile(null);
   };
 
   return (
@@ -282,7 +360,7 @@ export default function DownloadPage() {
             <div className="mx-auto max-w-sm space-y-4 text-center">
               <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
               <div>
-                <p className="font-medium">Downloading & decrypting...</p>
+                <p className="font-medium">{progressLabel}</p>
                 <p className="text-sm text-muted-foreground">
                   {fileInfo?.name}
                 </p>
