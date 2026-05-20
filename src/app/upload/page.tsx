@@ -226,6 +226,7 @@ export default function UploadPage() {
           handleUploadUrl: "/api/files",
           clientPayload,
           contentType: "application/octet-stream",
+          multipart: true,
           onUploadProgress: (e) => {
             setUploadProgress(e.percentage);
           },
