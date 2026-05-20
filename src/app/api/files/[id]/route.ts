@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { Readable } from "node:stream";
-import { get as blobGet } from "@vercel/blob";
+import { issueSignedToken, presignUrl } from "@vercel/blob";
 import {
   blobSize,
   openBlobReadStream,
@@ -18,10 +18,8 @@ import { sha256Hex } from "@/lib/crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// Streaming the (private) blob runs through this function, so let it run
-// long enough for big files. Vercel caps this at 60s on hobby, 300s default
-// on pro, configurable up to 900s.
-export const maxDuration = 300;
+
+const PRESIGN_TTL_MS = 5 * 60_000;
 
 async function checkPassword(
   meta: StoredMeta,
@@ -54,25 +52,36 @@ async function handleBlobDownload(
   if (pwFail) return pwFail;
   if (!meta.blobUrl) return new Response("blob missing", { status: 500 });
 
-  // Decrement first so concurrent requests see the lower count. Don't delete
-  // the blob yet — the stream below needs it. A subsequent request that finds
-  // downloadsRemaining <= 0 will clean it up.
+  // Decrement first so concurrent requests see the lower count. The blob
+  // itself is left alone — actual cleanup happens on the next request that
+  // observes downloadsRemaining <= 0 (above), which means the just-issued
+  // presigned URL stays valid for its TTL window.
   const remaining = meta.downloadsRemaining - 1;
   await blobWriteMeta({ ...meta, downloadsRemaining: remaining });
 
-  const result = await blobGet(meta.blobUrl, { access: "private" });
-  if (!result || result.statusCode !== 200) {
-    return new Response("blob missing", { status: 500 });
+  // Mint a short-lived presigned URL the client can fetch directly from the
+  // Blob CDN. This bypasses Vercel's function response body limit, which is
+  // what truncates large files to 0 bytes when we tried to proxy via get().
+  let pathname: string;
+  try {
+    pathname = new URL(meta.blobUrl).pathname.replace(/^\//, "");
+  } catch {
+    return new Response("blob url invalid", { status: 500 });
   }
-
-  return new Response(result.stream, {
-    status: 200,
-    headers: {
-      "content-type": "application/octet-stream",
-      "content-length": String(result.blob.size),
-      "cache-control": "no-store",
-    },
+  const validUntil = Date.now() + PRESIGN_TTL_MS;
+  const signedToken = await issueSignedToken({
+    pathname,
+    operations: ["get"],
+    validUntil,
   });
+  const { presignedUrl } = await presignUrl(signedToken, {
+    operation: "get",
+    pathname,
+    access: "private",
+    validUntil,
+  });
+
+  return Response.redirect(presignedUrl, 302);
 }
 
 async function handleFsDownload(
