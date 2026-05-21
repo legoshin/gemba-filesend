@@ -5,6 +5,7 @@ import {
   Check,
   Copy,
   Download,
+  File as FileIcon,
   Link2,
   Lock,
   Timer,
@@ -53,6 +54,12 @@ interface DirectMetaPayload {
   salt?: string;
   downloadsRemaining: number;
   expiresAt: number;
+}
+
+interface UploadResult {
+  fileName: string;
+  fileSize: number;
+  shareLink: string;
 }
 
 function uploadDirect(
@@ -107,35 +114,99 @@ function generateClientId(): string {
     .join("");
 }
 
-async function buildPayload(
-  files: File[],
-): Promise<{ data: ArrayBuffer; name: string; type: string; size: number }> {
-  if (files.length === 1) {
-    const f = files[0];
-    const data = await f.arrayBuffer();
-    return {
-      data,
-      name: f.name,
-      type: f.type || "application/octet-stream",
-      size: f.size,
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+/**
+ * Encrypts one file and uploads it. Returns the share link.
+ *
+ * Each file is processed end-to-end before the next starts, so peak memory
+ * stays at roughly 3× the single largest file (raw bytes + ciphertext +
+ * packed output) rather than 3× the combined total of all selected files.
+ * That's what keeps multi-file uploads from blowing past the browser's
+ * TypedArray limit ("array allocation failed").
+ */
+async function uploadOneFile(opts: {
+  file: File;
+  storageMode: StorageMode;
+  usePassword: boolean;
+  password: string;
+  downloadsRemaining: number;
+  expiresAt: number;
+  origin: string;
+  onProgress: (percent: number) => void;
+}): Promise<string> {
+  const {
+    file,
+    storageMode,
+    usePassword,
+    password,
+    downloadsRemaining,
+    expiresAt,
+    origin,
+    onProgress,
+  } = opts;
+
+  const data = await file.arrayBuffer();
+  const key = await generateKey();
+  const keyB64 = await exportKeyBase64(key);
+  const encrypted = await encryptPacked(data, key);
+  const encryptedBlob = new Blob([encrypted], {
+    type: "application/octet-stream",
+  });
+
+  let id: string;
+
+  if (storageMode === "blob") {
+    id = generateClientId();
+    const clientPayload = JSON.stringify({
+      id,
+      name: file.name,
+      type: file.type || "application/octet-stream",
+      size: file.size,
+      password: usePassword ? password : undefined,
+      downloadsRemaining,
+      expiresAt,
+    });
+    await upload(`gemba/blob/${id}.bin`, encryptedBlob, {
+      access: "private",
+      handleUploadUrl: "/api/files",
+      clientPayload,
+      contentType: "application/octet-stream",
+      multipart: true,
+      onUploadProgress: (e) => {
+        onProgress(e.percentage);
+      },
+    });
+  } else {
+    let passwordHash: string | undefined;
+    let salt: string | undefined;
+    if (usePassword) {
+      salt = randomSaltBase64();
+      passwordHash = await sha256Hex(password + salt);
+    }
+    const meta: DirectMetaPayload = {
+      name: file.name,
+      type: file.type || "application/octet-stream",
+      size: file.size,
+      passwordHash,
+      salt,
+      downloadsRemaining,
+      expiresAt,
     };
+    id = await uploadDirect(encryptedBlob, meta, (loaded, total) => {
+      if (total > 0) onProgress((loaded / total) * 100);
+    });
   }
 
-  const { zipSync } = await import("fflate");
-  const entries: Record<string, Uint8Array> = {};
-  for (const f of files) {
-    entries[f.name] = new Uint8Array(await f.arrayBuffer());
-  }
-  const zipped = zipSync(entries, { level: 0 });
-  return {
-    data: zipped.buffer.slice(
-      zipped.byteOffset,
-      zipped.byteOffset + zipped.byteLength,
-    ) as ArrayBuffer,
-    name: `gemba-bundle-${Date.now()}.zip`,
-    type: "application/zip",
-    size: zipped.byteLength,
-  };
+  const params = new URLSearchParams({ id });
+  if (usePassword) params.set("pw", "1");
+  return `${origin}/download?${params}#${keyB64}`;
 }
 
 export default function UploadPage() {
@@ -146,10 +217,12 @@ export default function UploadPage() {
   const [expiryValue, setExpiryValue] = useState("1");
   const [expiryUnit, setExpiryUnit] = useState<ExpiryUnit>("days");
   const [uploadState, setUploadState] = useState<UploadState>("idle");
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const [currentFileName, setCurrentFileName] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
-  const [shareLink, setShareLink] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [results, setResults] = useState<UploadResult[]>([]);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [storageMode, setStorageMode] = useState<StorageMode | null>(null);
 
   useEffect(() => {
@@ -160,7 +233,6 @@ export default function UploadPage() {
         const data = (await res.json()) as { mode: StorageMode };
         setStorageMode(data.mode);
       } catch {
-        // assume fs if config endpoint unreachable
         setStorageMode("fs");
       }
     })();
@@ -177,101 +249,66 @@ export default function UploadPage() {
       return;
     }
 
-    setUploadState("preparing");
-    setProgressLabel(
-      files.length > 1 ? "Bundling & encrypting…" : "Encrypting…",
+    const downloadsRemaining = Math.max(
+      1,
+      Math.min(100, Number(downloadLimit) || 1),
     );
+    const expiresAt =
+      Date.now() +
+      Math.max(1, Number(expiryValue) || 1) * EXPIRY_UNIT_MS[expiryUnit];
+
+    setUploadState("preparing");
+    setResults([]);
+    setCurrentFileIndex(0);
     setUploadProgress(0);
 
+    const collected: UploadResult[] = [];
+
     try {
-      const payload = await buildPayload(files);
-
-      const key = await generateKey();
-      const keyB64 = await exportKeyBase64(key);
-      const encrypted = await encryptPacked(payload.data, key);
-      const encryptedBlob = new Blob([encrypted], {
-        type: "application/octet-stream",
-      });
-
-      const downloadsRemaining = Math.max(
-        1,
-        Math.min(100, Number(downloadLimit) || 1),
-      );
-      const expiresAt =
-        Date.now() +
-        Math.max(1, Number(expiryValue) || 1) * EXPIRY_UNIT_MS[expiryUnit];
-
-      let id: string;
-
-      if (storageMode === "blob") {
-        // Generate ID client-side so we know the share URL up front; server
-        // validates it via the handleUpload hook.
-        id = generateClientId();
-        setUploadState("uploading");
-        setProgressLabel("Uploading…");
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setCurrentFileIndex(i);
+        setCurrentFileName(file.name);
+        setUploadState("preparing");
+        setProgressLabel(`Encrypting "${file.name}"…`);
         setUploadProgress(0);
 
-        const clientPayload = JSON.stringify({
-          id,
-          name: payload.name,
-          type: payload.type,
-          size: payload.size,
-          password: usePassword ? password : undefined,
+        const shareLink = await uploadOneFile({
+          file,
+          storageMode,
+          usePassword,
+          password,
           downloadsRemaining,
           expiresAt,
-        });
-
-        await upload(`gemba/blob/${id}.bin`, encryptedBlob, {
-          access: "private",
-          handleUploadUrl: "/api/files",
-          clientPayload,
-          contentType: "application/octet-stream",
-          multipart: true,
-          onUploadProgress: (e) => {
-            setUploadProgress(e.percentage);
+          origin: window.location.origin,
+          onProgress: (pct) => {
+            setUploadState("uploading");
+            setProgressLabel(`Uploading "${file.name}"…`);
+            setUploadProgress(pct);
           },
         });
-      } else {
-        let passwordHash: string | undefined;
-        let salt: string | undefined;
-        if (usePassword) {
-          salt = randomSaltBase64();
-          passwordHash = await sha256Hex(password + salt);
-        }
 
-        const meta: DirectMetaPayload = {
-          name: payload.name,
-          type: payload.type,
-          size: payload.size,
-          passwordHash,
-          salt,
-          downloadsRemaining,
-          expiresAt,
-        };
-
-        setUploadState("uploading");
-        setProgressLabel("Uploading…");
-        setUploadProgress(0);
-
-        id = await uploadDirect(encryptedBlob, meta, (loaded, total) => {
-          if (total > 0) setUploadProgress((loaded / total) * 100);
+        collected.push({
+          fileName: file.name,
+          fileSize: file.size,
+          shareLink,
         });
+        setResults([...collected]);
       }
 
-      const params = new URLSearchParams({ id });
-      if (usePassword) params.set("pw", "1");
-      setShareLink(`${window.location.origin}/download?${params}#${keyB64}`);
       setUploadState("done");
       setUploadProgress(100);
       toast.success(
         files.length > 1
-          ? `${files.length} files uploaded as bundle`
+          ? `${files.length} files uploaded — one link per file`
           : "File uploaded",
       );
     } catch (err) {
       setUploadState("idle");
       setUploadProgress(0);
       setProgressLabel("");
+      // Keep `results` so the user can still copy links for files that
+      // succeeded before the failure.
       toast.error(
         "Upload failed: " +
           (err instanceof Error ? err.message : "Unknown error"),
@@ -279,19 +316,28 @@ export default function UploadPage() {
     }
   };
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(shareLink);
-    setCopied(true);
+  const handleCopy = async (link: string, index: number) => {
+    await navigator.clipboard.writeText(link);
+    setCopiedIndex(index);
     toast.success("Link copied to clipboard");
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const handleCopyAll = async () => {
+    if (results.length === 0) return;
+    const text = results.map((r) => `${r.fileName}: ${r.shareLink}`).join("\n");
+    await navigator.clipboard.writeText(text);
+    toast.success(`Copied ${results.length} link${results.length > 1 ? "s" : ""}`);
   };
 
   const handleReset = () => {
     setFiles([]);
     setUploadState("idle");
+    setCurrentFileIndex(0);
+    setCurrentFileName("");
     setUploadProgress(0);
     setProgressLabel("");
-    setShareLink("");
+    setResults([]);
     setPassword("");
     setUsePassword(false);
     setDownloadLimit("1");
@@ -316,29 +362,49 @@ export default function UploadPage() {
             <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
               <Check className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
-            <CardTitle>Upload Complete</CardTitle>
+            <CardTitle>
+              {results.length === 1
+                ? "Upload Complete"
+                : `${results.length} Files Uploaded`}
+            </CardTitle>
             <CardDescription>
-              Your files are encrypted and ready to share.
+              {results.length === 1
+                ? "Your file is encrypted and ready to share."
+                : "Each file has its own share link below."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label>Share Link</Label>
-              <div className="flex gap-2">
-                <Input value={shareLink} readOnly className="font-mono text-xs" />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleCopy}
-                  className="shrink-0"
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+            <div className="space-y-3">
+              {results.map((r, i) => (
+                <div key={r.shareLink} className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm">
+                    <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate font-medium">{r.fileName}</span>
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                      {formatSize(r.fileSize)}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={r.shareLink}
+                      readOnly
+                      className="font-mono text-xs"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleCopy(r.shareLink, i)}
+                      className="shrink-0"
+                    >
+                      {copiedIndex === i ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -350,7 +416,8 @@ export default function UploadPage() {
               )}
               <Badge variant="secondary" className="gap-1">
                 <Download className="h-3 w-3" />
-                {downloadLimit} download{Number(downloadLimit) !== 1 ? "s" : ""}
+                {downloadLimit} download{Number(downloadLimit) !== 1 ? "s" : ""}{" "}
+                each
               </Badge>
               <Badge variant="secondary" className="gap-1">
                 <Timer className="h-3 w-3" />
@@ -367,9 +434,9 @@ export default function UploadPage() {
               <Button variant="outline" className="flex-1" onClick={handleReset}>
                 Upload More
               </Button>
-              <Button className="flex-1 gap-2" onClick={handleCopy}>
+              <Button className="flex-1 gap-2" onClick={handleCopyAll}>
                 <Link2 className="h-4 w-4" />
-                Copy Link
+                {results.length > 1 ? "Copy All Links" : "Copy Link"}
               </Button>
             </div>
           </CardContent>
@@ -381,7 +448,7 @@ export default function UploadPage() {
               <CardTitle className="text-lg">Select Files</CardTitle>
               <CardDescription>
                 Files are encrypted in your browser before uploading.
-                Multiple files are bundled into a zip.
+                When you select multiple files, each gets its own share link.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -481,13 +548,21 @@ export default function UploadPage() {
               <CardContent className="pt-6">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{progressLabel}</span>
-                    <span className="text-muted-foreground">
+                    <span className="truncate font-medium">
+                      {progressLabel}
+                    </span>
+                    <span className="shrink-0 text-muted-foreground">
                       {uploadState === "uploading"
                         ? `${Math.min(Math.round(uploadProgress), 100)}%`
                         : "…"}
                     </span>
                   </div>
+                  {files.length > 1 && (
+                    <p className="text-xs text-muted-foreground">
+                      File {currentFileIndex + 1} of {files.length}
+                      {currentFileName ? ` — ${currentFileName}` : ""}
+                    </p>
+                  )}
                   <Progress
                     value={
                       uploadState === "uploading"
