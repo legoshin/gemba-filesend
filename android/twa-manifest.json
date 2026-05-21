@@ -1,0 +1,54 @@
+{
+  "packageId": "mba.ge.filesend",
+  "host": "gemba-filesend.vercel.app",
+  "name": "Gemba Filesend",
+  "launcherName": "Filesend",
+  "display": "standalone",
+  "orientation": "default",
+  "themeColor": "#283349",
+  "themeColorDark": "#0a0a0a",
+  "navigationColor": "#283349",
+  "navigationColorDark": "#0a0a0a",
+  "navigationDividerColor": "#283349",
+  "navigationDividerColorDark": "#0a0a0a",
+  "backgroundColor": "#ffffff",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://gemba-filesend.vercel.app/icon-512.png",
+  "maskableIconUrl": "https://gemba-filesend.vercel.app/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Upload",
+      "shortName": "Upload",
+      "url": "/upload",
+      "chosenIconUrl": "https://gemba-filesend.vercel.app/icon-192.png"
+    },
+    {
+      "name": "Download",
+      "shortName": "Download",
+      "url": "/download",
+      "chosenIconUrl": "https://gemba-filesend.vercel.app/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://gemba-filesend.vercel.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": { "enabled": false },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://gemba-filesend.vercel.app/",
+  "minSdkVersion": 21,
+  "orientationLock": false,
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "appVersion": "1.0.0"
+}

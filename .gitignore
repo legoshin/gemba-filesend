@@ -30,6 +30,19 @@
 # local tool state
 /.omc/
 
+# Android / Bubblewrap build artefacts and signing keys — NEVER commit
+# the keystore or anything derived from it.
+android/android.keystore
+android/android.keystore.lock
+android/*.keystore
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/twa.iml
+android/app-release-bundle.aab
+android/app-release-signed.apk
+
 # debug
 npm-debug.log*
 yarn-debug.log*
