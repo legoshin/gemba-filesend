@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
-import { Menu, Send, X } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -20,10 +21,27 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-sm">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Send className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="text-lg font-bold tracking-tight">Gemba Filesend</span>
+          {/* Light-mode logo */}
+          <Image
+            src="/logo.svg"
+            alt="Gemba"
+            width={153}
+            height={36}
+            priority
+            className="h-7 w-auto dark:hidden"
+          />
+          {/* Dark-mode logo */}
+          <Image
+            src="/logo-dark.svg"
+            alt="Gemba"
+            width={153}
+            height={36}
+            priority
+            className="hidden h-7 w-auto dark:block"
+          />
+          <span className="text-lg font-medium tracking-tight text-muted-foreground">
+            Filesend
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
