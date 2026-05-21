@@ -316,8 +316,50 @@ export default function UploadPage() {
     }
   };
 
+  /**
+   * Writes `text` to the clipboard. Uses the async Clipboard API when
+   * available (HTTPS / localhost), falls back to a hidden <textarea> +
+   * document.execCommand("copy") for older browsers and insecure contexts.
+   * Returns true on success.
+   */
+  const writeClipboard = async (text: string): Promise<boolean> => {
+    try {
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.clipboard &&
+        window.isSecureContext
+      ) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch {
+      // fall through to legacy path
+    }
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.top = "0";
+      textarea.style.left = "0";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      return ok;
+    } catch {
+      return false;
+    }
+  };
+
   const handleCopy = async (link: string, index: number) => {
-    await navigator.clipboard.writeText(link);
+    const ok = await writeClipboard(link);
+    if (!ok) {
+      toast.error("Couldn't access the clipboard — copy the link manually");
+      return;
+    }
     setCopiedIndex(index);
     toast.success("Link copied to clipboard");
     setTimeout(() => setCopiedIndex(null), 2000);
@@ -325,9 +367,23 @@ export default function UploadPage() {
 
   const handleCopyAll = async () => {
     if (results.length === 0) return;
-    const text = results.map((r) => `${r.fileName}: ${r.shareLink}`).join("\n");
-    await navigator.clipboard.writeText(text);
-    toast.success(`Copied ${results.length} link${results.length > 1 ? "s" : ""}`);
+    // Single file: copy just the URL so paste-into-anything works.
+    // Multiple files: prefix each line with its filename so the user can tell
+    // which link belongs to which file.
+    const text =
+      results.length === 1
+        ? results[0].shareLink
+        : results.map((r) => `${r.fileName}: ${r.shareLink}`).join("\n");
+    const ok = await writeClipboard(text);
+    if (!ok) {
+      toast.error("Couldn't access the clipboard — copy the link manually");
+      return;
+    }
+    toast.success(
+      results.length > 1
+        ? `Copied ${results.length} links`
+        : "Link copied to clipboard",
+    );
   };
 
   const handleReset = () => {
