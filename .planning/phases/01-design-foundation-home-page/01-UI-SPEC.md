@@ -15,6 +15,21 @@ created: 2026-07-10
 
 ---
 
+## Approved Deviations (from generic GSD ceilings — token-locked, APPROVED)
+
+These two deviations from the generic GSD design-quality defaults are **intentional and approved**, not accidental overruns. Approval basis:
+- **PROJECT.md design-fidelity constraint:** "Only use tokens defined in `design-system/tokens/`; derive from the nearest token when a value isn't covered — do not invent colours/type/spacing/radii/shadows. Source of truth is the Figma-derived system."
+- **CONTEXT.md D-01/D-02:** token wiring is locked — the Gemba semantic aliases and scales *are* the app's visual vocabulary; Tailwind's `@theme inline` is re-pointed onto them.
+
+| # | Generic GSD ceiling | Gemba canonical value | Why approved |
+|---|---|---|---|
+| 1 | Typography ≤ 4 font sizes | **8-step scale**: 40 / 28 / 24 / 20 / 16 / 14 / 12 / 10 px (`design-system/tokens/typography.css`, `.gemba-h1…h5` + body/small/chip) | The full scale is the canonical design-system type ramp transcribed verbatim from Figma. Reducing to 4 sizes would violate the PROJECT.md design-fidelity constraint. This spec **overrides the generic ≤4-size ceiling by design.** |
+| 2 | Spacing must be multiples of 4 | `--space-1` = **2px** (`design-system/tokens/spacing.css`) | 2px is a real, canonical Gemba spacing token — not an invented value. Approved under the same token-fidelity basis. Used only for the single documented micro-gap case (see Spacing table). All other spacing tokens are multiples of 4. This spec **overrides the generic strict-4px rule** for this one token by design. |
+
+Checker: treat Dimension 4 (Typography) and Dimension 5 (Spacing) against these approved values, not the generic defaults.
+
+---
+
 ## Design System
 
 | Property | Value |
@@ -35,8 +50,8 @@ created: 2026-07-10
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `--space-1` | 2px | Micro-gap exception — chip internal icon↔label gap only |
-| `--space-2` | 4px | Icon gaps, tight inline padding, input label↔field gap |
+| `--space-1` | 2px | Micro-gap exception — Toggle track inner padding (the only 2px use this phase); see Approved Deviations #2 |
+| `--space-2` | 4px | Icon gaps, tight inline padding, input label↔field gap, **Chip internal icon↔label gap** |
 | `--space-3` | 8px | Compact element spacing, button icon↔label gap, toggle label gap |
 | `--space-4` | 12px | Input horizontal internal gap, small-button padding |
 | `--space-5` | 16px | Default element spacing, input padding, card inner padding |
@@ -44,7 +59,7 @@ created: 2026-07-10
 | `--space-7` | 32px | Layout gaps between major home-page blocks |
 | `--space-8` | 40px | Page-level spacing, large section breaks |
 
-Exceptions: `--space-1` (2px) is the only non-multiple-of-4 value and is reserved for the Chip's internal icon/label gap (`gap: 4` in the reference Chip is actually `--space-2`; treat `--space-1` as reserved for any future sub-4px hairline gap need — do not introduce other odd values).
+Exceptions: `--space-1` (2px) is the only non-multiple-of-4 value (approved — see Approved Deviations #2). Its sole use this phase is the **Toggle track inner padding** (2px, from `design-system/components/forms/Toggle.jsx`). The **Chip's internal icon↔label gap is 4px = `--space-2`** (matching the reference `Chip.jsx` `gap: 4`) — it is **not** a `--space-1` case. Do not introduce any other sub-4px value beyond `--space-1`'s single documented use.
 
 ### Radii (component shape — required alongside spacing)
 
@@ -140,11 +155,13 @@ Realized via `cva` variants on the existing `Button` component (`src/components/
 
 Sizes: default = 40px tall, padding `12px 24px`, gap 8, 20px icons; small = 32px tall, padding `12px 16px`, gap 8, 16px icons. Square variants swap `--radius-xl`→`--radius-sm`, same height, icon-only. Labels are verb-first ("Send a file", not "Submit").
 
+**Accessibility (icon-only / square variants — MANDATORY):** Any icon-only square button (no visible text label) MUST carry an `aria-label` describing its action (and/or a visible tooltip). This applies to every square-variant button and any icon-only control across the shell (e.g. the theme toggle, mobile tab-bar icons if unlabeled). Icons themselves are decorative-through-`currentColor` and do not announce meaning — the `aria-label` is the accessible name. No icon-only interactive element may ship without one.
+
 ### Card recipe (COMP-05)
 See Radii & Shadows above — inset-ring + soft-shadow, 16px radius, white surface. Inner sub-cards (e.g. feature icon tile) use `--surface-subdued` at `--radius-md` (12px).
 
 ### Chip (COMP-03)
-Height 20px, `border-radius: 16px`, padding `3px 10px`, gap 4 (`--space-2`), optional 16px prefix icon. Label: ALL-CAPS, 10px/16px line-height, weight 700, font `.gemba-chip-label` (Public Sans fallback for PT Root UI VF). Background = signal color at 8% tint (`--gemba-{signal}-subdued`), text = full-strength signal color. Variants: neutral / accent / success / warning / critical — home page only needs `neutral` or `accent` (e.g. "OPEN SOURCE" / "END-TO-END ENCRYPTED" badges replacing the current gradient `Badge`).
+Height 20px, `border-radius: 16px`, padding `3px 10px`, internal icon↔label gap **4px (`--space-2`)** — consistent with the reference `Chip.jsx` and the Spacing exception note. Optional 16px prefix icon. Label: ALL-CAPS, 10px/16px line-height, weight 700, font `.gemba-chip-label` (Public Sans fallback for PT Root UI VF). Background = signal color at 8% tint (`--gemba-{signal}-subdued`), text = full-strength signal color. Variants: neutral / accent / success / warning / critical — home page only needs `neutral` or `accent` (e.g. "OPEN SOURCE" / "END-TO-END ENCRYPTED" badges replacing the current gradient `Badge`).
 
 ### Form controls (COMP-02)
 Retrofit path (resolves discretion — chosen over lifting raw JSX, to honor the "reuse shadcn" constraint): `Input` and `Switch`/`Toggle` already exist in `src/components/ui/` — reskin in place to Gemba tokens (40px height, `--radius-sm`, `--ring-border`+`--shadow-field`, focus swaps to `--ring-focus`). `Checkbox` and `Radio` do **not** yet exist in `src/components/ui/` — add via `npx shadcn add checkbox radio-group` (shadcn **official** registry, safe by default) then reskin to match `design-system/components/forms/Checkbox.jsx`/`Radio.jsx` token usage. None of these are required by the home page itself (no forms on home) — this recipe is documented now so Phase 2/3 don't re-litigate it, but is not blocking Phase 1 completion.
@@ -162,6 +179,8 @@ Port `Icon.jsx` → `Icon.tsx` (strict-TS convention match) + `icon-data.js` + `
 ## Copywriting Contract
 
 Home page (PAGE-01) is streamlined toward an app landing per CONTEXT.md D-05 — primary "send a file" action up top, gradient hero and repeated how-it-works/CTA sections dropped or shortened.
+
+**Primary visual anchor / focal point:** the **"Send a file" primary CTA** (solid ink pill, `--button-primary-bg`) is the single dominant focal point of the page, sitting directly beneath the hero headline. Visual hierarchy is: (1) "Send a file" primary CTA → (2) hero headline (`.gemba-h1`, 40px) → (3) secondary "Receive a file" button → (4) the tighter feature/trust row below. Everything else (feature cards, trust chips) is deliberately lower-contrast supporting content so the eye lands on "Send a file" first.
 
 | Element | Copy |
 |---------|------|
