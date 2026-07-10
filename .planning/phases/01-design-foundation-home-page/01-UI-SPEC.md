@@ -1,7 +1,7 @@
 ---
 phase: 1
 slug: design-foundation-home-page
-status: draft
+status: approved
 shadcn_initialized: true
 preset: new-york / neutral base (pre-existing components.json)
 created: 2026-07-10
@@ -207,11 +207,11 @@ Voice per `design-system/DESIGN-SYSTEM.md`: confident, plain, benefit-first; add
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS (revision 1 — focal point + icon-button aria-label rule added)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS (via Approved Deviation — 8-step token-locked scale)
+- [x] Dimension 5 Spacing: PASS (via Approved Deviation — `--space-1` 2px token-locked)
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** APPROVED (2026-07-10, gsd-ui-checker — 6/6 dimensions, 1 revision)
