@@ -21,9 +21,9 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col bg-card md:flex">
-        <Link href="/" className="flex items-center gap-2 px-6 py-6">
+    <div className="flex min-h-screen flex-col">
+      <header className="sticky top-0 z-40 flex h-16 items-center gap-6 border-b border-[var(--border-default)] bg-card px-4 sm:px-6">
+        <Link href="/" className="flex shrink-0 items-center gap-2">
           {/* Light-mode logo */}
           <Image
             src="/logo.svg"
@@ -45,14 +45,15 @@ export function AppShell({ children }: AppShellProps) {
           <span className="gemba-body-sm text-[var(--text-subdued)]">Filesend</span>
         </Link>
 
-        <nav className="flex flex-1 flex-col gap-1 px-3">
+        {/* Desktop top nav (mobile uses the bottom tab bar) */}
+        <nav className="hidden items-center gap-1 md:flex">
           {navLinks.map((link) => {
             const active = pathname === link.href;
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2 ${
+                className={`flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 ${
                   active
                     ? "gemba-body-strong bg-[var(--surface-subdued)] text-[var(--text-primary)]"
                     : "gemba-body text-[var(--text-primary)] hover:bg-[var(--surface-subdued)]"
@@ -65,20 +66,12 @@ export function AppShell({ children }: AppShellProps) {
           })}
         </nav>
 
-        <div className="flex items-center justify-between px-6 py-4">
+        <div className="ml-auto">
           <ThemeToggle />
         </div>
-      </aside>
+      </header>
 
-      <div className="flex min-h-screen flex-col md:pl-60">
-        <header className="flex h-16 items-center justify-end border-b border-[var(--border-default)] bg-card px-6">
-          <div className="md:hidden">
-            <ThemeToggle />
-          </div>
-        </header>
-
-        <main className="flex-1 bg-[var(--surface-page)] pb-16 md:pb-0">{children}</main>
-      </div>
+      <main className="flex-1 bg-[var(--surface-page)] pb-16 md:pb-0">{children}</main>
 
       <MobileTabBar />
     </div>

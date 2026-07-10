@@ -50,7 +50,6 @@ export default function Home() {
           </Link>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <Chip variant="neutral">OPEN SOURCE</Chip>
           <Chip variant="accent">END-TO-END ENCRYPTED</Chip>
         </div>
       </section>
