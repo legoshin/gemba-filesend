@@ -9,7 +9,6 @@ import {
   Link2,
   Lock,
   Timer,
-  Upload,
 } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
@@ -25,6 +24,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/chip";
+import { Icon } from "@/components/icon";
 import { Separator } from "@/components/ui/separator";
 import { FileDropzone } from "@/components/file-dropzone";
 import { toast } from "sonner";
@@ -406,7 +407,7 @@ export default function UploadPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Upload Files</h1>
+        <h1 className="gemba-h2">Upload Files</h1>
         <p className="mt-2 text-muted-foreground">
           Select files to encrypt and share securely.
         </p>
@@ -501,7 +502,7 @@ export default function UploadPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Select Files</CardTitle>
+              <CardTitle className="gemba-h4">Select Files</CardTitle>
               <CardDescription>
                 Files are encrypted in your browser before uploading.
                 When you select multiple files, each gets its own share link.
@@ -514,7 +515,7 @@ export default function UploadPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Options</CardTitle>
+              <CardTitle className="gemba-h4">Options</CardTitle>
               <CardDescription>
                 Configure security and sharing settings.
               </CardDescription>
@@ -523,7 +524,7 @@ export default function UploadPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="password-toggle" className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-muted-foreground" />
+                    <Icon name="Lock01" size={16} className="text-[var(--text-subdued)]" />
                     Password Protection
                   </Label>
                   <p className="text-xs text-muted-foreground">
@@ -555,7 +556,7 @@ export default function UploadPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="download-limit" className="flex items-center gap-2">
-                    <Download className="h-4 w-4 text-muted-foreground" />
+                    <Icon name="Download01" size={16} className="text-[var(--text-subdued)]" />
                     Download Limit
                   </Label>
                   <Input
@@ -569,7 +570,7 @@ export default function UploadPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="expiry" className="flex items-center gap-2">
-                    <Timer className="h-4 w-4 text-muted-foreground" />
+                    <Icon name="Clock" size={16} className="text-[var(--text-subdued)]" />
                     Expires After
                   </Label>
                   <div className="flex gap-2">
@@ -587,7 +588,7 @@ export default function UploadPage() {
                       onChange={(e) =>
                         setExpiryUnit(e.target.value as ExpiryUnit)
                       }
-                      className="dark:bg-input/30 border-input h-9 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                      className="h-10 rounded-[var(--radius-sm)] bg-[var(--surface-card)] px-4 text-base shadow-[var(--ring-border),var(--shadow-field)] outline-none transition-[color,box-shadow] focus-visible:shadow-[var(--ring-focus)] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                     >
                       <option value="hours">Hours</option>
                       <option value="days">Days</option>
@@ -603,18 +604,18 @@ export default function UploadPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="truncate font-medium">
+                  <div className="flex items-center justify-between">
+                    <span className="gemba-body-strong truncate">
                       {progressLabel}
                     </span>
-                    <span className="shrink-0 text-muted-foreground">
+                    <span className="gemba-body-sm shrink-0 text-[var(--text-subdued)]">
                       {uploadState === "uploading"
                         ? `${Math.min(Math.round(uploadProgress), 100)}%`
                         : "…"}
                     </span>
                   </div>
                   {files.length > 1 && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="gemba-body-sm text-[var(--text-subdued)]">
                       File {currentFileIndex + 1} of {files.length}
                       {currentFileName ? ` — ${currentFileName}` : ""}
                     </p>
@@ -632,12 +633,12 @@ export default function UploadPage() {
           )}
 
           <Button
-            size="lg"
-            className="w-full gap-2 text-base"
+            size="default"
+            className="w-full"
             disabled={files.length === 0 || isBusy || !storageMode}
             onClick={handleUpload}
           >
-            <Upload className="h-4 w-4" />
+            <Icon name="Upload01" size={20} />
             {uploadState === "preparing"
               ? "Preparing…"
               : uploadState === "uploading"
