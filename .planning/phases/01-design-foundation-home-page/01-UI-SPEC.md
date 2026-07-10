@@ -121,7 +121,7 @@ Gemba is a low-chroma ink-and-grey system; "accent" is a narrow, deliberately ra
 | Role | Value | Usage |
 |------|-------|-------|
 | Dominant (60%) | `--surface-page` `#F9FAFB` | Page background (scrolling content area) |
-| Secondary (30%) | `--surface-card` `#FFFFFF` | Sidebar, top bar, cards, feature tiles |
+| Secondary (30%) | `--surface-card` `#FFFFFF` | Top nav bar, cards, feature tiles, mobile tab bar |
 | Accent (10%) | `--gemba-accent` `#2066E6` (`--link-color`) | Reserved for: inline hyperlinks/text links, informational icon accents (e.g. an info glyph), the accent Chip variant background tint (`--gemba-accent-subdued` 8%) — never for primary buttons, never as a background fill outside the 8% chip tint |
 | Destructive | `--gemba-critical` `#E95E5E` | Destructive actions only — none exist on the home page this phase (no delete/discard flows here); reserved for later phases. If a destructive confirmation is ever needed on this page, use `--gemba-critical` text/icon on `--gemba-critical-subdued` (8%) background |
 
@@ -161,7 +161,7 @@ Sizes: default = 40px tall, padding `12px 24px`, gap 8, 20px icons; small = 32px
 See Radii & Shadows above — inset-ring + soft-shadow, 16px radius, white surface. Inner sub-cards (e.g. feature icon tile) use `--surface-subdued` at `--radius-md` (12px).
 
 ### Chip (COMP-03)
-Height 20px, `border-radius: 16px`, padding `3px 10px`, internal icon↔label gap **4px (`--space-2`)** — consistent with the reference `Chip.jsx` and the Spacing exception note. Optional 16px prefix icon. Label: ALL-CAPS, 10px/16px line-height, weight 700, font `.gemba-chip-label` (Public Sans fallback for PT Root UI VF). Background = signal color at 8% tint (`--gemba-{signal}-subdued`), text = full-strength signal color. Variants: neutral / accent / success / warning / critical — home page only needs `neutral` or `accent` (e.g. "OPEN SOURCE" / "END-TO-END ENCRYPTED" badges replacing the current gradient `Badge`).
+Height 20px, `border-radius: 16px`, padding `3px 10px`, internal icon↔label gap **4px (`--space-2`)** — consistent with the reference `Chip.jsx` and the Spacing exception note. Optional 16px prefix icon. Label: ALL-CAPS, 10px/16px line-height, weight 700, font `.gemba-chip-label` (Public Sans fallback for PT Root UI VF). Background = signal color at 8% tint (`--gemba-{signal}-subdued`), text = full-strength signal color. Variants: neutral / accent / success / warning / critical — the home page uses the `accent` variant (e.g. the "END-TO-END ENCRYPTED" badge replacing the current gradient `Badge`). _(The neutral "OPEN SOURCE" chip was removed from the home page post-Phase-1 per user feedback; the `neutral` variant remains available for other surfaces.)_
 
 ### Form controls (COMP-02)
 Retrofit path (resolves discretion — chosen over lifting raw JSX, to honor the "reuse shadcn" constraint): `Input` and `Switch`/`Toggle` already exist in `src/components/ui/` — reskin in place to Gemba tokens (40px height, `--radius-sm`, `--ring-border`+`--shadow-field`, focus swaps to `--ring-focus`). `Checkbox` and `Radio` do **not** yet exist in `src/components/ui/` — add via `npx shadcn add checkbox radio-group` (shadcn **official** registry, safe by default) then reskin to match `design-system/components/forms/Checkbox.jsx`/`Radio.jsx` token usage. None of these are required by the home page itself (no forms on home) — this recipe is documented now so Phase 2/3 don't re-litigate it, but is not blocking Phase 1 completion.
@@ -169,9 +169,9 @@ Retrofit path (resolves discretion — chosen over lifting raw JSX, to honor the
 ### Icon wrapper (COMP-04)
 Port `Icon.jsx` → `Icon.tsx` (strict-TS convention match) + `icon-data.js` + `Icon.d.ts` into `src/components/` (exact subfolder is an execution detail). All home-page + shell UI icons render through this wrapper (24px, ~1.5–2px stroke, `currentColor`); zero emoji as UI icons anywhere on redesigned surfaces.
 
-### App shell & brand lockup (D-03/D-04, layout paradigm — not previously specified)
-- Desktop (≥ md): fixed 240px white sidebar (`--surface-card`) + top bar, scrolling content on `--surface-page`. Active nav item = `--surface-subdued` fill + bold label.
-- Mobile (< md): fixed bottom tab bar (Home / Upload / Download) — not a hamburger drawer. Replaces the current `Sheet`-based mobile nav in `header.tsx`.
+### App shell & brand lockup (D-03/D-04, layout paradigm — REVISED post-Phase-1)
+- Desktop (≥ md): sticky **top nav bar** (`--surface-card`) — brand lockup (left) + Home/Upload/Download links + theme toggle (right); scrolling content on `--surface-page`. Active nav item = `--surface-subdued` fill + bold label. **No left sidebar** (originally a fixed 240px sidebar; moved to top nav per user feedback). Implemented in `src/components/app-shell.tsx`.
+- Mobile (< md): fixed bottom tab bar (Home / Upload / Download) — not a hamburger drawer (`src/components/mobile-tab-bar.tsx`). Replaced the old `Sheet`-based mobile nav; the legacy `header.tsx` has been deleted.
 - Brand lockup: existing "Gemba" wordmark image (`logo.svg`/`logo-dark.svg`, already includes the mark + "GEMBA" text) + a separate "Filesend" label, set in `.gemba-body-sm` (12px, `--text-subdued`), placed immediately to the right of the wordmark, baseline-aligned — matches the current `header.tsx` composition pattern, just reskinned to the subdued token instead of `text-muted-foreground`.
 
 ---

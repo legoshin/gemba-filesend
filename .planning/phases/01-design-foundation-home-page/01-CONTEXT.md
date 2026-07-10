@@ -43,13 +43,17 @@ verification (Phase 3), security/reliability/testing hardening (Phase 4).
   + `.dark`) is replaced/re-pointed to Gemba values rather than kept alongside.
 
 ### Page layout paradigm
-- **D-03:** Adopt Gemba's **240px sidebar "app shell"** (fixed white sidebar + top
-  bar + scrolling content on `--surface-page`), with active-nav items gaining a
-  `--surface-subdued` fill and bolding — per APPLY-GUIDE Step 4. This replaces the
-  current sticky top-header-only layout.
-- **D-04:** On mobile, the sidebar becomes a **fixed bottom tab bar** (Home / Upload
-  / Download) for a native-app feel in the installable PWA/TWA — not a hamburger
-  drawer. Desktop (≥ md) keeps the fixed sidebar; a second nav component is expected.
+- **D-03:** _(REVISED post-Phase-1, per user feedback — was: 240px left sidebar app
+  shell.)_ Desktop nav is a **sticky top nav bar** on `--surface-card` (brand lockup
+  left, Home/Upload/Download links, theme toggle right), scrolling content on
+  `--surface-page`, active-nav items gaining a `--surface-subdued` fill and bolding.
+  **No left sidebar.** Replaces the current sticky top-header-only layout with a
+  reskinned top bar (`src/components/app-shell.tsx`).
+- **D-04:** On mobile, nav is a **fixed bottom tab bar** (Home / Upload / Download)
+  for a native-app feel in the installable PWA/TWA — not a hamburger drawer
+  (`src/components/mobile-tab-bar.tsx`). Desktop uses the top nav bar (D-03); mobile
+  uses the bottom tab bar. _(Originally the desktop layout was a fixed sidebar;
+  revised to top nav post-Phase-1.)_
 - **D-05:** Home page is **streamlined toward an app landing**, not a marketing page:
   a prominent primary "send a file" action up top, a tighter feature/trust row, and
   the how-it-works / CTA repetition dropped or shortened. Re-skin to Gemba: flat
@@ -170,9 +174,11 @@ the design-system-faithful option:
 <specifics>
 ## Specific Ideas
 
-- **Sidebar app shell over marketing layout** — deliberately chose the dashboard-style
-  shell despite the product being an anonymous public utility; responsive behavior is
-  the thing to get right (bottom tab bar on mobile for a native TWA feel).
+- **App-shell nav chrome over marketing layout** — deliberately chose app-style nav
+  chrome despite the product being an anonymous public utility; responsive behavior is
+  the thing to get right (bottom tab bar on mobile for a native TWA feel). _(Post-Phase-1
+  revision: desktop nav moved from a 240px left sidebar to a sticky top nav bar per user
+  feedback — see D-03/D-04.)_
 - **Home = app landing, not a marketing page** — lead with the primary "send a file"
   action; drop the gradient hero and the how-it-works/CTA repetition.
 - **True near-black dark mode** — explicitly preferred OLED-friendly near-black over a
