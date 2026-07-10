@@ -13,7 +13,7 @@ This milestone re-skins Gemba Filesend to the Gemba design system end-to-end and
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Design Foundation & Home Page** - Wire Gemba tokens app-wide, build the shared component layer, redesign home page in light + dark
+- [x] **Phase 1: Design Foundation & Home Page** - Wire Gemba tokens app-wide, build the shared component layer, redesign home page in light + dark (completed 2026-07-10)
 - [ ] **Phase 2: Upload Page Redesign** - Redesign the upload flow (dropzone, options, share link) to the design system, theme-aware
 - [ ] **Phase 3: Download Page Redesign & Dark Mode Complete** - Redesign the download flow to the design system; verify light/dark/system theming across the entire app
 - [ ] **Phase 4: Security, Reliability & Test Hardening** - Security headers, rate limiting, fix the download-counter race, add unit test coverage
@@ -52,7 +52,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01-07-PLAN.md — Phase-level human visual verification gate (light/dark/logo/icons) [Wave 4]
+- [x] 01-07-PLAN.md — Phase-level human visual verification gate (light/dark/logo/icons) [Wave 4]
 
 **UI hint**: yes
 
@@ -109,7 +109,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Design Foundation & Home Page | 6/7 | In Progress|  |
+| 1. Design Foundation & Home Page | 7/7 | Complete   | 2026-07-10 |
 | 2. Upload Page Redesign | 0/TBD | Not started | - |
 | 3. Download Page Redesign & Dark Mode Complete | 0/TBD | Not started | - |
 | 4. Security, Reliability & Test Hardening | 0/TBD | Not started | - |
