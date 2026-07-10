@@ -38,7 +38,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 1**
 
 - [x] 01-01-PLAN.md — Token foundation: wire Gemba tokens app-wide + author near-black dark layer (globals.css) [Wave 1]
-- [ ] 01-02-PLAN.md — Port the Untitled UI Icon wrapper + reskin theme-toggle (COMP-04) [Wave 1]
+- [x] 01-02-PLAN.md — Port the Untitled UI Icon wrapper + reskin theme-toggle (COMP-04) [Wave 1]
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -109,7 +109,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Design Foundation & Home Page | 1/7 | In Progress|  |
+| 1. Design Foundation & Home Page | 2/7 | In Progress|  |
 | 2. Upload Page Redesign | 0/TBD | Not started | - |
 | 3. Download Page Redesign & Dark Mode Complete | 0/TBD | Not started | - |
 | 4. Security, Reliability & Test Hardening | 0/TBD | Not started | - |

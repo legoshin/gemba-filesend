@@ -18,7 +18,7 @@ Requirements for this milestone (redesign + hardening). Each maps to a roadmap p
 - [ ] **COMP-01**: Button ranks (Primary, Secondary, Tertiary, Ghost — default/small/square) exist in the app's component layer per the design system
 - [ ] **COMP-02**: Form controls (Input, Checkbox, Radio, Toggle) match the design system
 - [ ] **COMP-03**: Chip/status component (ALL-CAPS label, signal colour on 8% tint) matches the design system
-- [ ] **COMP-04**: A single `Icon` wrapper renders Untitled UI stroke icons (`currentColor`); app UI icons use it — no emoji as UI icons
+- [x] **COMP-04**: A single `Icon` wrapper renders Untitled UI stroke icons (`currentColor`); app UI icons use it — no emoji as UI icons
 - [ ] **COMP-05**: Card/surface recipe (white surface, 16px radius, inset-ring border + soft cool-grey shadow) is applied to card surfaces
 
 ### Pages
@@ -92,7 +92,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | COMP-01 | Phase 1 | Pending |
 | COMP-02 | Phase 1 | Pending |
 | COMP-03 | Phase 1 | Pending |
-| COMP-04 | Phase 1 | Pending |
+| COMP-04 | Phase 1 | Complete |
 | COMP-05 | Phase 1 | Pending |
 | PAGE-01 | Phase 1 | Pending |
 | DARK-01 | Phase 1 | Complete |
