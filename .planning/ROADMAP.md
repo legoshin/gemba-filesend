@@ -43,7 +43,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 01-03-PLAN.md — Reskin Button ranks + Card recipe, add Chip (COMP-01/03/05) [Wave 2]
-- [ ] 01-04-PLAN.md — Form controls: reskin Input/Switch, add Checkbox/RadioGroup (COMP-02) [Wave 2]
+- [x] 01-04-PLAN.md — Form controls: reskin Input/Switch, add Checkbox/RadioGroup (COMP-02) [Wave 2]
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -109,7 +109,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Design Foundation & Home Page | 3/7 | In Progress|  |
+| 1. Design Foundation & Home Page | 4/7 | In Progress|  |
 | 2. Upload Page Redesign | 0/TBD | Not started | - |
 | 3. Download Page Redesign & Dark Mode Complete | 0/TBD | Not started | - |
 | 4. Security, Reliability & Test Hardening | 0/TBD | Not started | - |
