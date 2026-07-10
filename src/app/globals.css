@@ -88,37 +88,45 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* True near-black OLED-friendly surfaces (D-08) — a single authoring
+     point: :root already re-points --background/--card/--primary/... onto
+     these Gemba aliases (Task 2), so overriding the aliases here flips
+     every shadcn-named utility to dark automatically. */
+  --surface-page: #0a0b0d;
+  --surface-card: #16171a;
+  --surface-subdued: #1f2024;
+  --surface-inverse: #f4f5f7;
+
+  --text-primary: #f4f5f7;
+  --text-subdued: #a2a8b4;
+  --text-subtle: #7a808c;
+
+  --icon-primary: #f4f5f7;
+  --icon-subdued: #a2a8b4;
+  --icon-subtle: #7a808c;
+
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.24);
+
+  --button-primary-bg: #f4f5f7;
+  --button-primary-fg: #0a0b0d;
+  --button-emphasized-bg: #2a2c31;
+  --button-subdued-bg: #1f2024;
+
+  /* Lightened/desaturated accent + signal variants (D-09) — distinct from
+     the light hex, independently verified for WCAG AA below. */
+  --gemba-accent: #5b9cff;
+  --link-color: #5b9cff;
+  --gemba-success: #4ec06a;
+  --gemba-warning: #e7b02e;
+  --gemba-critical: #f08585;
+
+  --gemba-accent-subdued: rgba(91, 156, 255, 0.16);
+  --gemba-success-subdued: rgba(78, 192, 106, 0.16);
+  --gemba-warning-subdued: rgba(231, 176, 46, 0.16);
+  --gemba-critical-subdued: rgba(240, 133, 133, 0.16);
+  --gemba-neutral-subdued: rgba(255, 255, 255, 0.1);
+  --gemba-neutral-signal: #a2a8b4;
 }
 
 @layer base {
