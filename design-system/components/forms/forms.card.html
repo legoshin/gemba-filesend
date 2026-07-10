@@ -1,0 +1,56 @@
+<!-- @dsCard group="Components" viewport="700x360" name="Form controls" subtitle="Input states, checkbox, radio, toggle" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  body { margin: 0; padding: 24px; background: var(--surface-card); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 32px; }
+  .stack { display:flex; flex-direction:column; gap:14px; }
+  .lbl { font: 700 12px/16px var(--font-sans); color: var(--text-subdued); letter-spacing:.04em; text-transform:uppercase; margin: 0 0 8px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { Input, Checkbox, Radio, Toggle } = window.GembaDesignSystem_26dc89;
+function App() {
+  const [c1, setC1] = React.useState(true);
+  const [c2, setC2] = React.useState(false);
+  const [r, setR] = React.useState('gbp');
+  const [t, setT] = React.useState(true);
+  return (
+    <div className="grid">
+      <div>
+        <p className="lbl">Inputs</p>
+        <div className="stack">
+          <Input label="Beneficiary name" placeholder="e.g. Tech Corp Ltd" />
+          <Input label="Sort code" value="04-00-72" hint="Looks good" state="success" />
+          <Input label="IBAN" value="GB29 NWBK" hint="Invalid IBAN checksum" state="error" />
+        </div>
+      </div>
+      <div>
+        <p className="lbl">Selection</p>
+        <div className="stack">
+          <Checkbox checked={c1} onChange={setC1} label="Save this beneficiary" />
+          <Checkbox checked={c2} onChange={setC2} label="Notify by email" />
+          <div style={{display:'flex', gap:20}}>
+            <Radio checked={r==='gbp'} value="gbp" onChange={setR} label="GBP" />
+            <Radio checked={r==='eur'} value="eur" onChange={setR} label="EUR" />
+            <Radio checked={r==='usd'} value="usd" onChange={setR} label="USD" />
+          </div>
+          <Toggle checked={t} onChange={setT} label="Enable 2-factor auth" />
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!-- @dsCard group="Colors" viewport="700x180" name="Signal colors" subtitle="Status: accent, success, warning, critical — solid + 8% subdued" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 20px; background: var(--surface-card); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .sw { display: flex; flex-direction: column; gap: 6px; }
+  .chip { height: 56px; border-radius: 12px; display:flex; }
+  .chip > span { flex:1; border-radius:12px; }
+  .n { font: 700 12px/16px var(--font-sans); color: var(--text-primary); }
+  .h { font: 400 11px/14px var(--font-sans); color: var(--text-subdued); }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="sw"><div class="chip"><span style="background:var(--gemba-accent)"></span><span style="background:var(--gemba-accent-subdued)"></span></div><span class="n">Accent</span><span class="h">#2066E6</span></div>
+  <div class="sw"><div class="chip"><span style="background:var(--gemba-success)"></span><span style="background:var(--gemba-success-subdued)"></span></div><span class="n">Success</span><span class="h">#20982E</span></div>
+  <div class="sw"><div class="chip"><span style="background:var(--gemba-warning)"></span><span style="background:var(--gemba-warning-subdued)"></span></div><span class="n">Warning</span><span class="h">#CD8C00</span></div>
+  <div class="sw"><div class="chip"><span style="background:var(--gemba-critical)"></span><span style="background:var(--gemba-critical-subdued)"></span></div><span class="n">Critical</span><span class="h">#E95E5E</span></div>
+</div>
+</body>
+</html>

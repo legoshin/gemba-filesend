@@ -1,0 +1,35 @@
+/* ============================================================
+   GEMBA — RADII, SPACING, SHADOWS
+   Radii and shadows transcribed from the Figma components.
+   ============================================================ */
+
+:root {
+  /* ---- Corner radii (observed in source) ---- */
+  --radius-xs: 4px;    /* field-subdued token */
+  --radius-sm: 8px;    /* inputs, square buttons */
+  --radius-md: 12px;   /* inner cards */
+  --radius-lg: 16px;   /* cards, chips (pill on short) */
+  --radius-xl: 24px;   /* pill buttons, hero blocks */
+  --radius-pill: 999px;
+
+  /* ---- Spacing scale ---- */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* ---- Elevation / shadows (transcribed verbatim) ----
+     Gemba shadows are soft, low-opacity, cool-grey (95,105,133). */
+  --shadow-field: 0px 4px 16px 0px rgba(95, 105, 133, 0.06);
+  --shadow-field-focus: 0px 8px 16px 0px rgba(95, 105, 133, 0.06);
+  --shadow-card: 0px 4px 16px 0px rgba(95, 105, 133, 0.06);
+  --shadow-popover: 0px 12px 32px 0px rgba(40, 51, 73, 0.16);
+
+  /* Hairline as inset ring (Gemba borders inputs/cards this way) */
+  --ring-border: inset 0 0 0 1px var(--gemba-border);
+  --ring-focus: inset 0 0 0 2px var(--gemba-ink-800);
+}

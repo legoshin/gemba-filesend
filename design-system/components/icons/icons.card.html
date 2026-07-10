@@ -1,0 +1,45 @@
+<!-- @dsCard group="Components" viewport="700x300" name="Icon library" subtitle="1,167 line icons (Untitled UI set) — render via <Icon name size />" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  body { margin: 0; padding: 24px; background: var(--surface-card); }
+  .lbl { font: 700 12px/16px var(--font-sans); color: var(--text-subdued); letter-spacing:.04em; text-transform:uppercase; margin: 0 0 14px; }
+  .grid { display:grid; grid-template-columns: repeat(16, 1fr); gap: 16px; align-items:center; justify-items:center; }
+  .grid > span { color: var(--icon-primary); display:flex; }
+  .accentrow { display:flex; gap:20px; align-items:center; margin-top:22px; }
+  .accentrow > span { display:flex; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { Icon } = window.GembaDesignSystem_26dc89;
+const names = ["Home01","BankNote01","CreditCard01","Coins01","Wallet01","CurrencyDollar","CurrencyEuro","CurrencyPound","SwitchHorizontal01","Send01","Download01","Upload01","Repeat04","BarChart01","PieChart01","LineChartUp01","Users01","User01","Settings01","Bell01","SearchMd","FilterLines","CheckCircle","AlertCircle","XClose","Plus","Eye","Lock01","Shield01","Building01","Receipt","Safe"];
+function App() {
+  return (
+    <div>
+      <p className="lbl">Common banking icons · 20px</p>
+      <div className="grid">
+        {names.map(n => <span key={n} title={n}><Icon name={n} size={20} /></span>)}
+      </div>
+      <div className="accentrow">
+        <span style={{color:'var(--gemba-success)'}}><Icon name="CheckCircle" size={24} /></span>
+        <span style={{color:'var(--gemba-warning)'}}><Icon name="AlertTriangle" size={24} /></span>
+        <span style={{color:'var(--gemba-critical)'}}><Icon name="XCircle" size={24} /></span>
+        <span style={{color:'var(--gemba-accent)'}}><Icon name="InfoCircle" size={24} /></span>
+        <span style={{color:'var(--icon-subdued)'}}><Icon name="Loading02" size={24} /></span>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

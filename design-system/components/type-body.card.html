@@ -1,0 +1,20 @@
+<!-- @dsCard group="Type" viewport="700x240" name="Body & labels" subtitle="Base 14/20 · Small 12/16 · Chip 10/16 — regular & bold" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 24px; background: var(--surface-card); display:flex; flex-direction:column; gap:14px; }
+  .row { display:flex; align-items:baseline; gap:16px; }
+  .meta { font: 400 11px/16px var(--font-sans); color: var(--text-subtle); width: 120px; flex-shrink:0; }
+  p { margin: 0; }
+</style>
+</head>
+<body>
+  <div class="row"><span class="meta">Body · 14/20</span><p class="gemba-body">Curabitur et massa accumsan, pellentesque lacus eu, fermentum erat.</p></div>
+  <div class="row"><span class="meta">Body strong · 14/20</span><p class="gemba-body-strong">Curabitur et massa accumsan, pellentesque lacus eu, fermentum erat.</p></div>
+  <div class="row"><span class="meta">Small · 12/16</span><p class="gemba-body-sm">Curabitur et massa accumsan, pellentesque lacus eu, fermentum erat.</p></div>
+  <div class="row"><span class="meta">Chip · 10/16</span><span class="gemba-chip-label" style="color:var(--gemba-success)">RECEIVED</span></div>
+</body>
+</html>

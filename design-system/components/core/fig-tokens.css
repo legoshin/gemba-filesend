@@ -1,0 +1,44 @@
+/* Generated from Figma Variables. First mode = :root default.
+   FLOAT tokens are unitless — multiply by 1px in calc() where a length is needed. */
+
+:root {
+  --border-neutral: rgb(232,234,237); /* @kind color */
+  --borderradius-field-subdued: 4; /* @kind radius */
+  --button-emphasized: rgb(232,234,237); /* @kind color */
+  --button-primary: rgb(40,51,73); /* @kind color */
+  --button-subdued: rgb(243,245,246); /* @kind color */
+  --colors-background-field-neutral-accent: rgb(90,91,140); /* @kind color */
+  --colors-icon-neutral-default: rgb(43,42,88); /* @kind color */
+  --colors-icon-neutral-on-accent-default: rgb(243,243,246); /* @kind color */
+  --colors-text-neutral-on-accent-default: rgb(243,243,246); /* @kind color */
+  --icons-primary: rgb(40,51,73); /* @kind color */
+  --icons-subdued-50: rgb(148,153,164); /* @kind color */
+  --icons-subdued-70: rgb(105,112,128); /* @kind color */
+  --primary: rgb(40,51,73); /* @kind color */
+  --signal-accent-subdued: rgba(32,102,230,0.08); /* @kind color */
+  --signal-accent: rgb(32,102,230); /* @kind color */
+  --signal-critical-subdued: rgba(233,94,94,0.08); /* @kind color */
+  --signal-critical: rgb(233,94,94); /* @kind color */
+  --signal-neutral-subdued: rgb(232,234,237); /* @kind color */
+  --signal-neutral: rgb(105,112,128); /* @kind color */
+  --signal-success-subdued: rgba(32,152,46,0.08); /* @kind color */
+  --signal-success: rgb(32,152,46); /* @kind color */
+  --signal-warning-subdued: rgba(205,140,0,0.08); /* @kind color */
+  --signal-warning: rgb(205,140,0); /* @kind color */
+  --spacing-size2: 2;
+  --spacing-size4: 4;
+  --text-primary: rgb(40,51,73); /* @kind color */
+  --text-subdued-50: rgb(148,153,164); /* @kind color */
+  --text-subdued-70: rgb(105,112,128); /* @kind color */
+  --typography-text-base-default-family: "DT Flow";
+  --typography-text-base-default-line-height: 20;
+  --typography-text-base-default-size: 14;
+  --typography-text-base-default-weight: 400;
+}
+
+:root[data-theme="dark"], .dark {
+  --colors-background-field-neutral-accent: rgb(160,161,192); /* @kind color */
+  --colors-icon-neutral-default: rgb(235,236,255); /* @kind color */
+  --colors-icon-neutral-on-accent-default: rgb(31,32,51); /* @kind color */
+  --colors-text-neutral-on-accent-default: rgb(31,32,51); /* @kind color */
+}
