@@ -73,7 +73,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 1**
 
 - [x] 02-01-PLAN.md — Reskin the dropzone: dashed/accent drop target + inset-ring file rows (D-03) [Wave 1]
-- [ ] 02-02-PLAN.md — Reskin the upload page: cards, share options, progress, CTA, calm success/share-link state (D-01/D-02/D-04) [Wave 1]
+- [x] 02-02-PLAN.md — Reskin the upload page: cards, share options, progress, CTA, calm success/share-link state (D-01/D-02/D-04) [Wave 1]
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -120,6 +120,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Design Foundation & Home Page | 7/7 | Complete    | 2026-07-10 |
-| 2. Upload Page Redesign | 1/3 | In Progress|  |
+| 2. Upload Page Redesign | 2/3 | In Progress|  |
 | 3. Download Page Redesign & Dark Mode Complete | 0/TBD | Not started | - |
 | 4. Security, Reliability & Test Hardening | 0/TBD | Not started | - |

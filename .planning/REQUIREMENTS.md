@@ -24,7 +24,7 @@ Requirements for this milestone (redesign + hardening). Each maps to a roadmap p
 ### Pages
 
 - [x] **PAGE-01**: Home page is redesigned to the design system
-- [ ] **PAGE-02**: Upload page (dropzone, options, share link) is redesigned to the design system
+- [x] **PAGE-02**: Upload page (dropzone, options, share link) is redesigned to the design system
 - [ ] **PAGE-03**: Download page (metadata, password entry, download/decrypt) is redesigned to the design system
 
 ### Dark Mode
@@ -97,7 +97,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | PAGE-01 | Phase 1 | Complete |
 | DARK-01 | Phase 1 | Complete |
 | DARK-03 | Phase 1 | Complete |
-| PAGE-02 | Phase 2 | Pending |
+| PAGE-02 | Phase 2 | Complete |
 | PAGE-03 | Phase 3 | Pending |
 | DARK-02 | Phase 3 | Pending |
 | SEC-01 | Phase 4 | Pending |
