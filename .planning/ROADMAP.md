@@ -30,7 +30,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Buttons, form controls, chips, icons, and card surfaces on the home page use the new shared component layer (button ranks, Input/Checkbox/Radio/Toggle, Chip, card recipe) matching the design system spec.
   4. All UI icons on the home page render through the single `Icon` wrapper (Untitled UI stroke icons, `currentColor`) — no emoji used as UI icons.
   5. Switching themes on the home page resolves every semantic token alias to a valid dark value — no unstyled or mis-colored elements in dark mode.
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+- [ ] 01-01-PLAN.md — Token foundation: wire Gemba tokens app-wide + author near-black dark layer (globals.css) [Wave 1]
+- [ ] 01-02-PLAN.md — Port the Untitled UI Icon wrapper + reskin theme-toggle (COMP-04) [Wave 1]
+- [ ] 01-03-PLAN.md — Reskin Button ranks + Card recipe, add Chip (COMP-01/03/05) [Wave 2]
+- [ ] 01-04-PLAN.md — Form controls: reskin Input/Switch, add Checkbox/RadioGroup (COMP-02) [Wave 2]
+- [ ] 01-05-PLAN.md — App shell (240px sidebar + top bar) + mobile tab bar + layout wiring (PAGE-01/DARK-03) [Wave 3]
+- [ ] 01-06-PLAN.md — Redesign the home page as a Gemba app landing (PAGE-01) [Wave 3]
+- [ ] 01-07-PLAN.md — Phase-level human visual verification gate (light/dark/logo/icons) [Wave 4]
 **UI hint**: yes
 
 ### Phase 2: Upload Page Redesign
@@ -77,7 +85,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Design Foundation & Home Page | 0/TBD | Not started | - |
+| 1. Design Foundation & Home Page | 0/7 | Planned | - |
 | 2. Upload Page Redesign | 0/TBD | Not started | - |
 | 3. Download Page Redesign & Dark Mode Complete | 0/TBD | Not started | - |
 | 4. Security, Reliability & Test Hardening | 0/TBD | Not started | - |
