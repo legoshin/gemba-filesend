@@ -309,11 +309,11 @@ Every row below must render correctly (no unstyled element, no incorrect color r
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS (via Phase 1 Approved Deviation — 8-step token-locked scale)
-- [ ] Dimension 5 Spacing: PASS (via Phase 1 Approved Deviation — `--space-1` 2px token-locked, unused this phase)
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS (via Phase 1 Approved Deviation — 8-step token-locked scale)
+- [x] Dimension 5 Spacing: PASS (via Phase 1 Approved Deviation — `--space-1` 2px token-locked, unused this phase)
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved — gsd-ui-checker, 2026-07-10 (6/6 dimensions PASS, no blocking issues; D-01..D-04 all represented)
