@@ -9,9 +9,9 @@ Requirements for this milestone (redesign + hardening). Each maps to a roadmap p
 
 ### Design Foundation
 
-- [ ] **DESIGN-01**: Gemba design tokens (`design-system/tokens/` + `styles.css`) are wired into the app via a single global import at the app root
-- [ ] **DESIGN-02**: App code uses the semantic token aliases (`--text-*`, `--surface-*`, `--border-*`, `--button-*`, radii, shadows, rings) instead of raw colour/spacing/shadow values
-- [ ] **DESIGN-03**: Public Sans is the app's default typeface and the Gemba type scale (H1–H5, body, small) is available via helper classes/tokens
+- [x] **DESIGN-01**: Gemba design tokens (`design-system/tokens/` + `styles.css`) are wired into the app via a single global import at the app root
+- [x] **DESIGN-02**: App code uses the semantic token aliases (`--text-*`, `--surface-*`, `--border-*`, `--button-*`, radii, shadows, rings) instead of raw colour/spacing/shadow values
+- [x] **DESIGN-03**: Public Sans is the app's default typeface and the Gemba type scale (H1–H5, body, small) is available via helper classes/tokens
 
 ### Components
 
@@ -29,7 +29,7 @@ Requirements for this milestone (redesign + hardening). Each maps to a roadmap p
 
 ### Dark Mode
 
-- [ ] **DARK-01**: A dark-mode token layer is authored — every semantic alias resolves to a correct dark value
+- [x] **DARK-01**: A dark-mode token layer is authored — every semantic alias resolves to a correct dark value
 - [ ] **DARK-02**: All pages and components render correctly in light, dark, and system themes via `next-themes`
 - [ ] **DARK-03**: Logos / brand mark swap to the correct asset per theme, verified on web, PWA, and Android TWA
 
@@ -86,16 +86,16 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DESIGN-01 | Phase 1 | Pending |
-| DESIGN-02 | Phase 1 | Pending |
-| DESIGN-03 | Phase 1 | Pending |
+| DESIGN-01 | Phase 1 | Complete |
+| DESIGN-02 | Phase 1 | Complete |
+| DESIGN-03 | Phase 1 | Complete |
 | COMP-01 | Phase 1 | Pending |
 | COMP-02 | Phase 1 | Pending |
 | COMP-03 | Phase 1 | Pending |
 | COMP-04 | Phase 1 | Pending |
 | COMP-05 | Phase 1 | Pending |
 | PAGE-01 | Phase 1 | Pending |
-| DARK-01 | Phase 1 | Pending |
+| DARK-01 | Phase 1 | Complete |
 | DARK-03 | Phase 1 | Pending |
 | PAGE-02 | Phase 2 | Pending |
 | PAGE-03 | Phase 3 | Pending |
@@ -109,6 +109,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | TEST-04 | Phase 4 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 21 total
 - Mapped to phases: 21 (100%)
 - Unmapped: 0
