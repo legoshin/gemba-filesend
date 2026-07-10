@@ -68,7 +68,17 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Upload page renders correctly in both light and dark themes, matching the visual system established in Phase 1.
   3. Existing upload functionality (drag-drop, multi-file selection, client-side encryption, share-link generation) continues to work unchanged after the redesign.
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Reskin the dropzone: dashed/accent drop target + inset-ring file rows (D-03) [Wave 1]
+- [ ] 02-02-PLAN.md — Reskin the upload page: cards, share options, progress, CTA, calm success/share-link state (D-01/D-02/D-04) [Wave 1]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-03-PLAN.md — Phase-level human visual verification gate (light/dark sign-off + build audit) [Wave 2]
+
 **UI hint**: yes
 
 ### Phase 3: Download Page Redesign & Dark Mode Complete
@@ -110,6 +120,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Design Foundation & Home Page | 7/7 | Complete    | 2026-07-10 |
-| 2. Upload Page Redesign | 0/TBD | Not started | - |
+| 2. Upload Page Redesign | 0/3 | Not started | - |
 | 3. Download Page Redesign & Dark Mode Complete | 0/TBD | Not started | - |
 | 4. Security, Reliability & Test Hardening | 0/TBD | Not started | - |
