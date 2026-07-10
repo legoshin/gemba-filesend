@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { CloudUpload, File, X } from "lucide-react";
+import { File, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
 
 interface FileDropzoneProps {
@@ -116,10 +117,10 @@ export function FileDropzone({
         onDragOver={handleDrag}
         onDrop={handleDrop}
         className={cn(
-          "relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors",
+          "relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-[var(--radius-lg)] border-2 border-dashed p-8 text-center transition-colors",
           isDragging
-            ? "border-primary bg-primary/5"
-            : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50"
+            ? "border-[var(--gemba-accent)] bg-[var(--gemba-accent-subdued)]"
+            : "border-[var(--border-default)] hover:border-[var(--gemba-accent)]/50"
         )}
       >
         <input
@@ -128,17 +129,19 @@ export function FileDropzone({
           onChange={handleFileSelect}
           className="sr-only"
         />
-        <CloudUpload
+        <Icon
           aria-hidden="true"
+          name="UploadCloud01"
+          size={40}
           className={cn(
-            "pointer-events-none mb-4 h-10 w-10",
-            isDragging ? "text-primary" : "text-muted-foreground"
+            "pointer-events-none mb-4",
+            isDragging ? "text-[var(--gemba-accent)]" : "text-[var(--icon-subdued)]"
           )}
         />
-        <p className="pointer-events-none text-sm font-medium">
+        <p className="gemba-body-strong pointer-events-none">
           {isDragging ? "Drop files here" : "Drag & drop files here"}
         </p>
-        <p className="pointer-events-none mt-1 text-xs text-muted-foreground">
+        <p className="gemba-body-sm pointer-events-none mt-1 text-[var(--text-subdued)]">
           or click to browse &middot; Max {maxSizeMb >= 1024 ? `${maxSizeMb / 1024} GB` : `${maxSizeMb} MB`} per file
         </p>
       </label>
