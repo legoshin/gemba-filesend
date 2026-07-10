@@ -1,0 +1,98 @@
+# Requirements: Gemba Filesend
+
+**Defined:** 2026-07-10
+**Core Value:** Anyone can share a file securely — encrypted end-to-end, no account, no friction — through a single link.
+
+## v1 Requirements
+
+Requirements for this milestone (redesign + hardening). Each maps to a roadmap phase.
+
+### Design Foundation
+
+- [ ] **DESIGN-01**: Gemba design tokens (`design-system/tokens/` + `styles.css`) are wired into the app via a single global import at the app root
+- [ ] **DESIGN-02**: App code uses the semantic token aliases (`--text-*`, `--surface-*`, `--border-*`, `--button-*`, radii, shadows, rings) instead of raw colour/spacing/shadow values
+- [ ] **DESIGN-03**: Public Sans is the app's default typeface and the Gemba type scale (H1–H5, body, small) is available via helper classes/tokens
+
+### Components
+
+- [ ] **COMP-01**: Button ranks (Primary, Secondary, Tertiary, Ghost — default/small/square) exist in the app's component layer per the design system
+- [ ] **COMP-02**: Form controls (Input, Checkbox, Radio, Toggle) match the design system
+- [ ] **COMP-03**: Chip/status component (ALL-CAPS label, signal colour on 8% tint) matches the design system
+- [ ] **COMP-04**: A single `Icon` wrapper renders Untitled UI stroke icons (`currentColor`); app UI icons use it — no emoji as UI icons
+- [ ] **COMP-05**: Card/surface recipe (white surface, 16px radius, inset-ring border + soft cool-grey shadow) is applied to card surfaces
+
+### Pages
+
+- [ ] **PAGE-01**: Home page is redesigned to the design system
+- [ ] **PAGE-02**: Upload page (dropzone, options, share link) is redesigned to the design system
+- [ ] **PAGE-03**: Download page (metadata, password entry, download/decrypt) is redesigned to the design system
+
+### Dark Mode
+
+- [ ] **DARK-01**: A dark-mode token layer is authored — every semantic alias resolves to a correct dark value
+- [ ] **DARK-02**: All pages and components render correctly in light, dark, and system themes via `next-themes`
+- [ ] **DARK-03**: Logos / brand mark swap to the correct asset per theme, verified on web, PWA, and Android TWA
+
+### Security
+
+- [ ] **SEC-01**: Security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options) are set on app responses
+- [ ] **SEC-02**: Per-IP rate limiting protects the upload and download endpoints (abuse + password brute-force)
+
+### Reliability
+
+- [ ] **REL-01**: The download-counter race is fixed — concurrent downloads cannot exceed the configured download limit
+
+### Testing
+
+- [ ] **TEST-01**: Unit tests cover the crypto encrypt/decrypt round-trip and packed format
+- [ ] **TEST-02**: Unit tests cover password hashing and validation
+- [ ] **TEST-03**: Tests cover download-counter decrement and limit enforcement, including the REL-01 race fix
+- [ ] **TEST-04**: Unit tests cover metadata serialization/validation
+
+## v2 Requirements
+
+Deferred to a future milestone. Tracked but not in this roadmap.
+
+### Crypto
+
+- **CRYP-01**: Migrate file encryption to AES-256-GCM (with re-encryption/version migration)
+- **CRYP-02**: Replace SHA-256 password hashing with PBKDF2/Argon2
+
+### Quality
+
+- **QUAL-01**: End-to-end (Playwright) tests for upload → share → download and password/expiry/limit flows
+- **QUAL-02**: Load/stress tests for concurrent uploads/downloads
+
+### Operations
+
+- **OPS-01**: Admin dashboard (stored files, manual delete, cleanup status)
+- **OPS-02**: Hosted privacy-policy page (Play Store requirement)
+- **OPS-03**: Abuse-reporting flow
+
+## Out of Scope
+
+Explicitly excluded for this milestone.
+
+| Feature | Reason |
+|---------|--------|
+| User accounts / authentication | Product is deliberately anonymous; sharing is link-based |
+| Marketing website redesign | Design system covers a website too, but this repo is the file-send app only |
+| Streaming/chunked encryption, larger presign TTL, cleanup indexing | Performance/scaling work; not required for redesign + core hardening |
+| AES-256 / PBKDF2 migration | Real value but needs a separate crypto-migration milestone (see v2) |
+
+## Traceability
+
+Which phases cover which requirements. Populated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| (pending roadmap) | — | Pending |
+
+**Coverage:**
+- v1 requirements: 18 total
+- Mapped to phases: 0 (pending roadmap)
+- Unmapped: 18 ⚠️
+
+---
+*Requirements defined: 2026-07-10*
+*Last updated: 2026-07-10 after initial definition*
