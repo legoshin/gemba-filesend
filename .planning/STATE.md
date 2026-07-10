@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-07-10T12:34:56.692Z"
+stopped_at: Completed 01-05-PLAN.md
+last_updated: "2026-07-10T12:42:39.944Z"
 last_activity: 2026-07-10 -- Phase 01 execution started
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 ## Current Position
 
 Phase: 01 (design-foundation-home-page) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-07-10 -- Phase 01 execution started
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-design-foundation-home-page P2 | ~15min | 2 tasks | 4 files |
 | Phase 01-design-foundation-home-page P3 | 20min | 3 tasks | 3 files |
 | Phase 01 P04 | 14min | 2 tasks | 4 files |
+| Phase 01 P05 | 12min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ Recent decisions affecting current work:
 - [Phase ?]: icon.tsx widens icon-data.js's TS-inferred literal-key type to Record<string, viewBox/body> so strict-mode indexing by name: string type-checks
 - [Phase ?]: No new npm deps for checkbox/radio-group — resolved via existing radix-ui meta-package; components.json/package.json unchanged
 - [Phase ?]: Task 1 blocking-human supply-chain checkpoint satisfied via documented verification steps under orchestrator-relayed user pre-authorization for this plan's network install
+- [Phase ?]: AppShell kept ThemeToggle in sidebar footer for desktop; top bar shows it only on mobile via a plain md:hidden wrapper div (theme-toggle.tsx not modified, no className prop)
+- [Phase ?]: Chose Home01/Upload01/Download01 Untitled UI glyphs for nav/tab icons, matching the numbered-variant convention already used by Sun/Moon01 in theme-toggle.tsx
 
 ### Pending Todos
 
@@ -92,6 +95,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-10T12:34:49.907Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-07-10T12:42:39.940Z
+Stopped at: Completed 01-05-PLAN.md
 Resume file: None
