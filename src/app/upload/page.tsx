@@ -1,15 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Check,
-  Copy,
-  Download,
-  File as FileIcon,
-  Link2,
-  Lock,
-  Timer,
-} from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { Chip } from "@/components/chip";
 import { Icon } from "@/components/icon";
 import { Separator } from "@/components/ui/separator";
@@ -416,8 +406,8 @@ export default function UploadPage() {
       {uploadState === "done" ? (
         <Card>
           <CardHeader className="text-center">
-            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-              <Check className="h-6 w-6 text-green-600 dark:text-green-400" />
+            <div className="mx-auto mb-2 flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--gemba-success-subdued)]">
+              <Icon name="Check" size={20} className="text-[var(--gemba-success)]" />
             </div>
             <CardTitle>
               {results.length === 1
@@ -434,10 +424,10 @@ export default function UploadPage() {
             <div className="space-y-3">
               {results.map((r, i) => (
                 <div key={r.shareLink} className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-sm">
-                    <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate font-medium">{r.fileName}</span>
-                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Icon name="File01" size={16} className="shrink-0 text-[var(--icon-subdued)]" />
+                    <span className="gemba-body-strong truncate">{r.fileName}</span>
+                    <span className="gemba-body-sm ml-auto shrink-0 text-[var(--text-subdued)]">
                       {formatSize(r.fileSize)}
                     </span>
                   </div>
@@ -448,15 +438,16 @@ export default function UploadPage() {
                       className="font-mono text-xs"
                     />
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="icon"
+                      aria-label="Copy link"
                       onClick={() => handleCopy(r.shareLink, i)}
                       className="shrink-0"
                     >
                       {copiedIndex === i ? (
-                        <Check className="h-4 w-4" />
+                        <Icon name="Check" size={16} />
                       ) : (
-                        <Copy className="h-4 w-4" />
+                        <Icon name="Copy01" size={16} />
                       )}
                     </Button>
                   </div>
@@ -466,33 +457,30 @@ export default function UploadPage() {
 
             <div className="flex flex-wrap gap-2">
               {usePassword && (
-                <Badge variant="secondary" className="gap-1">
-                  <Lock className="h-3 w-3" />
-                  Password Protected
-                </Badge>
+                <Chip variant="neutral" icon={<Icon name="Lock01" size={16} />}>
+                  PASSWORD PROTECTED
+                </Chip>
               )}
-              <Badge variant="secondary" className="gap-1">
-                <Download className="h-3 w-3" />
-                {downloadLimit} download{Number(downloadLimit) !== 1 ? "s" : ""}{" "}
-                each
-              </Badge>
-              <Badge variant="secondary" className="gap-1">
-                <Timer className="h-3 w-3" />
-                Expires in {expiryValue}{" "}
-                {Number(expiryValue) === 1
+              <Chip variant="neutral" icon={<Icon name="Download01" size={16} />}>
+                {downloadLimit} DOWNLOAD{Number(downloadLimit) !== 1 ? "S" : ""} EACH
+              </Chip>
+              <Chip variant="neutral" icon={<Icon name="Clock" size={16} />}>
+                EXPIRES IN {expiryValue}{" "}
+                {(Number(expiryValue) === 1
                   ? expiryUnit.slice(0, -1)
-                  : expiryUnit}
-              </Badge>
+                  : expiryUnit
+                ).toUpperCase()}
+              </Chip>
             </div>
 
             <Separator />
 
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={handleReset}>
+              <Button variant="secondary" className="flex-1" onClick={handleReset}>
                 Upload More
               </Button>
               <Button className="flex-1 gap-2" onClick={handleCopyAll}>
-                <Link2 className="h-4 w-4" />
+                <Icon name="Link02" size={20} />
                 {results.length > 1 ? "Copy All Links" : "Copy Link"}
               </Button>
             </div>
