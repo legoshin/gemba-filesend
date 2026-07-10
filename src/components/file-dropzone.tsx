@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { File, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icon";
@@ -151,24 +150,25 @@ export function FileDropzone({
           {files.map((file, index) => (
             <div
               key={`${file.name}-${index}`}
-              className="flex items-center gap-3 rounded-lg border bg-card p-3"
+              className="flex items-center gap-3 rounded-[var(--radius-md)] bg-[var(--surface-card)] p-3 shadow-[var(--ring-border)]"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
-                <File className="h-4 w-4 text-muted-foreground" />
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-subdued)]">
+                <Icon name="File01" size={16} className="text-[var(--icon-subdued)]" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{file.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="gemba-body-strong truncate">{file.name}</p>
+                <p className="gemba-body-sm text-[var(--text-subdued)]">
                   {formatSize(file.size)}
                 </p>
               </div>
               <Button
                 variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
+                size="icon-sm"
+                className="shrink-0"
+                aria-label={`Remove ${file.name}`}
                 onClick={() => removeFile(index)}
               >
-                <X className="h-4 w-4" />
+                <Icon name="XClose" size={16} />
               </Button>
             </div>
           ))}
