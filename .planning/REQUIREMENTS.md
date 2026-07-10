@@ -86,13 +86,35 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (pending roadmap) | — | Pending |
+| DESIGN-01 | Phase 1 | Pending |
+| DESIGN-02 | Phase 1 | Pending |
+| DESIGN-03 | Phase 1 | Pending |
+| COMP-01 | Phase 1 | Pending |
+| COMP-02 | Phase 1 | Pending |
+| COMP-03 | Phase 1 | Pending |
+| COMP-04 | Phase 1 | Pending |
+| COMP-05 | Phase 1 | Pending |
+| PAGE-01 | Phase 1 | Pending |
+| DARK-01 | Phase 1 | Pending |
+| DARK-03 | Phase 1 | Pending |
+| PAGE-02 | Phase 2 | Pending |
+| PAGE-03 | Phase 3 | Pending |
+| DARK-02 | Phase 3 | Pending |
+| SEC-01 | Phase 4 | Pending |
+| SEC-02 | Phase 4 | Pending |
+| REL-01 | Phase 4 | Pending |
+| TEST-01 | Phase 4 | Pending |
+| TEST-02 | Phase 4 | Pending |
+| TEST-03 | Phase 4 | Pending |
+| TEST-04 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 18 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 18 ⚠️
+- v1 requirements: 21 total
+- Mapped to phases: 21 (100%)
+- Unmapped: 0
+
+*Note: an earlier draft of this file undercounted the total as 18; the enumerated list above (3 DESIGN + 5 COMP + 3 PAGE + 3 DARK + 2 SEC + 1 REL + 4 TEST) is 21 — corrected during roadmap creation.*
 
 ---
 *Requirements defined: 2026-07-10*
-*Last updated: 2026-07-10 after initial definition*
+*Last updated: 2026-07-10 after roadmap creation*
