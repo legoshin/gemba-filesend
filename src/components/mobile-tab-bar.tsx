@@ -25,6 +25,7 @@ export function MobileTabBar() {
             key={tab.href}
             href={tab.href}
             aria-label={tab.label}
+            aria-current={active ? "page" : undefined}
             className={`flex flex-1 flex-col items-center justify-center gap-1 ${
               active ? "text-[var(--text-primary)]" : "text-[var(--text-subdued)]"
             }`}
