@@ -94,7 +94,18 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Every page (home, upload, download) and every shared component renders correctly under light, dark, and system theme settings via `next-themes` — no unstyled or mis-themed element remains anywhere in the app.
   4. Existing download functionality (metadata fetch, password validation, decryption, file download) continues to work unchanged after the redesign.
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Reskin the download page: all four states + D-01 handled error cards/inline password error + D-03 secure row (PAGE-03) [Wave 1]
+- [ ] 03-02-PLAN.md — 3-way light/dark/system theme control + Gemba dropdown-menu reskin (D-02, DARK-02) [Wave 1]
+- [ ] 03-03-PLAN.md — Fix the Public Sans production webfont drop in the root layout (DARK-02) [Wave 1]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-04-PLAN.md — DARK-02 completeness: build/source audit + blocking human light/dark/system sign-off (D-04) [Wave 2]
+
 **UI hint**: yes
 
 ### Phase 4: Security, Reliability & Test Hardening
@@ -121,5 +132,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Design Foundation & Home Page | 7/7 | Complete    | 2026-07-10 |
 | 2. Upload Page Redesign | 3/3 | Complete    | 2026-07-10 |
-| 3. Download Page Redesign & Dark Mode Complete | 0/TBD | Not started | - |
+| 3. Download Page Redesign & Dark Mode Complete | 0/4 | Planned | - |
 | 4. Security, Reliability & Test Hardening | 0/TBD | Not started | - |
