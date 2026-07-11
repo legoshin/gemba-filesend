@@ -46,6 +46,26 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
+function isMetaPayload(obj: unknown): obj is {
+  name: string;
+  type: string;
+  size: number;
+  passwordProtected: boolean;
+  downloadsRemaining: number;
+  expiresAt: number;
+} {
+  if (typeof obj !== "object" || obj === null) return false;
+  const o = obj as Record<string, unknown>;
+  return (
+    typeof o.name === "string" &&
+    typeof o.type === "string" &&
+    typeof o.size === "number" &&
+    typeof o.passwordProtected === "boolean" &&
+    typeof o.downloadsRemaining === "number" &&
+    typeof o.expiresAt === "number"
+  );
+}
+
 function formatExpiresIn(expiresAt: number): string {
   const ms = expiresAt - Date.now();
   if (ms <= 0) return "expired";
@@ -112,18 +132,17 @@ export default function DownloadPage() {
       return;
     }
 
-    let data: {
-      name: string;
-      type: string;
-      size: number;
-      passwordProtected: boolean;
-      downloadsRemaining: number;
-      expiresAt: number;
-    };
+    let data: unknown;
     try {
       data = await res.json();
     } catch {
       toast.error("Received an invalid response from the server");
+      return;
+    }
+
+    if (!isMetaPayload(data)) {
+      toast.error("Received an invalid response from the server");
+      setState("invalid-link");
       return;
     }
 
