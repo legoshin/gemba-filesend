@@ -84,9 +84,13 @@ async function enforce(
       status: 429,
       headers: { "Retry-After": String(retryAfterSeconds) },
     });
-  } catch {
-    // Fail OPEN: never surface Redis errors to the client, never block traffic
-    // on a limiter outage (no console per project convention).
+  } catch (err) {
+    // Fail OPEN: never surface Redis errors to the client, never block
+    // traffic on a limiter outage. Still log so a sustained Upstash outage
+    // that silently disables rate limiting (including the password
+    // brute-force guard) is observable (WR-01), matching the console.error
+    // precedent already used for SW registration failures.
+    console.error("rate-limit: enforce() failed, failing open", err);
     return null;
   }
 }
