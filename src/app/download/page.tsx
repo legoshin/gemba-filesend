@@ -112,7 +112,7 @@ export default function DownloadPage() {
       return;
     }
 
-    const data = (await res.json()) as {
+    let data: {
       name: string;
       type: string;
       size: number;
@@ -120,6 +120,12 @@ export default function DownloadPage() {
       downloadsRemaining: number;
       expiresAt: number;
     };
+    try {
+      data = await res.json();
+    } catch {
+      toast.error("Received an invalid response from the server");
+      return;
+    }
 
     setFileInfo({
       id,
