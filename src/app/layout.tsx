@@ -40,6 +40,31 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/*
+          Public Sans is loaded via a document-head <link> instead of the
+          fonts.css `@import` (design-system/tokens/fonts.css) because
+          Turbopack/Lightning CSS silently strips remote @import rules from
+          the production build, dropping the webfont in prod even though
+          `next dev` renders it correctly. This <link> is independent of
+          that CSS pipeline and survives `npm run build`.
+        */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font -- this
+            rule targets pages-router `_app.js`; here it's the App Router
+            root layout, which already applies to every page (equivalent to
+            `_document.js`), so the "only loads for a single page" warning
+            does not apply. */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&family=Inter:wght@400;500;600;700&display=swap"
+        />
+      </head>
       <body className="antialiased">
         <ThemeProvider
           attribute="class"
