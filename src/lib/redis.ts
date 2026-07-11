@@ -63,6 +63,12 @@ function counterKey(id: string): string {
 /**
  * Seed dl:{id} to the file's download limit with a TTL aligned to file expiry.
  * Called once at upload time (REL-01 seed, D-08).
+ *
+ * NX: only seed if absent. Vercel Blob may retry the onUploadCompleted
+ * webhook (standard webhook resilience) — an unconditional `set` on a retry
+ * would silently reset the counter back to the full limit after downloads
+ * have already started, defeating the exact over-issuing bug REL-01 exists
+ * to close (CR-01). A retried webhook call must be a no-op here.
  */
 export async function seedDownloadCounter(
   id: string,
@@ -70,7 +76,7 @@ export async function seedDownloadCounter(
   ttlSeconds: number,
   redis: RedisLike = getRedisClient(),
 ): Promise<void> {
-  await redis.set(counterKey(id), limit, { ex: ttlSeconds });
+  await redis.set(counterKey(id), limit, { nx: true, ex: ttlSeconds });
 }
 
 /**
