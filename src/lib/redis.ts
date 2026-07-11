@@ -81,10 +81,25 @@ export async function seedDownloadCounter(
 
 /**
  * Atomically decrement dl:{id} and return the post-decrement value. Performs a
- * race-safe NX self-heal first (only seeds when the key is absent — e.g. after
- * TTL/eviction) so a missing key can never silently under-count. The injectable
- * `redis` arg (last, optional) is what makes REL-01 hermetically testable with
- * an in-memory fake in Plan 04-03.
+ * race-safe NX self-heal first (only seeds when the key is absent) so a
+ * missing key can never silently under-count. The injectable `redis` arg
+ * (last, optional) is what makes REL-01 hermetically testable with an
+ * in-memory fake in Plan 04-03.
+ *
+ * WR-02 documented tradeoff: with CR-01's `seedDownloadCounter` now itself
+ * using `nx: true` at upload time, dl:{id} should already exist by the time
+ * any download reaches this function — the self-heal here exists only to
+ * cover the narrow race where a download request lands between
+ * `blobWriteMeta`/`fsWriteMeta` and the seed call in `onUploadCompleted`
+ * (metadata becomes readable slightly before Redis is seeded). It cannot
+ * distinguish that legitimate "not yet seeded" case from a genuinely
+ * mid-life eviction (e.g. Upstash under memory pressure) — in the eviction
+ * case, this reseeds to the full limit, silently over-counting rather than
+ * under-counting. Under-counting (refusing a legitimate download) is the
+ * safer failure mode for a security-relevant limit, but is not implemented
+ * here because there's no way to tell the two cases apart without
+ * additional state; this asymmetry is accepted as a known, low-probability
+ * residual risk rather than solved with unseeded speculative bookkeeping.
  */
 export async function decrementDownloadCounter(
   id: string,
