@@ -14,9 +14,9 @@ import { seedDownloadCounter } from "@/lib/redis";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MAX_DOWNLOADS = 100;
-const MAX_EXPIRY_MS = 365 * 24 * 3600_000;
-const MAX_BLOB_BYTES = 15 * 1024 ** 3; // 15 GiB
+export const MAX_DOWNLOADS = 100;
+export const MAX_EXPIRY_MS = 365 * 24 * 3600_000;
+export const MAX_BLOB_BYTES = 15 * 1024 ** 3; // 15 GiB
 
 interface ClientPayload {
   id: string;
@@ -38,7 +38,7 @@ interface UploadMetaPayload {
   expiresAt: number;
 }
 
-function validateClientMeta<T extends {
+export function validateClientMeta<T extends {
   name?: unknown;
   type?: unknown;
   size?: unknown;
