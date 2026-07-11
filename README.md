@@ -137,6 +137,24 @@ Once finished, you will see a **Download Complete** confirmation with the file n
 4. **Auto-deletion**: Files are deleted after the download limit is reached or the expiry time passes, whichever comes first.
 5. **No tracking**: No accounts, no cookies for tracking, no personal data collection.
 
+### Deployment Requirement: Trusted Proxy (Rate Limiting)
+
+Every rate limiter in this app (upload throttle, download throttle, and the
+password brute-force guard) keys its per-IP limits off the `x-forwarded-for`
+request header (see `src/lib/request-ip.ts`). **This header is only trustworthy
+if something in front of the app actually overwrites it with the real client
+IP** -- otherwise an attacker can bypass every rate limit simply by sending a
+different `x-forwarded-for` value on each request.
+
+- **Vercel**: Safe by default. Vercel's edge network sets and overwrites
+  `x-forwarded-for` for every request, so this is not spoofable in production.
+- **Docker / VPS / bare-metal**: Only safe if you deploy behind a reverse
+  proxy (nginx, Caddy, etc.) that is configured to strip/overwrite any
+  client-supplied `x-forwarded-for` before forwarding to the app -- see the
+  example nginx/Caddy configs in "Deploying to a VPS or Bare-Metal Server"
+  below. **If you run `next start` directly with no proxy in front of it, do
+  not rely on the rate limiters for protection.**
+
 ---
 
 ## Installation
