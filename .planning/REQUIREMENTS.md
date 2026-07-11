@@ -44,10 +44,10 @@ Requirements for this milestone (redesign + hardening). Each maps to a roadmap p
 
 ### Testing
 
-- [ ] **TEST-01**: Unit tests cover the crypto encrypt/decrypt round-trip and packed format
-- [ ] **TEST-02**: Unit tests cover password hashing and validation
-- [ ] **TEST-03**: Tests cover download-counter decrement and limit enforcement, including the REL-01 race fix
-- [ ] **TEST-04**: Unit tests cover metadata serialization/validation
+- [x] **TEST-01**: Unit tests cover the crypto encrypt/decrypt round-trip and packed format
+- [x] **TEST-02**: Unit tests cover password hashing and validation
+- [x] **TEST-03**: Tests cover download-counter decrement and limit enforcement, including the REL-01 race fix
+- [x] **TEST-04**: Unit tests cover metadata serialization/validation
 
 ## v2 Requirements
 
@@ -103,10 +103,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | SEC-01 | Phase 4 | Complete |
 | SEC-02 | Phase 4 | Complete |
 | REL-01 | Phase 4 | Complete |
-| TEST-01 | Phase 4 | Pending |
-| TEST-02 | Phase 4 | Pending |
-| TEST-03 | Phase 4 | Pending |
-| TEST-04 | Phase 4 | Pending |
+| TEST-01 | Phase 4 | Complete |
+| TEST-02 | Phase 4 | Complete |
+| TEST-03 | Phase 4 | Complete |
+| TEST-04 | Phase 4 | Complete |
 
 **Coverage:**
 

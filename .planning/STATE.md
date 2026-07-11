@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-07-11T20:00:00.000Z"
+status: verifying
+stopped_at: Completed 04-03-PLAN.md (TEST-01..04 Vitest suite, 27 passing)
+last_updated: "2026-07-11T20:12:54.553Z"
 last_activity: 2026-07-11 -- Completed Plan 04-02 (SEC-02 rate limiting + REL-01 atomic counter)
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 17
-  completed_plans: 16
-  percent: 79
+  completed_plans: 17
+  percent: 100
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 Phase: 04 (security-reliability-test-hardening) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-11 -- Completed Plan 04-02 (SEC-02 rate limiting + REL-01 atomic counter)
 
 Progress: [██████░░░░] 67%
@@ -69,6 +69,7 @@ Progress: [██████░░░░] 67%
 | Phase 03 P04 | 12min | 2 tasks | 1 files |
 | Phase 04 P01 | 8min | 1 tasks | 1 files |
 | Phase 04 P02 | ~18min | 2 tasks | 5 files |
+| Phase 04 P03 | 10min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-02: Rate limiters fail OPEN (availability) while the atomic download counter fails CLOSED (503 on Redis outage) — deliberate opposite policies so a Redis outage can never over-issue downloads past the limit
 - [Phase 04]: 04-02: Redis dl:{id} is the live download-counter authority (D-09); the decremented value is NOT written back to metadata (metadata keeps the original limit for display/expiry only); NX self-heal before DECR prevents a TTL-evicted key from under-counting
 - [Phase 04]: 04-02: Live Upstash verification (real 429 + real DECR/410) deferred to deploy by explicit user decision — creds not provisioned in this env; all code + build criteria satisfied, concurrency correctness proven by the hermetic fake in 04-03
+- [Phase ?]: 04-03: Vitest is the project's first test runner (D-11); vitest.config.ts adds a resolve.alias for @ to ./src because Vitest does not read tsconfig paths by default
+- [Phase ?]: 04-03: TEST-03 REL-01 concurrency regression uses a hermetic in-memory Redis fake injected via the counter's optional client arg (D-13); validateClientMeta + MAX_* bounds promoted to named exports (no logic change) so TEST-04 tests the real predicate
 
 ### Pending Todos
 
@@ -123,6 +126,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T20:00:00.000Z
-Stopped at: Completed 04-02-PLAN.md (SEC-02 + REL-01)
-Resume file: .planning/phases/04-security-reliability-test-hardening/04-03-PLAN.md
+Last session: 2026-07-11T20:12:54.549Z
+Stopped at: Completed 04-03-PLAN.md (TEST-01..04 Vitest suite, 27 passing)
+Resume file: None
