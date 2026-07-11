@@ -121,7 +121,16 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Concurrent download requests against a file with a configured download limit never exceed that limit — the counter race is fixed and verified by a concurrency test.
   4. Automated unit tests exist and pass for: the crypto encrypt/decrypt round-trip and packed format, password hashing/validation, download-counter decrement and limit enforcement (including the concurrency fix), and metadata serialization/validation.
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — SEC-01: enforced CSP + HSTS + X-Frame-Options + X-Content-Type-Options in next.config.ts (font-CDN/blob-CDN allowlist, T-03-07 carry-forward) [Wave 1]
+- [ ] 04-02-PLAN.md — SEC-02 + REL-01: shared Upstash Redis client, per-IP sliding-window rate limiting (429 + Retry-After), and atomic dl:{id} download counter replacing the read-modify-write race [Wave 1]
+
+**Wave 2** *(blocked on 04-02 completion)*
+
+- [ ] 04-03-PLAN.md — TEST-01..04: Vitest baseline + crypto round-trip/packed-format, password hash/validate, metadata validation, and the hermetic REL-01 counter/concurrency test [Wave 2]
 
 ## Progress
 
@@ -133,4 +142,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Design Foundation & Home Page | 7/7 | Complete    | 2026-07-10 |
 | 2. Upload Page Redesign | 3/3 | Complete    | 2026-07-10 |
 | 3. Download Page Redesign & Dark Mode Complete | 4/4 | Complete    | 2026-07-11 |
-| 4. Security, Reliability & Test Hardening | 0/TBD | Not started | - |
+| 4. Security, Reliability & Test Hardening | 0/3 | Planned | - |
