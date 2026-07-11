@@ -8,6 +8,7 @@ import {
 import { writeMeta as blobWriteMeta, blobPathnamePrefix } from "@/lib/blob-storage";
 import { getStorageMode, type StoredMeta } from "@/lib/storage";
 import { sha256Hex, randomSaltBase64 } from "@/lib/crypto";
+import { checkUploadLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -191,7 +192,19 @@ async function handleDirectUpload(req: NextRequest): Promise<NextResponse> {
   return NextResponse.json({ id });
 }
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
+/**
+ * Client IP from the first x-forwarded-for hop. On Vercel this header is set
+ * and overwritten at the edge with the real client IP, so it is not
+ * client-spoofable in production.
+ */
+function clientIp(req: NextRequest): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
+export async function POST(req: NextRequest): Promise<NextResponse | Response> {
+  const limited = await checkUploadLimit(clientIp(req));
+  if (limited) return limited;
+
   if (getStorageMode() === "blob") {
     return handleBlobUpload(req);
   }
