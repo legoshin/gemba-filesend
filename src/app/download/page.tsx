@@ -17,7 +17,14 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { decryptPacked, importKeyBase64 } from "@/lib/crypto";
 
-type DownloadState = "input" | "preview" | "downloading" | "done";
+type DownloadState =
+  | "input"
+  | "preview"
+  | "downloading"
+  | "done"
+  | "invalid-link"
+  | "file-not-found"
+  | "expired";
 
 interface FileInfo {
   id: string;
@@ -62,6 +69,7 @@ export default function DownloadPage() {
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("Downloading…");
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
+  const [hasPasswordError, setHasPasswordError] = useState(false);
 
   const fetchFileInfo = useCallback(async (shareLink: string) => {
     let id = "";
@@ -71,15 +79,15 @@ export default function DownloadPage() {
       id = url.searchParams.get("id") ?? "";
       keyBase64 = url.hash.replace(/^#/, "");
     } catch {
-      toast.error("Invalid share link");
+      setState("invalid-link");
       return;
     }
     if (!id) {
-      toast.error("No file ID found in link");
+      setState("invalid-link");
       return;
     }
     if (!keyBase64) {
-      toast.error("Missing decryption key in link fragment");
+      setState("invalid-link");
       return;
     }
 
@@ -92,10 +100,15 @@ export default function DownloadPage() {
     }
 
     if (!res.ok) {
-      if (res.status === 404) toast.error("File not found");
-      else if (res.status === 410)
-        toast.error("This file has expired or been fully downloaded");
-      else toast.error(`Failed to fetch file info (HTTP ${res.status})`);
+      if (res.status === 404) {
+        setState("file-not-found");
+        return;
+      }
+      if (res.status === 410) {
+        setState("expired");
+        return;
+      }
+      toast.error(`Failed to fetch file info (HTTP ${res.status})`);
       return;
     }
 
@@ -146,6 +159,9 @@ export default function DownloadPage() {
     setState("downloading");
     setProgress(0);
     setProgressLabel("Downloading…");
+    setHasPasswordError(false);
+
+    let isPasswordError = false;
 
     try {
       const headers: Record<string, string> = {};
@@ -162,6 +178,7 @@ export default function DownloadPage() {
       if (!authRes.ok) {
         const text = await authRes.text().catch(() => "");
         if (authRes.status === 401 || authRes.status === 403) {
+          isPasswordError = true;
           throw new Error("Incorrect password");
         }
         if (authRes.status === 404) throw new Error("File not found");
@@ -250,6 +267,10 @@ export default function DownloadPage() {
     } catch (err) {
       setState("preview");
       setProgress(0);
+      if (isPasswordError) {
+        setHasPasswordError(true);
+        return;
+      }
       toast.error(
         "Download failed: " +
           (err instanceof Error ? err.message : "Unknown error"),
@@ -264,6 +285,7 @@ export default function DownloadPage() {
     setProgress(0);
     setProgressLabel("Downloading…");
     setFileInfo(null);
+    setHasPasswordError(false);
   };
 
   return (
@@ -365,9 +387,24 @@ export default function DownloadPage() {
                     type="password"
                     placeholder="Enter the file password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    aria-invalid={hasPasswordError}
+                    className={
+                      hasPasswordError
+                        ? "shadow-[inset_0_0_0_1px_var(--gemba-critical),var(--shadow-field)]"
+                        : undefined
+                    }
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setHasPasswordError(false);
+                    }}
                     onKeyDown={(e) => e.key === "Enter" && handleDownload()}
                   />
+                  {hasPasswordError && (
+                    <p className="gemba-body-sm flex items-center gap-1 text-[var(--gemba-critical)]">
+                      <Icon name="AlertCircle" size={16} />
+                      Incorrect password — try again.
+                    </p>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -428,6 +465,84 @@ export default function DownloadPage() {
               </div>
               <Button variant="secondary" onClick={handleReset}>
                 Download another file
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {state === "invalid-link" && (
+        <Card>
+          <CardContent className="py-12">
+            <div className="mx-auto max-w-sm space-y-4 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-subdued)]">
+                <Icon
+                  name="LinkBroken02"
+                  size={24}
+                  className="text-[var(--icon-subdued)]"
+                />
+              </div>
+              <div>
+                <h3 className="gemba-h4">Invalid share link</h3>
+                <p className="gemba-body mt-1 text-[var(--text-subdued)]">
+                  This link doesn&apos;t look right — check that you copied
+                  the whole URL, including the part after the #.
+                </p>
+              </div>
+              <Button className="w-full" onClick={handleReset}>
+                Try another link
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {state === "file-not-found" && (
+        <Card>
+          <CardContent className="py-12">
+            <div className="mx-auto max-w-sm space-y-4 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-subdued)]">
+                <Icon
+                  name="SearchRefraction"
+                  size={24}
+                  className="text-[var(--icon-subdued)]"
+                />
+              </div>
+              <div>
+                <h3 className="gemba-h4">File not found</h3>
+                <p className="gemba-body mt-1 text-[var(--text-subdued)]">
+                  This file may have been removed, or the link may be
+                  incorrect.
+                </p>
+              </div>
+              <Button className="w-full" onClick={handleReset}>
+                Try another link
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {state === "expired" && (
+        <Card>
+          <CardContent className="py-12">
+            <div className="mx-auto max-w-sm space-y-4 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-[var(--radius-md)] bg-[var(--gemba-warning-subdued)]">
+                <Icon
+                  name="Clock"
+                  size={24}
+                  className="text-[var(--gemba-warning)]"
+                />
+              </div>
+              <div>
+                <h3 className="gemba-h4">Link expired</h3>
+                <p className="gemba-body mt-1 text-[var(--text-subdued)]">
+                  This file is no longer available — it&apos;s expired or
+                  reached its download limit.
+                </p>
+              </div>
+              <Button className="w-full" onClick={handleReset}>
+                Try another link
               </Button>
             </div>
           </CardContent>
