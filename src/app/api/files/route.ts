@@ -10,6 +10,7 @@ import { getStorageMode, type StoredMeta } from "@/lib/storage";
 import { sha256Hex, randomSaltBase64 } from "@/lib/crypto";
 import { checkUploadLimit } from "@/lib/rate-limit";
 import { seedDownloadCounter } from "@/lib/redis";
+import { clientIp } from "@/lib/request-ip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -207,15 +208,6 @@ async function handleDirectUpload(req: NextRequest): Promise<NextResponse> {
   await seedDownloadCounter(id, meta.downloadsRemaining, ttlSeconds);
 
   return NextResponse.json({ id });
-}
-
-/**
- * Client IP from the first x-forwarded-for hop. On Vercel this header is set
- * and overwritten at the edge with the real client IP, so it is not
- * client-spoofable in production.
- */
-function clientIp(req: NextRequest): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse | Response> {

@@ -19,6 +19,7 @@ import {
   checkPasswordAttemptLimit,
 } from "@/lib/rate-limit";
 import { decrementDownloadCounter } from "@/lib/redis";
+import { clientIp } from "@/lib/request-ip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -176,14 +177,6 @@ async function handleFsDownload(
       "cache-control": "no-store",
     },
   });
-}
-
-/**
- * Client IP from the first x-forwarded-for hop. Vercel overwrites this header
- * at the edge with the real client IP, so it is not client-spoofable in prod.
- */
-function clientIp(req: NextRequest): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 }
 
 export async function GET(
