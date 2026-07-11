@@ -36,11 +36,11 @@ Requirements for this milestone (redesign + hardening). Each maps to a roadmap p
 ### Security
 
 - [x] **SEC-01**: Security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options) are set on app responses
-- [ ] **SEC-02**: Per-IP rate limiting protects the upload and download endpoints (abuse + password brute-force)
+- [x] **SEC-02**: Per-IP rate limiting protects the upload and download endpoints (abuse + password brute-force)
 
 ### Reliability
 
-- [ ] **REL-01**: The download-counter race is fixed — concurrent downloads cannot exceed the configured download limit
+- [x] **REL-01**: The download-counter race is fixed — concurrent downloads cannot exceed the configured download limit
 
 ### Testing
 
@@ -101,8 +101,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | PAGE-03 | Phase 3 | Complete |
 | DARK-02 | Phase 3 | Complete |
 | SEC-01 | Phase 4 | Complete |
-| SEC-02 | Phase 4 | Pending |
-| REL-01 | Phase 4 | Pending |
+| SEC-02 | Phase 4 | Complete |
+| REL-01 | Phase 4 | Complete |
 | TEST-01 | Phase 4 | Pending |
 | TEST-02 | Phase 4 | Pending |
 | TEST-03 | Phase 4 | Pending |

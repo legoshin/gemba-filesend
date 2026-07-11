@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 context gathered
-last_updated: "2026-07-11T19:43:38.240Z"
-last_activity: 2026-07-11 -- Phase 04 execution started
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-07-11T20:00:00.000Z"
+last_activity: 2026-07-11 -- Completed Plan 04-02 (SEC-02 rate limiting + REL-01 atomic counter)
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 17
-  completed_plans: 15
-  percent: 75
+  completed_plans: 16
+  percent: 79
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 ## Current Position
 
 Phase: 04 (security-reliability-test-hardening) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
-Last activity: 2026-07-11 -- Phase 04 execution started
+Last activity: 2026-07-11 -- Completed Plan 04-02 (SEC-02 rate limiting + REL-01 atomic counter)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████░░░░] 67%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P03 | 6min | 1 tasks | 1 files |
 | Phase 03 P04 | 12min | 2 tasks | 1 files |
 | Phase 04 P01 | 8min | 1 tasks | 1 files |
+| Phase 04 P02 | ~18min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,10 @@ Recent decisions affecting current work:
 - [Phase 03]: Used a document-head <link> (preconnect + stylesheet) for Public Sans instead of next/font/google, since fonts.css's @import is stripped by Turbopack/Lightning CSS in production. — Preferred approach per plan (reuse-first, surgical); keeps the existing @theme Public Sans token chain as sole source of the font-family value; verified the font request survives npm run build across all prerendered pages.
 - [Phase 03]: 03-04: DARK-02 human sign-off APPROVED on Vercel preview commit f8416e4 (legoshin/lego@ge.mba) — all 8 completeness-bar surfaces pass in light/dark/system — Mobile tab bar top corners (mobile-tab-bar.tsx) found square during the sign-off sweep and fixed to rounded-t-[var(--radius-lg)] in commit f8416e4 before approval was given; reviewed build already includes the fix
 - [Phase 04]: Pragmatic enforced CSP (no nonce, no Report-Only) shipped per D-04; unsafe-inline accepted for next-themes/sw.js inline scripts, nonce hardening deferred to D-07
+- [Phase 04]: 04-02: ONE shared getRedisClient() serves both the rate limiter and the atomic download counter (D-10) — no second store; env-gated with an in-memory dev shim when Upstash creds are unset (mirrors getStorageMode())
+- [Phase 04]: 04-02: Rate limiters fail OPEN (availability) while the atomic download counter fails CLOSED (503 on Redis outage) — deliberate opposite policies so a Redis outage can never over-issue downloads past the limit
+- [Phase 04]: 04-02: Redis dl:{id} is the live download-counter authority (D-09); the decremented value is NOT written back to metadata (metadata keeps the original limit for display/expiry only); NX self-heal before DECR prevents a TTL-evicted key from under-counting
+- [Phase 04]: 04-02: Live Upstash verification (real 429 + real DECR/410) deferred to deploy by explicit user decision — creds not provisioned in this env; all code + build criteria satisfied, concurrency correctness proven by the hermetic fake in 04-03
 
 ### Pending Todos
 
@@ -118,6 +123,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T19:41:01.484Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-security-reliability-test-hardening/04-CONTEXT.md
+Last session: 2026-07-11T20:00:00.000Z
+Stopped at: Completed 04-02-PLAN.md (SEC-02 + REL-01)
+Resume file: .planning/phases/04-security-reliability-test-hardening/04-03-PLAN.md
