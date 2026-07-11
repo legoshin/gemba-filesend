@@ -52,8 +52,10 @@ async function handleBlobDownload(
     await blobDeleteEntry(meta);
     return new Response("exhausted", { status: 410 });
   }
-  const pwLimited = await checkPasswordAttemptLimit(id, ip);
-  if (pwLimited) return pwLimited;
+  if (meta.passwordHash) {
+    const pwLimited = await checkPasswordAttemptLimit(id, ip);
+    if (pwLimited) return pwLimited;
+  }
   const pwFail = await checkPassword(meta, req.headers.get("x-password"));
   if (pwFail) return pwFail;
   if (!meta.blobUrl) return new Response("blob missing", { status: 500 });
@@ -120,8 +122,10 @@ async function handleFsDownload(
     await fsDeleteEntry(id);
     return new Response("exhausted", { status: 410 });
   }
-  const pwLimited = await checkPasswordAttemptLimit(id, ip);
-  if (pwLimited) return pwLimited;
+  if (meta.passwordHash) {
+    const pwLimited = await checkPasswordAttemptLimit(id, ip);
+    if (pwLimited) return pwLimited;
+  }
   const pwFail = await checkPassword(meta, req.headers.get("x-password"));
   if (pwFail) return pwFail;
 
