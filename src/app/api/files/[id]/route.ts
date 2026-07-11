@@ -6,15 +6,18 @@ import {
   openBlobReadStream,
   readMeta as fsReadMeta,
   deleteEntry as fsDeleteEntry,
-  writeMeta as fsWriteMeta,
 } from "@/lib/server-storage";
 import {
   readMeta as blobReadMeta,
-  writeMeta as blobWriteMeta,
   deleteEntry as blobDeleteEntry,
 } from "@/lib/blob-storage";
 import { getStorageMode, type StoredMeta } from "@/lib/storage";
 import { sha256Hex } from "@/lib/crypto";
+import {
+  checkDownloadLimit,
+  checkPasswordAttemptLimit,
+} from "@/lib/rate-limit";
+import { decrementDownloadCounter } from "@/lib/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +40,7 @@ async function checkPassword(
 async function handleBlobDownload(
   req: NextRequest,
   id: string,
+  ip: string,
 ): Promise<Response> {
   const meta = await blobReadMeta(id);
   if (!meta) return new Response("not found", { status: 404 });
@@ -48,16 +52,31 @@ async function handleBlobDownload(
     await blobDeleteEntry(meta);
     return new Response("exhausted", { status: 410 });
   }
+  const pwLimited = await checkPasswordAttemptLimit(id, ip);
+  if (pwLimited) return pwLimited;
   const pwFail = await checkPassword(meta, req.headers.get("x-password"));
   if (pwFail) return pwFail;
   if (!meta.blobUrl) return new Response("blob missing", { status: 500 });
 
-  // Decrement first so concurrent requests see the lower count. The blob
-  // itself is left alone — actual cleanup happens on the next request that
-  // observes downloadsRemaining <= 0 (above), which means the just-issued
-  // presigned URL stays valid for its TTL window.
-  const remaining = meta.downloadsRemaining - 1;
-  await blobWriteMeta({ ...meta, downloadsRemaining: remaining });
+  // REL-01: atomic Redis DECR on dl:{id} replaces the old read-modify-write on
+  // metadata (race-free by construction, D-08). Redis is the live authority
+  // (D-09) — the decremented value is NOT written back to metadata. Fail CLOSED:
+  // if Redis is unreachable, refuse the download rather than risk over-issuing.
+  const ttlSeconds = Math.max(1, Math.ceil((meta.expiresAt - Date.now()) / 1000));
+  let remaining: number;
+  try {
+    remaining = await decrementDownloadCounter(
+      id,
+      meta.downloadsRemaining,
+      ttlSeconds,
+    );
+  } catch {
+    return new Response("counter unavailable", { status: 503 });
+  }
+  if (remaining < 0) {
+    await blobDeleteEntry(meta);
+    return new Response("exhausted", { status: 410 });
+  }
 
   // Mint a short-lived presigned URL the client can fetch directly from the
   // Blob CDN. Returning it in JSON rather than via 302 redirect avoids
@@ -89,6 +108,7 @@ async function handleBlobDownload(
 async function handleFsDownload(
   req: NextRequest,
   id: string,
+  ip: string,
 ): Promise<Response> {
   const meta = await fsReadMeta(id);
   if (!meta) return new Response("not found", { status: 404 });
@@ -100,14 +120,31 @@ async function handleFsDownload(
     await fsDeleteEntry(id);
     return new Response("exhausted", { status: 410 });
   }
+  const pwLimited = await checkPasswordAttemptLimit(id, ip);
+  if (pwLimited) return pwLimited;
   const pwFail = await checkPassword(meta, req.headers.get("x-password"));
   if (pwFail) return pwFail;
 
   const onDiskSize = await blobSize(id);
   if (onDiskSize == null) return new Response("not found", { status: 404 });
 
-  const remaining = meta.downloadsRemaining - 1;
-  await fsWriteMeta({ ...meta, downloadsRemaining: remaining });
+  // REL-01: atomic Redis DECR replaces the metadata read-modify-write (D-08);
+  // Redis is the live authority, not metadata (D-09). Fail CLOSED on outage.
+  const ttlSeconds = Math.max(1, Math.ceil((meta.expiresAt - Date.now()) / 1000));
+  let remaining: number;
+  try {
+    remaining = await decrementDownloadCounter(
+      id,
+      meta.downloadsRemaining,
+      ttlSeconds,
+    );
+  } catch {
+    return new Response("counter unavailable", { status: 503 });
+  }
+  if (remaining < 0) {
+    await fsDeleteEntry(id);
+    return new Response("exhausted", { status: 410 });
+  }
 
   const nodeStream = openBlobReadStream(id);
   if (remaining === 0) {
@@ -127,11 +164,22 @@ async function handleFsDownload(
   });
 }
 
+/**
+ * Client IP from the first x-forwarded-for hop. Vercel overwrites this header
+ * at the edge with the real client IP, so it is not client-spoofable in prod.
+ */
+function clientIp(req: NextRequest): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const { id } = await params;
-  if (getStorageMode() === "blob") return handleBlobDownload(req, id);
-  return handleFsDownload(req, id);
+  const ip = clientIp(req);
+  const dlLimited = await checkDownloadLimit(ip);
+  if (dlLimited) return dlLimited;
+  if (getStorageMode() === "blob") return handleBlobDownload(req, id, ip);
+  return handleFsDownload(req, id, ip);
 }

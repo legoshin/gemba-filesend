@@ -9,6 +9,7 @@ import { writeMeta as blobWriteMeta, blobPathnamePrefix } from "@/lib/blob-stora
 import { getStorageMode, type StoredMeta } from "@/lib/storage";
 import { sha256Hex, randomSaltBase64 } from "@/lib/crypto";
 import { checkUploadLimit } from "@/lib/rate-limit";
+import { seedDownloadCounter } from "@/lib/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -128,6 +129,17 @@ async function handleBlobUpload(req: NextRequest): Promise<NextResponse> {
           blobUrl: blob.url,
         };
         await blobWriteMeta(stored);
+        // REL-01: Redis is the live download-counter authority (D-09). Seed
+        // dl:{id} to the limit with a TTL aligned to file expiry (D-08).
+        const ttlSeconds = Math.max(
+          1,
+          Math.ceil((stored.expiresAt - Date.now()) / 1000),
+        );
+        await seedDownloadCounter(
+          stored.id,
+          stored.downloadsRemaining,
+          ttlSeconds,
+        );
       },
     });
 
@@ -188,6 +200,11 @@ async function handleDirectUpload(req: NextRequest): Promise<NextResponse> {
     expiresAt: meta.expiresAt,
     createdAt: Date.now(),
   });
+
+  // REL-01: seed the atomic download counter symmetrically with the blob path
+  // (dual-mode parity) — Redis is the live authority (D-08/D-09).
+  const ttlSeconds = Math.max(1, Math.ceil((meta.expiresAt - Date.now()) / 1000));
+  await seedDownloadCounter(id, meta.downloadsRemaining, ttlSeconds);
 
   return NextResponse.json({ id });
 }
