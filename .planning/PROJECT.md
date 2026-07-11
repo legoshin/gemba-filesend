@@ -24,6 +24,7 @@ Anyone can share a file securely — encrypted end-to-end, no account, no fricti
 - ✓ Android TWA shipped to Google Play (`mba.ge.filesend`) — existing
 - ✓ Theme scaffolding: `next-themes` + light/dark toggle, `gemba-logo.svg` + `gemba-logo-dark.svg` in `public/` — existing
 - ✓ Upload page redesigned to the Gemba design system (dropzone, share options, share-link result), theme-aware light/dark, reusing the Phase 1 component layer — Validated in Phase 2 (PAGE-02)
+- ✓ Download page redesigned to the Gemba design system (all states, error cards, secure row, inline password error); 3-way light/dark/system theme control; Public Sans production-font fix; full-app light/dark/system theming human-signed-off — Validated in Phase 3 (PAGE-03, DARK-02)
 
 ### Active
 
@@ -100,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-10 — Phase 2 complete (upload page redesigned to Gemba design system, theme-aware)*
+*Last updated: 2026-07-11 — Phase 3 complete (download page redesigned + full-app light/dark/system theming verified; DARK-02 human-signed-off)*
