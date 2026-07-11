@@ -6,7 +6,8 @@ import { Icon } from "@/components/icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -31,27 +32,20 @@ export function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
-          <Icon name="Sun" size={16} />
-          <span className={theme === "light" ? "gemba-body-strong" : "gemba-body"}>
-            Light
-          </span>
-          {theme === "light" && <Icon name="Check" size={16} className="ml-auto" />}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
-          <Icon name="Moon01" size={16} />
-          <span className={theme === "dark" ? "gemba-body-strong" : "gemba-body"}>
-            Dark
-          </span>
-          {theme === "dark" && <Icon name="Check" size={16} className="ml-auto" />}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
-          <Icon name="Monitor01" size={16} />
-          <span className={theme === "system" ? "gemba-body-strong" : "gemba-body"}>
-            System
-          </span>
-          {theme === "system" && <Icon name="Check" size={16} className="ml-auto" />}
-        </DropdownMenuItem>
+        <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+          <DropdownMenuRadioItem value="light">
+            <Icon name="Sun" size={16} />
+            <span className="gemba-body">Light</span>
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="dark">
+            <Icon name="Moon01" size={16} />
+            <span className="gemba-body">Dark</span>
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="system">
+            <Icon name="Monitor01" size={16} />
+            <span className="gemba-body">System</span>
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
