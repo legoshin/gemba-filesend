@@ -1,15 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  Check,
-  Download,
-  File,
-  Loader2,
-  Lock,
-  ShieldCheck,
-  Timer,
-} from "lucide-react";
+import { Icon } from "@/components/icon";
+import { Chip } from "@/components/chip";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,8 +14,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { decryptPacked, importKeyBase64 } from "@/lib/crypto";
 
@@ -278,7 +269,7 @@ export default function DownloadPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Download File</h1>
+        <h1 className="gemba-h2">Download File</h1>
         <p className="mt-2 text-muted-foreground">
           Paste a share link to download and decrypt your file.
         </p>
@@ -287,7 +278,7 @@ export default function DownloadPage() {
       {state === "input" && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Enter Share Link</CardTitle>
+            <CardTitle className="gemba-h4">Enter Share Link</CardTitle>
             <CardDescription>
               Paste the link you received to access the shared file.
             </CardDescription>
@@ -308,8 +299,8 @@ export default function DownloadPage() {
               disabled={!link.trim()}
               onClick={handleFetchInfo}
             >
-              <Download className="h-4 w-4" />
-              Fetch File Info
+              <Icon name="Download01" size={16} />
+              Fetch file info
             </Button>
           </CardContent>
         </Card>
@@ -319,75 +310,80 @@ export default function DownloadPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">File Details</CardTitle>
+              <CardTitle className="gemba-h4">File Details</CardTitle>
               <CardDescription>
                 Review file information before downloading.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-4 rounded-lg border bg-muted/30 p-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <File className="h-6 w-6 text-primary" />
+              <div className="flex items-center gap-4 rounded-[var(--radius-md)] bg-[var(--surface-card)] p-4 shadow-[var(--ring-border)]">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-subdued)]">
+                  <Icon name="File01" size={24} className="text-[var(--icon-subdued)]" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{fileInfo.name}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="gemba-body-strong truncate">{fileInfo.name}</p>
+                  <p className="gemba-body-sm text-[var(--text-subdued)]">
                     {fileInfo.size} &middot; {fileInfo.type}
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary" className="gap-1">
-                  <Download className="h-3 w-3" />
-                  {fileInfo.downloadsRemaining} downloads left
-                </Badge>
-                <Badge variant="secondary" className="gap-1">
-                  <Timer className="h-3 w-3" />
-                  Expires in {fileInfo.expiresIn}
-                </Badge>
+                <Chip variant="neutral" icon={<Icon name="Download01" size={16} />}>
+                  {fileInfo.downloadsRemaining} DOWNLOADS LEFT
+                </Chip>
+                <Chip variant="neutral" icon={<Icon name="Clock" size={16} />}>
+                  EXPIRES IN {fileInfo.expiresIn.toUpperCase()}
+                </Chip>
                 {fileInfo.passwordProtected && (
-                  <Badge variant="secondary" className="gap-1">
-                    <Lock className="h-3 w-3" />
-                    Password Required
-                  </Badge>
+                  <Chip variant="neutral" icon={<Icon name="Lock01" size={16} />}>
+                    PASSWORD REQUIRED
+                  </Chip>
                 )}
-                <Badge variant="outline" className="gap-1">
-                  <ShieldCheck className="h-3 w-3" />
-                  E2E Encrypted
-                </Badge>
+                <Chip variant="success" icon={<Icon name="ShieldTick" size={16} />}>
+                  E2E ENCRYPTED
+                </Chip>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-[var(--radius-md)] bg-[var(--gemba-success-subdued)] p-4">
+                <Icon
+                  name="ShieldTick"
+                  size={20}
+                  className="mt-0.5 shrink-0 text-[var(--gemba-success)]"
+                />
+                <p className="gemba-body-sm text-[var(--text-primary)]">
+                  End-to-end encrypted — decrypted in your browser; the key
+                  never reaches our server.
+                </p>
               </div>
 
               {fileInfo.passwordProtected && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter the file password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleDownload()}
-                    />
-                  </div>
-                </>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter the file password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleDownload()}
+                  />
+                </div>
               )}
             </CardContent>
           </Card>
 
           <div className="flex gap-3">
             <Button
-              variant="outline"
+              variant="secondary"
               className="flex-1"
               onClick={handleReset}
             >
               Cancel
             </Button>
             <Button className="flex-1 gap-2" onClick={handleDownload}>
-              <Download className="h-4 w-4" />
-              Download & Decrypt
+              <Icon name="Download01" size={16} />
+              Download and decrypt
             </Button>
           </div>
         </div>
@@ -397,15 +393,19 @@ export default function DownloadPage() {
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-4 text-center">
-              <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+              <Icon
+                name="Loading03"
+                size={32}
+                className="mx-auto animate-spin text-[var(--icon-primary)]"
+              />
               <div>
-                <p className="font-medium">{progressLabel}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="gemba-body-strong">{progressLabel}</p>
+                <p className="gemba-body-sm text-[var(--text-subdued)]">
                   {fileInfo?.name}
                 </p>
               </div>
               <Progress value={Math.min(progress, 100)} />
-              <p className="text-sm text-muted-foreground">
+              <p className="gemba-body-sm text-[var(--text-subdued)]">
                 {Math.min(Math.round(progress), 100)}%
               </p>
             </div>
@@ -417,17 +417,17 @@ export default function DownloadPage() {
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-6 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+              <div className="mx-auto flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--gemba-success-subdued)]">
+                <Icon name="Check" size={20} className="text-[var(--gemba-success)]" />
               </div>
               <div>
-                <h3 className="text-xl font-semibold">Download Complete</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <h3 className="gemba-h4">Download Complete</h3>
+                <p className="gemba-body-sm mt-1 text-[var(--text-subdued)]">
                   {fileInfo?.name} has been decrypted and saved.
                 </p>
               </div>
-              <Button variant="outline" onClick={handleReset}>
-                Download Another File
+              <Button variant="secondary" onClick={handleReset}>
+                Download another file
               </Button>
             </div>
           </CardContent>
