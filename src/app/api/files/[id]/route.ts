@@ -9,6 +9,7 @@ import {
 } from "@/lib/server-storage";
 import {
   readMeta as blobReadMeta,
+  writeMeta as blobWriteMeta,
   deleteEntry as blobDeleteEntry,
 } from "@/lib/blob-storage";
 import { getStorageMode, type StoredMeta } from "@/lib/storage";
@@ -78,6 +79,15 @@ async function handleBlobDownload(
   if (remaining < 0) {
     await blobDeleteEntry(meta);
     return new Response("exhausted", { status: 410 });
+  }
+  if (remaining === 0) {
+    // Last legitimate download: best-effort metadata write purely for cron
+    // visibility (CR-03). Redis stays authoritative for the allow/deny
+    // decision above — this does not reintroduce the read-modify-write race
+    // REL-01 removed. Without this, a blob-mode file downloaded exactly its
+    // configured number of times is never reaped by the cleanup cron and
+    // persists until natural expiry (up to 365 days).
+    await blobWriteMeta({ ...meta, downloadsRemaining: 0 });
   }
 
   // Mint a short-lived presigned URL the client can fetch directly from the
