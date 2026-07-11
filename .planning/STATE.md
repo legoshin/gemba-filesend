@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 4 context gathered
-last_updated: "2026-07-11T19:29:31.778Z"
-last_activity: 2026-07-11 -- Phase 04 planning complete
+last_updated: "2026-07-11T19:43:38.240Z"
+last_activity: 2026-07-11 -- Phase 04 execution started
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 17
+  completed_plans: 15
   percent: 75
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-10)
 
 **Core value:** Anyone can share a file securely — encrypted end-to-end, no account, no friction — through a single link.
-**Current focus:** Phase 03 — download-page-redesign-dark-mode-complete
+**Current focus:** Phase 04 — security-reliability-test-hardening
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
+Phase: 04 (security-reliability-test-hardening) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-07-11 -- Phase 04 planning complete
+Last activity: 2026-07-11 -- Phase 04 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -67,6 +67,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P02 | 10min | 2 tasks | 2 files |
 | Phase 03 P03 | 6min | 1 tasks | 1 files |
 | Phase 03 P04 | 12min | 2 tasks | 1 files |
+| Phase 04 P01 | 8min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,7 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-02: ThemeToggle reads theme (not resolvedTheme) from useTheme() — resolvedTheme always collapses to light/dark and can never represent 'system' as a distinct, re-selectable state
 - [Phase 03]: Used a document-head <link> (preconnect + stylesheet) for Public Sans instead of next/font/google, since fonts.css's @import is stripped by Turbopack/Lightning CSS in production. — Preferred approach per plan (reuse-first, surgical); keeps the existing @theme Public Sans token chain as sole source of the font-family value; verified the font request survives npm run build across all prerendered pages.
 - [Phase 03]: 03-04: DARK-02 human sign-off APPROVED on Vercel preview commit f8416e4 (legoshin/lego@ge.mba) — all 8 completeness-bar surfaces pass in light/dark/system — Mobile tab bar top corners (mobile-tab-bar.tsx) found square during the sign-off sweep and fixed to rounded-t-[var(--radius-lg)] in commit f8416e4 before approval was given; reviewed build already includes the fix
+- [Phase 04]: Pragmatic enforced CSP (no nonce, no Report-Only) shipped per D-04; unsafe-inline accepted for next-themes/sw.js inline scripts, nonce hardening deferred to D-07
 
 ### Pending Todos
 
@@ -116,6 +118,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T19:04:39.141Z
+Last session: 2026-07-11T19:41:01.484Z
 Stopped at: Phase 4 context gathered
 Resume file: .planning/phases/04-security-reliability-test-hardening/04-CONTEXT.md

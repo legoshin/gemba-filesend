@@ -125,7 +125,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — SEC-01: enforced CSP + HSTS + X-Frame-Options + X-Content-Type-Options in next.config.ts (font-CDN/blob-CDN allowlist, T-03-07 carry-forward) [Wave 1]
+- [x] 04-01-PLAN.md — SEC-01: enforced CSP + HSTS + X-Frame-Options + X-Content-Type-Options in next.config.ts (font-CDN/blob-CDN allowlist, T-03-07 carry-forward) [Wave 1]
 - [ ] 04-02-PLAN.md — SEC-02 + REL-01: shared Upstash Redis client, per-IP sliding-window rate limiting (429 + Retry-After), and atomic dl:{id} download counter replacing the read-modify-write race [Wave 1]
 
 **Wave 2** *(blocked on 04-02 completion)*
@@ -142,4 +142,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Design Foundation & Home Page | 7/7 | Complete    | 2026-07-10 |
 | 2. Upload Page Redesign | 3/3 | Complete    | 2026-07-10 |
 | 3. Download Page Redesign & Dark Mode Complete | 4/4 | Complete    | 2026-07-11 |
-| 4. Security, Reliability & Test Hardening | 0/3 | Planned | - |
+| 4. Security, Reliability & Test Hardening | 1/3 | In Progress|  |
