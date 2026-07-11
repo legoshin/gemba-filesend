@@ -30,7 +30,7 @@ Requirements for this milestone (redesign + hardening). Each maps to a roadmap p
 ### Dark Mode
 
 - [x] **DARK-01**: A dark-mode token layer is authored — every semantic alias resolves to a correct dark value
-- [ ] **DARK-02**: All pages and components render correctly in light, dark, and system themes via `next-themes`
+- [x] **DARK-02**: All pages and components render correctly in light, dark, and system themes via `next-themes`
 - [x] **DARK-03**: Logos / brand mark swap to the correct asset per theme, verified on web, PWA, and Android TWA
 
 ### Security
