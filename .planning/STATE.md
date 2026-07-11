@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-07-11T16:28:30.022Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-07-11T16:33:30.820Z"
 last_activity: 2026-07-11 -- Phase 03 execution started
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 12
   percent: 50
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 ## Current Position
 
 Phase: 03 (download-page-redesign-dark-mode-complete) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-11 -- Phase 03 execution started
 
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P02 | 14min | 2 tasks | 1 files |
 | Phase 02 P03 | 8min | 2 tasks | 0 files |
 | Phase 03 P01 | 6min | 2 tasks | 1 files |
+| Phase 03 P02 | 10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-01: DownloadState extended with invalid-link/file-not-found/expired literal states rather than a discriminated error field — Simplest option matching the file's existing four-state union pattern
 - [Phase 03]: 03-01: isPasswordError local boolean distinguishes 401/403 from other download failures in the shared catch block — Avoids string-matching the thrown Error's message while keeping the single try/catch structure intact
 - [Phase 03]: 03-01: Kept Loading03 spinner glyph (no Loading01 fallback needed) — Glyph reads correctly under CSS rotation; final visual confirmation deferred to the DARK-02 sign-off gate
+- [Phase 03]: 03-02: Scoped dropdown-menu reskin strictly to DropdownMenuContent + plain DropdownMenuItem — Checkbox/Radio/SubTrigger/SubContent variants are unused by the theme menu; PATTERNS.md explicitly scoped them out to avoid unnecessary lucide-icon migration work
+- [Phase 03]: 03-02: ThemeToggle reads theme (not resolvedTheme) from useTheme() — resolvedTheme always collapses to light/dark and can never represent 'system' as a distinct, re-selectable state
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T16:28:30.018Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-07-11T16:33:30.816Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None

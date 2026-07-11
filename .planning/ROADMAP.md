@@ -99,7 +99,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 1**
 
 - [x] 03-01-PLAN.md — Reskin the download page: all four states + D-01 handled error cards/inline password error + D-03 secure row (PAGE-03) [Wave 1]
-- [ ] 03-02-PLAN.md — 3-way light/dark/system theme control + Gemba dropdown-menu reskin (D-02, DARK-02) [Wave 1]
+- [x] 03-02-PLAN.md — 3-way light/dark/system theme control + Gemba dropdown-menu reskin (D-02, DARK-02) [Wave 1]
 - [ ] 03-03-PLAN.md — Fix the Public Sans production webfont drop in the root layout (DARK-02) [Wave 1]
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -132,5 +132,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Design Foundation & Home Page | 7/7 | Complete    | 2026-07-10 |
 | 2. Upload Page Redesign | 3/3 | Complete    | 2026-07-10 |
-| 3. Download Page Redesign & Dark Mode Complete | 1/4 | In Progress|  |
+| 3. Download Page Redesign & Dark Mode Complete | 2/4 | In Progress|  |
 | 4. Security, Reliability & Test Hardening | 0/TBD | Not started | - |
