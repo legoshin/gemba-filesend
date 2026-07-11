@@ -99,7 +99,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DARK-03 | Phase 1 | Complete |
 | PAGE-02 | Phase 2 | Complete |
 | PAGE-03 | Phase 3 | Complete |
-| DARK-02 | Phase 3 | In Progress |
+| DARK-02 | Phase 3 | Complete |
 | SEC-01 | Phase 4 | Pending |
 | SEC-02 | Phase 4 | Pending |
 | REL-01 | Phase 4 | Pending |
