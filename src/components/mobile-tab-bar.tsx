@@ -15,7 +15,7 @@ export function MobileTabBar() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 flex h-16 items-stretch bg-card pb-[env(safe-area-inset-bottom)] shadow-[var(--ring-border)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-50 flex h-16 items-stretch rounded-t-[var(--radius-lg)] bg-card pb-[env(safe-area-inset-bottom)] shadow-[var(--ring-border)] md:hidden"
       aria-label="Primary"
     >
       {tabs.map((tab) => {
