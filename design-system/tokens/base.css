@@ -1,0 +1,13 @@
+/* Minimal base reset for Gemba specimens and UI kits. */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: var(--link-color); text-decoration: none; }

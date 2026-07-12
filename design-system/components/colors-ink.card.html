@@ -1,0 +1,26 @@
+<!-- @dsCard group="Colors" viewport="700x180" name="Ink & neutrals" subtitle="The core grey ramp — text, surfaces, borders" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 20px; background: var(--surface-card); }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .sw { display: flex; flex-direction: column; gap: 6px; }
+  .chip { height: 64px; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(40,51,73,.08); }
+  .n { font: 700 12px/16px var(--font-sans); color: var(--text-primary); }
+  .h { font: 400 11px/14px var(--font-sans); color: var(--text-subdued); }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="sw"><div class="chip" style="background:var(--gemba-ink-900)"></div><span class="n">Ink 900</span><span class="h">#181D27</span></div>
+  <div class="sw"><div class="chip" style="background:var(--gemba-ink-800)"></div><span class="n">Ink 800 · primary</span><span class="h">#283349</span></div>
+  <div class="sw"><div class="chip" style="background:var(--gemba-ink-500)"></div><span class="n">Ink 500</span><span class="h">#697080</span></div>
+  <div class="sw"><div class="chip" style="background:var(--gemba-ink-400)"></div><span class="n">Ink 400</span><span class="h">#9499A4</span></div>
+  <div class="sw"><div class="chip" style="background:var(--gemba-border)"></div><span class="n">Border</span><span class="h">#E8EAED</span></div>
+  <div class="sw"><div class="chip" style="background:var(--gemba-surface-1)"></div><span class="n">Surface</span><span class="h">#F9FAFB</span></div>
+</div>
+</body>
+</html>

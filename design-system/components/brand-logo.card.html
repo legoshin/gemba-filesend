@@ -1,0 +1,25 @@
+<!-- @dsCard group="Brand" viewport="700x220" name="Logo & mark" subtitle="Gemba wordmark and the tri-fold mark" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 28px; background: var(--surface-card); display:flex; gap:40px; align-items:center; }
+  .panel { display:flex; flex-direction:column; gap:10px; align-items:center; }
+  .dark { background: var(--gemba-ink-800); border-radius: 16px; padding: 28px 36px; }
+  .lbl { font: 400 11px/16px var(--font-sans); color: var(--text-subdued); }
+  img { display:block; }
+</style>
+</head>
+<body>
+  <div class="panel">
+    <img src="../assets/gemba-logo-full.svg" alt="Gemba" style="height:40px" />
+    <span class="lbl">Full wordmark · on light</span>
+  </div>
+  <div class="panel">
+    <div class="dark"><img src="../assets/gemba-logo-full.svg" alt="Gemba" style="height:40px; filter: brightness(0) invert(1)" /></div>
+    <span class="lbl">Reversed · on ink</span>
+  </div>
+</body>
+</html>

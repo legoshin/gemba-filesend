@@ -1,0 +1,41 @@
+/* ============================================================
+   GEMBA — TYPOGRAPHY
+   Public Sans throughout. Scale transcribed from the Figma
+   Typography specimen. Chips use PT Root UI VF (substituted by
+   Public Sans — see readme.md).
+   ============================================================ */
+
+:root {
+  --font-sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-chip: "PT Root UI VF", "Public Sans", -apple-system, sans-serif;
+
+  /* Weights */
+  --fw-regular: 400;    /* @kind font */
+  --fw-medium: 500;     /* @kind font */
+  --fw-semibold: 600;   /* @kind font */
+  --fw-bold: 700;       /* @kind font */
+
+  /* ---- Type scale: font-size / line-height ----
+     Heading L1 .. L4, then body (Base/Emphasized × Default/Small),
+     and the chip micro-label. */
+  --text-h1-size: 40px;    --text-h1-lh: 48px;   /* Display / page hero */
+  --text-h2-size: 28px;    --text-h2-lh: 36px;
+  --text-h3-size: 24px;    --text-h3-lh: 32px;
+  --text-h4-size: 20px;    --text-h4-lh: 28px;
+  --text-h5-size: 16px;    --text-h5-lh: 24px;   /* smallest heading (bold) */
+
+  --text-body-size: 14px;      --text-body-lh: 20px;   /* Base/Default */
+  --text-body-sm-size: 12px;   --text-body-sm-lh: 16px; /* Base/Small */
+  --text-chip-size: 10px;      --text-chip-lh: 16px;    /* PT Root UI Bold */
+}
+
+/* Reusable type classes (optional helpers for specimens & kits) */
+.gemba-h1 { font-family: var(--font-sans); font-weight: var(--fw-bold); font-size: var(--text-h1-size); line-height: var(--text-h1-lh); color: var(--text-primary); }
+.gemba-h2 { font-family: var(--font-sans); font-weight: var(--fw-bold); font-size: var(--text-h2-size); line-height: var(--text-h2-lh); color: var(--text-primary); }
+.gemba-h3 { font-family: var(--font-sans); font-weight: var(--fw-bold); font-size: var(--text-h3-size); line-height: var(--text-h3-lh); color: var(--text-primary); }
+.gemba-h4 { font-family: var(--font-sans); font-weight: var(--fw-bold); font-size: var(--text-h4-size); line-height: var(--text-h4-lh); color: var(--text-primary); }
+.gemba-h5 { font-family: var(--font-sans); font-weight: var(--fw-bold); font-size: var(--text-h5-size); line-height: var(--text-h5-lh); color: var(--text-primary); }
+.gemba-body { font-family: var(--font-sans); font-weight: var(--fw-regular); font-size: var(--text-body-size); line-height: var(--text-body-lh); color: var(--text-primary); }
+.gemba-body-strong { font-family: var(--font-sans); font-weight: var(--fw-bold); font-size: var(--text-body-size); line-height: var(--text-body-lh); color: var(--text-primary); }
+.gemba-body-sm { font-family: var(--font-sans); font-weight: var(--fw-regular); font-size: var(--text-body-sm-size); line-height: var(--text-body-sm-lh); color: var(--text-subdued); }
+.gemba-chip-label { font-family: var(--font-chip); font-weight: var(--fw-bold); font-size: var(--text-chip-size); line-height: var(--text-chip-lh); letter-spacing: 0.02em; }

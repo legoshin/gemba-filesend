@@ -8,13 +8,16 @@ import {
 import { writeMeta as blobWriteMeta, blobPathnamePrefix } from "@/lib/blob-storage";
 import { getStorageMode, type StoredMeta } from "@/lib/storage";
 import { sha256Hex, randomSaltBase64 } from "@/lib/crypto";
+import { checkUploadLimit } from "@/lib/rate-limit";
+import { seedDownloadCounter } from "@/lib/redis";
+import { clientIp } from "@/lib/request-ip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MAX_DOWNLOADS = 100;
-const MAX_EXPIRY_MS = 365 * 24 * 3600_000;
-const MAX_BLOB_BYTES = 15 * 1024 ** 3; // 15 GiB
+export const MAX_DOWNLOADS = 100;
+export const MAX_EXPIRY_MS = 365 * 24 * 3600_000;
+export const MAX_BLOB_BYTES = 15 * 1024 ** 3; // 15 GiB
 
 interface ClientPayload {
   id: string;
@@ -36,7 +39,7 @@ interface UploadMetaPayload {
   expiresAt: number;
 }
 
-function validateClientMeta<T extends {
+export function validateClientMeta<T extends {
   name?: unknown;
   type?: unknown;
   size?: unknown;
@@ -127,6 +130,17 @@ async function handleBlobUpload(req: NextRequest): Promise<NextResponse> {
           blobUrl: blob.url,
         };
         await blobWriteMeta(stored);
+        // REL-01: Redis is the live download-counter authority (D-09). Seed
+        // dl:{id} to the limit with a TTL aligned to file expiry (D-08).
+        const ttlSeconds = Math.max(
+          1,
+          Math.ceil((stored.expiresAt - Date.now()) / 1000),
+        );
+        await seedDownloadCounter(
+          stored.id,
+          stored.downloadsRemaining,
+          ttlSeconds,
+        );
       },
     });
 
@@ -188,10 +202,18 @@ async function handleDirectUpload(req: NextRequest): Promise<NextResponse> {
     createdAt: Date.now(),
   });
 
+  // REL-01: seed the atomic download counter symmetrically with the blob path
+  // (dual-mode parity) — Redis is the live authority (D-08/D-09).
+  const ttlSeconds = Math.max(1, Math.ceil((meta.expiresAt - Date.now()) / 1000));
+  await seedDownloadCounter(id, meta.downloadsRemaining, ttlSeconds);
+
   return NextResponse.json({ id });
 }
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export async function POST(req: NextRequest): Promise<NextResponse | Response> {
+  const limited = await checkUploadLimit(clientIp(req));
+  if (limited) return limited;
+
   if (getStorageMode() === "blob") {
     return handleBlobUpload(req);
   }

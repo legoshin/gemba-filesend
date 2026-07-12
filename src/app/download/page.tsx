@@ -1,15 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  Check,
-  Download,
-  File,
-  Loader2,
-  Lock,
-  ShieldCheck,
-  Timer,
-} from "lucide-react";
+import { Icon } from "@/components/icon";
+import { Chip } from "@/components/chip";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,12 +14,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { decryptPacked, importKeyBase64 } from "@/lib/crypto";
 
-type DownloadState = "input" | "preview" | "downloading" | "done";
+type DownloadState =
+  | "input"
+  | "preview"
+  | "downloading"
+  | "done"
+  | "invalid-link"
+  | "file-not-found"
+  | "expired";
 
 interface FileInfo {
   id: string;
@@ -46,6 +44,26 @@ function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024 * 1024)
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function isMetaPayload(obj: unknown): obj is {
+  name: string;
+  type: string;
+  size: number;
+  passwordProtected: boolean;
+  downloadsRemaining: number;
+  expiresAt: number;
+} {
+  if (typeof obj !== "object" || obj === null) return false;
+  const o = obj as Record<string, unknown>;
+  return (
+    typeof o.name === "string" &&
+    typeof o.type === "string" &&
+    typeof o.size === "number" &&
+    typeof o.passwordProtected === "boolean" &&
+    typeof o.downloadsRemaining === "number" &&
+    typeof o.expiresAt === "number"
+  );
 }
 
 function formatExpiresIn(expiresAt: number): string {
@@ -71,6 +89,7 @@ export default function DownloadPage() {
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("Downloading…");
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
+  const [hasPasswordError, setHasPasswordError] = useState(false);
 
   const fetchFileInfo = useCallback(async (shareLink: string) => {
     let id = "";
@@ -80,15 +99,15 @@ export default function DownloadPage() {
       id = url.searchParams.get("id") ?? "";
       keyBase64 = url.hash.replace(/^#/, "");
     } catch {
-      toast.error("Invalid share link");
+      setState("invalid-link");
       return;
     }
     if (!id) {
-      toast.error("No file ID found in link");
+      setState("invalid-link");
       return;
     }
     if (!keyBase64) {
-      toast.error("Missing decryption key in link fragment");
+      setState("invalid-link");
       return;
     }
 
@@ -101,21 +120,31 @@ export default function DownloadPage() {
     }
 
     if (!res.ok) {
-      if (res.status === 404) toast.error("File not found");
-      else if (res.status === 410)
-        toast.error("This file has expired or been fully downloaded");
-      else toast.error(`Failed to fetch file info (HTTP ${res.status})`);
+      if (res.status === 404) {
+        setState("file-not-found");
+        return;
+      }
+      if (res.status === 410) {
+        setState("expired");
+        return;
+      }
+      toast.error(`Failed to fetch file info (HTTP ${res.status})`);
       return;
     }
 
-    const data = (await res.json()) as {
-      name: string;
-      type: string;
-      size: number;
-      passwordProtected: boolean;
-      downloadsRemaining: number;
-      expiresAt: number;
-    };
+    let data: unknown;
+    try {
+      data = await res.json();
+    } catch {
+      toast.error("Received an invalid response from the server");
+      return;
+    }
+
+    if (!isMetaPayload(data)) {
+      toast.error("Received an invalid response from the server");
+      setState("invalid-link");
+      return;
+    }
 
     setFileInfo({
       id,
@@ -155,6 +184,9 @@ export default function DownloadPage() {
     setState("downloading");
     setProgress(0);
     setProgressLabel("Downloading…");
+    setHasPasswordError(false);
+
+    let isPasswordError = false;
 
     try {
       const headers: Record<string, string> = {};
@@ -171,6 +203,7 @@ export default function DownloadPage() {
       if (!authRes.ok) {
         const text = await authRes.text().catch(() => "");
         if (authRes.status === 401 || authRes.status === 403) {
+          isPasswordError = true;
           throw new Error("Incorrect password");
         }
         if (authRes.status === 404) throw new Error("File not found");
@@ -259,6 +292,10 @@ export default function DownloadPage() {
     } catch (err) {
       setState("preview");
       setProgress(0);
+      if (isPasswordError) {
+        setHasPasswordError(true);
+        return;
+      }
       toast.error(
         "Download failed: " +
           (err instanceof Error ? err.message : "Unknown error"),
@@ -273,12 +310,13 @@ export default function DownloadPage() {
     setProgress(0);
     setProgressLabel("Downloading…");
     setFileInfo(null);
+    setHasPasswordError(false);
   };
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Download File</h1>
+        <h1 className="gemba-h2">Download File</h1>
         <p className="mt-2 text-muted-foreground">
           Paste a share link to download and decrypt your file.
         </p>
@@ -287,7 +325,7 @@ export default function DownloadPage() {
       {state === "input" && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Enter Share Link</CardTitle>
+            <CardTitle className="gemba-h4">Enter Share Link</CardTitle>
             <CardDescription>
               Paste the link you received to access the shared file.
             </CardDescription>
@@ -308,8 +346,8 @@ export default function DownloadPage() {
               disabled={!link.trim()}
               onClick={handleFetchInfo}
             >
-              <Download className="h-4 w-4" />
-              Fetch File Info
+              <Icon name="Download01" size={16} />
+              Fetch file info
             </Button>
           </CardContent>
         </Card>
@@ -319,75 +357,95 @@ export default function DownloadPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">File Details</CardTitle>
+              <CardTitle className="gemba-h4">File Details</CardTitle>
               <CardDescription>
                 Review file information before downloading.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-4 rounded-lg border bg-muted/30 p-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <File className="h-6 w-6 text-primary" />
+              <div className="flex items-center gap-4 rounded-[var(--radius-md)] bg-[var(--surface-card)] p-4 shadow-[var(--ring-border)]">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-subdued)]">
+                  <Icon name="File01" size={24} className="text-[var(--icon-subdued)]" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{fileInfo.name}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="gemba-body-strong truncate">{fileInfo.name}</p>
+                  <p className="gemba-body-sm text-[var(--text-subdued)]">
                     {fileInfo.size} &middot; {fileInfo.type}
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary" className="gap-1">
-                  <Download className="h-3 w-3" />
-                  {fileInfo.downloadsRemaining} downloads left
-                </Badge>
-                <Badge variant="secondary" className="gap-1">
-                  <Timer className="h-3 w-3" />
-                  Expires in {fileInfo.expiresIn}
-                </Badge>
+                <Chip variant="neutral" icon={<Icon name="Download01" size={16} />}>
+                  {fileInfo.downloadsRemaining} DOWNLOADS LEFT
+                </Chip>
+                <Chip variant="neutral" icon={<Icon name="Clock" size={16} />}>
+                  EXPIRES IN {fileInfo.expiresIn.toUpperCase()}
+                </Chip>
                 {fileInfo.passwordProtected && (
-                  <Badge variant="secondary" className="gap-1">
-                    <Lock className="h-3 w-3" />
-                    Password Required
-                  </Badge>
+                  <Chip variant="neutral" icon={<Icon name="Lock01" size={16} />}>
+                    PASSWORD REQUIRED
+                  </Chip>
                 )}
-                <Badge variant="outline" className="gap-1">
-                  <ShieldCheck className="h-3 w-3" />
-                  E2E Encrypted
-                </Badge>
+                <Chip variant="success" icon={<Icon name="ShieldTick" size={16} />}>
+                  E2E ENCRYPTED
+                </Chip>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-[var(--radius-md)] bg-[var(--gemba-success-subdued)] p-4">
+                <Icon
+                  name="ShieldTick"
+                  size={20}
+                  className="mt-0.5 shrink-0 text-[var(--gemba-success)]"
+                />
+                <p className="gemba-body-sm text-[var(--text-primary)]">
+                  End-to-end encrypted — decrypted in your browser; the key
+                  never reaches our server.
+                </p>
               </div>
 
               {fileInfo.passwordProtected && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter the file password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleDownload()}
-                    />
-                  </div>
-                </>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter the file password"
+                    value={password}
+                    aria-invalid={hasPasswordError}
+                    className={
+                      hasPasswordError
+                        ? "shadow-[inset_0_0_0_1px_var(--gemba-critical),var(--shadow-field)]"
+                        : undefined
+                    }
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setHasPasswordError(false);
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && handleDownload()}
+                  />
+                  {hasPasswordError && (
+                    <p className="gemba-body-sm flex items-center gap-1 text-[var(--gemba-critical)]">
+                      <Icon name="AlertCircle" size={16} />
+                      Incorrect password — try again.
+                    </p>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
 
           <div className="flex gap-3">
             <Button
-              variant="outline"
+              variant="secondary"
               className="flex-1"
               onClick={handleReset}
             >
               Cancel
             </Button>
             <Button className="flex-1 gap-2" onClick={handleDownload}>
-              <Download className="h-4 w-4" />
-              Download & Decrypt
+              <Icon name="Download01" size={16} />
+              Download and decrypt
             </Button>
           </div>
         </div>
@@ -397,15 +455,19 @@ export default function DownloadPage() {
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-4 text-center">
-              <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+              <Icon
+                name="Loading03"
+                size={32}
+                className="mx-auto animate-spin text-[var(--icon-primary)]"
+              />
               <div>
-                <p className="font-medium">{progressLabel}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="gemba-body-strong">{progressLabel}</p>
+                <p className="gemba-body-sm text-[var(--text-subdued)]">
                   {fileInfo?.name}
                 </p>
               </div>
               <Progress value={Math.min(progress, 100)} />
-              <p className="text-sm text-muted-foreground">
+              <p className="gemba-body-sm text-[var(--text-subdued)]">
                 {Math.min(Math.round(progress), 100)}%
               </p>
             </div>
@@ -417,17 +479,95 @@ export default function DownloadPage() {
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-6 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+              <div className="mx-auto flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--gemba-success-subdued)]">
+                <Icon name="Check" size={20} className="text-[var(--gemba-success)]" />
               </div>
               <div>
-                <h3 className="text-xl font-semibold">Download Complete</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <h3 className="gemba-h4">Download Complete</h3>
+                <p className="gemba-body-sm mt-1 text-[var(--text-subdued)]">
                   {fileInfo?.name} has been decrypted and saved.
                 </p>
               </div>
-              <Button variant="outline" onClick={handleReset}>
-                Download Another File
+              <Button variant="secondary" onClick={handleReset}>
+                Download another file
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {state === "invalid-link" && (
+        <Card>
+          <CardContent className="py-12">
+            <div className="mx-auto max-w-sm space-y-4 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-subdued)]">
+                <Icon
+                  name="LinkBroken02"
+                  size={24}
+                  className="text-[var(--icon-subdued)]"
+                />
+              </div>
+              <div>
+                <h3 className="gemba-h4">Invalid share link</h3>
+                <p className="gemba-body mt-1 text-[var(--text-subdued)]">
+                  This link doesn&apos;t look right — check that you copied
+                  the whole URL, including the part after the #.
+                </p>
+              </div>
+              <Button className="w-full" onClick={handleReset}>
+                Try another link
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {state === "file-not-found" && (
+        <Card>
+          <CardContent className="py-12">
+            <div className="mx-auto max-w-sm space-y-4 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-subdued)]">
+                <Icon
+                  name="SearchRefraction"
+                  size={24}
+                  className="text-[var(--icon-subdued)]"
+                />
+              </div>
+              <div>
+                <h3 className="gemba-h4">File not found</h3>
+                <p className="gemba-body mt-1 text-[var(--text-subdued)]">
+                  This file may have been removed, or the link may be
+                  incorrect.
+                </p>
+              </div>
+              <Button className="w-full" onClick={handleReset}>
+                Try another link
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {state === "expired" && (
+        <Card>
+          <CardContent className="py-12">
+            <div className="mx-auto max-w-sm space-y-4 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-[var(--radius-md)] bg-[var(--gemba-warning-subdued)]">
+                <Icon
+                  name="Clock"
+                  size={24}
+                  className="text-[var(--gemba-warning)]"
+                />
+              </div>
+              <div>
+                <h3 className="gemba-h4">Link expired</h3>
+                <p className="gemba-body mt-1 text-[var(--text-subdued)]">
+                  This file is no longer available — it&apos;s expired or
+                  reached its download limit.
+                </p>
+              </div>
+              <Button className="w-full" onClick={handleReset}>
+                Try another link
               </Button>
             </div>
           </CardContent>

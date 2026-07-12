@@ -1,0 +1,8 @@
+/* Gemba webfonts.
+   Public Sans — primary UI typeface (all headings, body, buttons, tables).
+   Inter — used for icon-library specimen headings in the source.
+   PT Root UI VF — used on chips/badges (10px bold). Not available on Google Fonts;
+   we substitute Public Sans as the nearest match. SUBSTITUTION — flagged in readme.md.
+   DT Flow — appears only as the raw token default family (10 uses); not shipped. */
+
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&family=Inter:wght@400;500;600;700&display=swap');

@@ -1,0 +1,62 @@
+/* ============================================================
+   GEMBA — COLOR SYSTEM
+   Base palette + semantic aliases. Values transcribed verbatim
+   from the Figma file (Design-System / Colors + Variables).
+   The raw Figma Variables live in components/core/fig-tokens.css;
+   this file layers named base + semantic tokens on top.
+   ============================================================ */
+
+:root {
+  /* ---- Base neutral ramp (the "ink" family) ---- */
+  --gemba-ink-900: rgb(24, 29, 39);      /* #181D27 deepest */
+  --gemba-ink-800: rgb(40, 51, 73);      /* #283349 PRIMARY — text, buttons, icons */
+  --gemba-ink-600: rgb(52, 73, 115);     /* #344973 */
+  --gemba-ink-500: rgb(105, 112, 128);   /* #697080 subdued 70 */
+  --gemba-ink-400: rgb(148, 153, 164);   /* #9499A4 subdued 50 */
+  --gemba-ink-300: rgb(201, 204, 209);   /* #C9CCD1 */
+  --gemba-border:  rgb(232, 234, 237);   /* #E8EAED hairline border */
+  --gemba-surface-2: rgb(243, 245, 246); /* #F3F5F6 subdued fill */
+  --gemba-surface-1: rgb(249, 250, 251); /* #F9FAFB app background */
+  --gemba-white:   rgb(255, 255, 255);
+
+  /* ---- Brand accent (the yellow mark) ---- */
+  --gemba-yellow: rgb(255, 218, 68);     /* #FFDA44 logo / brand highlight */
+
+  /* ---- Signal (status) ---- */
+  --gemba-accent:  rgb(32, 102, 230);    /* #2066E6 informational / links */
+  --gemba-success: rgb(32, 152, 46);     /* #20982E */
+  --gemba-warning: rgb(205, 140, 0);     /* #CD8C00 */
+  --gemba-critical: rgb(233, 94, 94);    /* #E95E5E */
+  --gemba-neutral-signal: rgb(105, 112, 128); /* #697080 */
+
+  --gemba-accent-subdued:  rgba(32, 102, 230, 0.08);
+  --gemba-success-subdued: rgba(32, 152, 46, 0.08);
+  --gemba-warning-subdued: rgba(205, 140, 0, 0.08);
+  --gemba-critical-subdued: rgba(233, 94, 94, 0.08);
+  --gemba-neutral-subdued: rgb(232, 234, 237);
+
+  /* ---- Semantic aliases (use these in product code) ---- */
+  --text-primary: var(--gemba-ink-800);
+  --text-subdued: var(--gemba-ink-500);
+  --text-subtle: var(--gemba-ink-400);
+  --text-on-dark: var(--gemba-white);
+
+  --icon-primary: var(--gemba-ink-800);
+  --icon-subdued: var(--gemba-ink-500);
+  --icon-subtle: var(--gemba-ink-400);
+
+  --surface-page: var(--gemba-surface-1);
+  --surface-card: var(--gemba-white);
+  --surface-subdued: var(--gemba-surface-2);
+  --surface-inverse: var(--gemba-ink-800);
+
+  --border-default: var(--gemba-border);
+  --border-strong: var(--gemba-ink-800);
+
+  --button-primary-bg: var(--gemba-ink-800);
+  --button-primary-fg: var(--gemba-white);
+  --button-emphasized-bg: var(--gemba-border);
+  --button-subdued-bg: var(--gemba-surface-2);
+
+  --link-color: var(--gemba-accent);
+}
