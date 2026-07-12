@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Native Mobile Apps
-status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-07-12T11:50:58.796Z"
+status: verifying
+stopped_at: "Completed 05-04-PLAN.md (Tasks 1-2; Task 3 checkpoint:human-verify pending)"
+last_updated: "2026-07-12T12:04:07.184Z"
 last_activity: 2026-07-12 -- Phase 05 execution started
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
-  percent: 0
+  completed_plans: 4
+  percent: 20
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-12)
 
 Phase: 05 (monorepo-expo-scaffold-crypto-interop-walking-skeleton) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-12 -- Phase 05 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -73,6 +73,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05 P01 | 25min | 2 tasks | 6 files |
 | Phase 05 P02 | 20min | 3 tasks | 18 files |
 | Phase 05 P03 | 25min | 3 tasks | 13 files |
+| Phase 05 P04 | 15min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Deleted apps/web/src/lib/crypto.ts outright (no shim) — all callers import @gemba/crypto directly, per the plan's acceptance criteria
 - [Phase ?]: New Architecture has no toggle on Expo SDK 57 (always-on); removed app.json newArchEnabled/jsEngine fields and expo-build-properties newArchEnabled options
 - [Phase ?]: apps/mobile pins its own typescript@6.0.3 (SDK 57 requirement), scoped independently of apps/web's typescript^5
+- [Phase ?]: Auth-tag concat/split lives entirely in crypto.native.ts (encryptRaw/decryptRaw), not the shared core (D-02b)
+- [Phase ?]: Native CryptoKey is a module-local opaque {raw: Uint8Array} type, not the DOM CryptoKey
+- [Phase ?]: eas.json development profile: added android.buildType apk for emulator-installable dev-client builds
 
 ### Pending Todos
 
@@ -137,6 +141,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-12T11:50:25.609Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-07-12T12:04:07.180Z
+Stopped at: Completed 05-04-PLAN.md (Tasks 1-2; Task 3 checkpoint:human-verify pending)
 Resume file: None
