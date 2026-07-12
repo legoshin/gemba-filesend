@@ -181,7 +181,7 @@ Decimal phases appear between their surrounding integers in numeric order. Phase
 
 **Wave 3** *(blocked on 05-02)*
 
-- [ ] 05-03-PLAN.md — Expo scaffold under gemba.filesend (dev-client + New Arch + expo-router) + supply-chain install gate + jest-expo core pre-check (APP-02; D-08/D-09) [Wave 3]
+- [x] 05-03-PLAN.md — Expo scaffold under gemba.filesend (dev-client + New Arch + expo-router) + supply-chain install gate + jest-expo core pre-check (APP-02; D-08/D-09) [Wave 3]
 
 **Wave 4** *(blocked on 05-03)*
 
@@ -255,7 +255,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. Upload Page Redesign | v1.0 | 3/3 | Complete | 2026-07-10 |
 | 3. Download Page Redesign & Dark Mode Complete | v1.0 | 4/4 | Complete | 2026-07-11 |
 | 4. Security, Reliability & Test Hardening | v1.0 | 3/3 | Complete | 2026-07-11 |
-| 5. Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton | v1.1 | 2/4 | In Progress|  |
+| 5. Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton | v1.1 | 3/4 | In Progress|  |
 | 6. Native Uploader Flow | v1.1 | 0/TBD | Not started | - |
 | 7. Native Downloader Flow | v1.1 | 0/TBD | Not started | - |
 | 8. Android Release | v1.1 | 0/TBD | Not started | - |

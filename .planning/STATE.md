@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: Native Mobile Apps
 status: executing
 stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-07-12T11:25:25.519Z"
+last_updated: "2026-07-12T11:50:58.796Z"
 last_activity: 2026-07-12 -- Phase 05 execution started
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-12)
 ## Current Position
 
 Phase: 05 (monorepo-expo-scaffold-crypto-interop-walking-skeleton) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-07-12 -- Phase 05 execution started
 
@@ -72,6 +72,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P03 | 10min | 3 tasks | 6 files |
 | Phase 05 P01 | 25min | 2 tasks | 6 files |
 | Phase 05 P02 | 20min | 3 tasks | 18 files |
+| Phase 05 P03 | 25min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 05-01: Vercel Root Directory change (D-07) deferred to deploy time per plan's own resume-signal text; flagged as required pre-production-deploy action
 - [Phase ?]: Split @gemba/crypto into encoding.ts (platform-free core) + crypto.ts (neutral fallback) + crypto.web.ts (Web Crypto adapter) to avoid a circular import between index.ts and the platform adapter, and so tsc/Node resolve './crypto' without bundler-level resolveExtensions config
 - [Phase ?]: Deleted apps/web/src/lib/crypto.ts outright (no shim) — all callers import @gemba/crypto directly, per the plan's acceptance criteria
+- [Phase ?]: New Architecture has no toggle on Expo SDK 57 (always-on); removed app.json newArchEnabled/jsEngine fields and expo-build-properties newArchEnabled options
+- [Phase ?]: apps/mobile pins its own typescript@6.0.3 (SDK 57 requirement), scoped independently of apps/web's typescript^5
 
 ### Pending Todos
 
@@ -134,6 +137,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-12T11:25:18.850Z
+Last session: 2026-07-12T11:50:25.609Z
 Stopped at: Completed 05-02-PLAN.md
 Resume file: None
