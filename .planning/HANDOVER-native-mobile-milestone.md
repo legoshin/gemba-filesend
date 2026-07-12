@@ -32,11 +32,19 @@ Recommended: **monorepo** — `apps/mobile` (Expo) alongside the Next app, shari
 - Uploader: `expo-document-picker` → encrypt → PUT/upload via existing API → share link (`expo-clipboard`/share sheet).
 - Downloader: parse link (key in fragment) → fetch ciphertext → decrypt → save via `expo-file-system` / `expo-sharing`.
 
+## App identifiers (user request: `gemba.filesend`)
+
+User asked to use **`gemba.filesend`** as the identifier for BOTH App Store (iOS bundle id) and Google Play (Android applicationId). Implications (CONFIRM in discuss-phase — identifiers are PERMANENT on both stores):
+- `gemba.filesend` ≠ the existing TWA package `mba.ge.filesend`. **A package id cannot be changed on an existing Play listing**, so using `gemba.filesend` means a **NEW Google Play listing** — the TWA is retired/separate, NOT updated in-place. Existing TWA users would install the new app rather than auto-update.
+- **Silver lining:** a brand-new package moots the earlier lost-keystore question — a new listing uses **Play App Signing** from day one with an EAS-managed upload key. No need to recover `android.keystore`.
+- **Format caveat:** `gemba.filesend` is 2-segment / forward-order, not reverse-DNS. It is technically valid (Android applicationId needs ≥2 letter-initial segments; Apple accepts it) but unconventional and permanent. Reverse-DNS alternatives if reconsidered: reuse `mba.ge.filesend` (Android only, keeps the TWA listing) or `app.gemba.filesend` / `ge.mba.filesend`.
+- **DECIDED (user, 2026-07-12): `gemba.filesend` for BOTH stores → new Google Play listing, the existing TWA (`mba.ge.filesend`) is retired/superseded.** Reverse-DNS + in-place-TWA alternatives were offered and NOT chosen. (Ids are permanent per store, so this is only re-openable before the first store submission.) Net effect: fresh Play App Signing, no keystore recovery needed; existing TWA users install the new app rather than auto-update.
+
 ## Android — publish native AAB to Google Play (REQUIRED)
 
 The user explicitly wants the **native app published to Google Play**, not just the PWA/TWA.
 
-- **Approach: replace the TWA in-place** under the SAME package `mba.ge.filesend` (versionCode ≥ 2). Existing users get a normal update (TWA → native). A new package = split listing (avoid).
+- **DECIDED: NEW listing under `gemba.filesend`** — fresh Play App Signing (EAS-managed upload key), existing TWA (`mba.ge.filesend`) retired. **The signing-continuity checklist below is MOOT** (no keystore recovery needed — new package). Kept only for historical reference.
 - **EAS Build** produces the signed AAB; `eas submit` can push to Play (needs a Google Play **service-account JSON**).
 - **BLOCKING DEPENDENCY — signing continuity (user checking):** to update the same listing, the new AAB must be signed acceptably:
   - If **Play App Signing** is ON → just need a registered upload key (EAS can manage). Easiest.
@@ -67,5 +75,5 @@ This is a NEW milestone — run it through GSD: `/gsd-new-milestone` → discuss
 
 ## Resume command (what to run after /clear)
 ```
-/gsd-new-milestone Native mobile apps (React Native + Expo) for iOS + Android — encrypted file uploader/downloader front-ends over the existing API. Read .planning/HANDOVER-native-mobile-milestone.md first for full context, decisions, and constraints.
+/gsd-new-milestone Native mobile apps (React Native + Expo) for iOS + Android — encrypted file uploader/downloader front-ends over the existing API, store identifier gemba.filesend for both. Read .planning/HANDOVER-native-mobile-milestone.md first for full context, decisions, and constraints.
 ```
