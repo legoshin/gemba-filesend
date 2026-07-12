@@ -8,6 +8,7 @@
     ".": {
       "react-native": "./src/index.ts",
       "default": "./src/index.ts"
-    }
+    },
+    "./vectors": "./src/vectors.ts"
   }
 }
