@@ -17,7 +17,7 @@ The walking skeleton and #1 risk. Native has no `crypto.subtle`; it must reprodu
 
 ### App Foundation
 
-- [ ] **APP-01**: Monorepo restructure — `apps/mobile` (Expo) coexists with the Next app; crypto/validation/types are single-sourced in a shared `packages/crypto` imported by both web and native
+- [x] **APP-01**: Monorepo restructure — `apps/mobile` (Expo) coexists with the Next app; crypto/validation/types are single-sourced in a shared `packages/crypto` imported by both web and native
 - [ ] **APP-02**: Expo app scaffold launches on the iOS simulator and Android emulator under app identifier `gemba.filesend`
 
 ### Uploader
@@ -98,7 +98,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | CRYPTO-01 | Phase 5 | Pending |
 | CRYPTO-02 | Phase 5 | Pending |
 | CRYPTO-03 | Phase 5 | Pending |
-| APP-01 | Phase 5 | Pending |
+| APP-01 | Phase 5 | Complete |
 | APP-02 | Phase 5 | Pending |
 | UP-01 | Phase 6 | Pending |
 | UP-02 | Phase 6 | Pending |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Native Mobile Apps
 status: executing
-stopped_at: Phase 5 context gathered
-last_updated: "2026-07-12T08:40:33.923Z"
-last_activity: 2026-07-12 — ROADMAP.md v1.1 created (Phases 5-9), 16/16 requirements mapped
+stopped_at: Phase 05 Plan 01 executed (Tasks 1-2 complete; Task 3 Vercel Root Directory change deferred to deploy time)
+last_updated: "2026-07-12T10:56:09.606Z"
+last_activity: 2026-07-12 -- Phase 05 execution started
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 4
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-12)
 
 **Core value:** Anyone can share a file securely — encrypted end-to-end, no account, no friction — through a single link.
-**Current focus:** Phase 5 — Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton
+**Current focus:** Phase 05 — monorepo-expo-scaffold-crypto-interop-walking-skeleton
 
 ## Current Position
 
-Phase: 5 of 9 (Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton) — 1st phase of v1.1
-Plan: — (not yet planned)
+Phase: 05 (monorepo-expo-scaffold-crypto-interop-walking-skeleton) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-12 — ROADMAP.md v1.1 created (Phases 5-9), 16/16 requirements mapped
+Last activity: 2026-07-12 -- Phase 05 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -70,6 +70,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P01 | 8min | 1 tasks | 1 files |
 | Phase 04 P02 | ~18min | 2 tasks | 5 files |
 | Phase 04 P03 | 10min | 3 tasks | 6 files |
+| Phase 05 P01 | 25min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 04-03: Vitest is the project's first test runner (D-11); vitest.config.ts adds a resolve.alias for @ to ./src because Vitest does not read tsconfig paths by default
 - [Phase ?]: 04-03: TEST-03 REL-01 concurrency regression uses a hermetic in-memory Redis fake injected via the counter's optional client arg (D-13); validateClientMeta + MAX_* bounds promoted to named exports (no logic change) so TEST-04 tests the real predicate
 - Roadmap (v1.1): 5 phases derived directly from HANDOVER hard-sequencing constraints — Phase 5 bundles the monorepo/Expo scaffold with the crypto-interop walking skeleton (APP-01/02, CRYPTO-01..03) and gates all screens; Phase 6 (uploader) and Phase 7 (downloader) sequenced after the gate passes; Phase 8 (Android) and Phase 9 (iOS) are the final release phases, each split into an automated EAS build success criterion and a separate human-gated store-submission criterion.
+- [Phase ?]: 05-01: Moved screenshots/, play-screenshots/, and root screenshot-*.png into apps/web alongside README.md/ANDROID.md which reference them (not explicitly listed in plan's file set)
+- [Phase ?]: 05-01: Pinned turbopack.root to the monorepo root in apps/web/next.config.ts to fix Turbopack root-inference walking into an unrelated ancestor directory post-relocation
+- [Phase ?]: 05-01: Vercel Root Directory change (D-07) deferred to deploy time per plan's own resume-signal text; flagged as required pre-production-deploy action
 
 ### Pending Todos
 
@@ -127,6 +131,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-12T07:40:00.824Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-monorepo-expo-scaffold-crypto-interop-walking-skeleton/05-CONTEXT.md
+Last session: 2026-07-12T10:56:09.601Z
+Stopped at: Phase 05 Plan 01 executed (Tasks 1-2 complete; Task 3 Vercel Root Directory change deferred to deploy time)
+Resume file: .planning/phases/05-monorepo-expo-scaffold-crypto-interop-walking-skeleton/05-02-PLAN.md
