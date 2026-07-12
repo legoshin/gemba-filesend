@@ -30,8 +30,27 @@ const nextConfig: NextConfig = {
   // lockfile. The root must be the monorepo root (not apps/web itself) —
   // npm workspaces hoists `next` and other deps to the root node_modules,
   // so Turbopack needs the wider root to resolve them.
+  // Workspace packages (@gemba/crypto, @gemba/shared) ship raw TypeScript
+  // source with no build step — Turbopack only transpiles the app's own
+  // files by default, so packages resolved from node_modules (even
+  // workspace-symlinked ones) need to be opted in explicitly.
+  transpilePackages: ["@gemba/crypto", "@gemba/shared"],
   turbopack: {
     root: path.join(__dirname, "../.."),
+    // Prefer .web.ts/.web.tsx so @gemba/crypto's platform-resolved adapter
+    // (crypto.web.ts) is picked over the neutral fallback — and so the
+    // native-only adapter (crypto.native.ts, 05-04) can NEVER be resolved
+    // into the web bundle (D-02).
+    resolveExtensions: [
+      ".web.ts",
+      ".web.tsx",
+      ".tsx",
+      ".ts",
+      ".jsx",
+      ".js",
+      ".mjs",
+      ".json",
+    ],
   },
   async headers() {
     return [

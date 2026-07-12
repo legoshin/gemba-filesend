@@ -7,17 +7,14 @@ import {
 } from "@/lib/server-storage";
 import { writeMeta as blobWriteMeta, blobPathnamePrefix } from "@/lib/blob-storage";
 import { getStorageMode, type StoredMeta } from "@/lib/storage";
-import { sha256Hex, randomSaltBase64 } from "@/lib/crypto";
+import { sha256Hex, randomSaltBase64 } from "@gemba/crypto";
+import { MAX_BLOB_BYTES, validateClientMeta } from "@gemba/shared";
 import { checkUploadLimit } from "@/lib/rate-limit";
 import { seedDownloadCounter } from "@/lib/redis";
 import { clientIp } from "@/lib/request-ip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-export const MAX_DOWNLOADS = 100;
-export const MAX_EXPIRY_MS = 365 * 24 * 3600_000;
-export const MAX_BLOB_BYTES = 15 * 1024 ** 3; // 15 GiB
 
 interface ClientPayload {
   id: string;
@@ -37,34 +34,6 @@ interface UploadMetaPayload {
   salt?: string;
   downloadsRemaining: number;
   expiresAt: number;
-}
-
-export function validateClientMeta<T extends {
-  name?: unknown;
-  type?: unknown;
-  size?: unknown;
-  downloadsRemaining?: unknown;
-  expiresAt?: unknown;
-}>(obj: T): obj is T & {
-  name: string;
-  type: string;
-  size: number;
-  downloadsRemaining: number;
-  expiresAt: number;
-} {
-  return (
-    typeof obj.name === "string" &&
-    typeof obj.type === "string" &&
-    typeof obj.size === "number" &&
-    obj.size > 0 &&
-    obj.size <= MAX_BLOB_BYTES &&
-    typeof obj.downloadsRemaining === "number" &&
-    obj.downloadsRemaining >= 1 &&
-    obj.downloadsRemaining <= MAX_DOWNLOADS &&
-    typeof obj.expiresAt === "number" &&
-    obj.expiresAt > Date.now() &&
-    obj.expiresAt <= Date.now() + MAX_EXPIRY_MS
-  );
 }
 
 async function handleBlobUpload(req: NextRequest): Promise<NextResponse> {

@@ -9,6 +9,19 @@ const config = defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Mirror next.config.ts's turbopack.resolveExtensions (05-02, D-02): Node-
+    // env Vitest must also prefer .web.ts so @gemba/crypto's web adapter is
+    // exercised, never a future native-only adapter.
+    extensions: [
+      ".web.ts",
+      ".web.tsx",
+      ".tsx",
+      ".ts",
+      ".jsx",
+      ".js",
+      ".mjs",
+      ".json",
+    ],
   },
   test: {
     environment: "node",

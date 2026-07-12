@@ -87,8 +87,8 @@ export function packPayload(
  * cannot contain a full IV.
  */
 export function unpackPayload(packed: ArrayBuffer): {
-  iv: Uint8Array;
-  ciphertext: Uint8Array;
+  iv: Uint8Array<ArrayBuffer>;
+  ciphertext: Uint8Array<ArrayBuffer>;
 } {
   if (packed.byteLength <= IV_BYTES) {
     throw new Error("payload too short");

@@ -56,7 +56,7 @@ export function randomSaltBase64(): string {
 export async function encryptPackedWithIv(
   data: ArrayBuffer,
   key: CryptoKey,
-  iv: Uint8Array,
+  iv: Uint8Array<ArrayBuffer>,
 ): Promise<Uint8Array<ArrayBuffer>> {
   const ciphertextWithTag = await encryptRaw(data, key, iv);
   return packPayload(iv, ciphertextWithTag);

@@ -4,7 +4,7 @@ import {
   MAX_DOWNLOADS,
   MAX_EXPIRY_MS,
   validateClientMeta,
-} from "@/app/api/files/route";
+} from "@gemba/shared";
 import type { StoredMeta } from "@/lib/storage";
 import {
   decrementDownloadCounter,

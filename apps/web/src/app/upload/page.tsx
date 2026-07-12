@@ -25,7 +25,7 @@ import {
   generateKey,
   randomSaltBase64,
   sha256Hex,
-} from "@/lib/crypto";
+} from "@gemba/crypto";
 
 type UploadState = "idle" | "preparing" | "uploading" | "done";
 type ExpiryUnit = "hours" | "days" | "months";

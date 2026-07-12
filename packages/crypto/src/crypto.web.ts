@@ -18,7 +18,9 @@ export async function generateKey(): Promise<CryptoKey> {
   );
 }
 
-export async function importKeyRaw(raw: Uint8Array): Promise<CryptoKey> {
+export async function importKeyRaw(
+  raw: Uint8Array<ArrayBuffer>,
+): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",
     raw,
@@ -28,7 +30,9 @@ export async function importKeyRaw(raw: Uint8Array): Promise<CryptoKey> {
   );
 }
 
-export async function exportKeyRaw(key: CryptoKey): Promise<Uint8Array> {
+export async function exportKeyRaw(
+  key: CryptoKey,
+): Promise<Uint8Array<ArrayBuffer>> {
   const raw = await crypto.subtle.exportKey("raw", key);
   return new Uint8Array(raw);
 }
@@ -37,8 +41,8 @@ export async function exportKeyRaw(key: CryptoKey): Promise<Uint8Array> {
 export async function encryptRaw(
   data: ArrayBuffer,
   key: CryptoKey,
-  iv: Uint8Array,
-): Promise<Uint8Array> {
+  iv: Uint8Array<ArrayBuffer>,
+): Promise<Uint8Array<ArrayBuffer>> {
   const ciphertext = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv },
     key,
@@ -49,9 +53,9 @@ export async function encryptRaw(
 
 /** Inverse of {@link encryptRaw}. Throws if the auth tag fails to verify. */
 export async function decryptRaw(
-  ciphertext: Uint8Array,
+  ciphertext: Uint8Array<ArrayBuffer>,
   key: CryptoKey,
-  iv: Uint8Array,
+  iv: Uint8Array<ArrayBuffer>,
 ): Promise<ArrayBuffer> {
   return crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
 }
@@ -65,6 +69,6 @@ export async function sha256Hex(input: string): Promise<string> {
 }
 
 /** CSPRNG bytes. All randomness (salts, IVs) routes through this. */
-export function getRandomBytes(n: number): Uint8Array {
+export function getRandomBytes(n: number): Uint8Array<ArrayBuffer> {
   return crypto.getRandomValues(new Uint8Array(n));
 }

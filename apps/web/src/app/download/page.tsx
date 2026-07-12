@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { decryptPacked, importKeyBase64 } from "@/lib/crypto";
+import { decryptPacked, importKeyBase64 } from "@gemba/crypto";
 
 type DownloadState =
   | "input"

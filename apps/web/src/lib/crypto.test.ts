@@ -5,7 +5,7 @@ import {
   generateKey,
   randomSaltBase64,
   sha256Hex,
-} from "@/lib/crypto";
+} from "@gemba/crypto";
 
 const IV_BYTES = 12;
 const GCM_TAG_BYTES = 16;

@@ -13,7 +13,7 @@ import {
   deleteEntry as blobDeleteEntry,
 } from "@/lib/blob-storage";
 import { getStorageMode, type StoredMeta } from "@/lib/storage";
-import { sha256Hex } from "@/lib/crypto";
+import { sha256Hex } from "@gemba/crypto";
 import {
   checkDownloadLimit,
   checkPasswordAttemptLimit,
