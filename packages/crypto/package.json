@@ -9,6 +9,9 @@
       "react-native": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./vectors": "./src/vectors.ts"
+    "./vectors": {
+      "react-native": "./src/vectors.ts",
+      "default": "./src/vectors.ts"
+    }
   }
 }
