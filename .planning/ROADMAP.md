@@ -169,7 +169,23 @@ Decimal phases appear between their surrounding integers in numeric order. Phase
   4. Native SHA-256 password hashing and Base64URL encoding match the web implementation exactly.
   5. An automated interop test proves a file encrypted on web decrypts on native and vice-versa — this must pass before any uploader/downloader work begins.
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+**Wave 1**
+
+- [ ] 05-01-PLAN.md — Monorepo restructure: npm workspaces + move Next app to apps/web (APP-01; D-06/D-07) [Wave 1]
+
+**Wave 2** *(blocked on 05-01)*
+
+- [ ] 05-02-PLAN.md — Shared @gemba/crypto + @gemba/shared, web adapter, golden-vector web byte-equality/cross-decrypt gate (APP-01, CRYPTO-01/02/03 web half; D-01/D-02/D-03/D-04) [Wave 2]
+
+**Wave 3** *(blocked on 05-02)*
+
+- [ ] 05-03-PLAN.md — Expo scaffold under gemba.filesend (dev-client + New Arch + expo-router) + supply-chain install gate + jest-expo core pre-check (APP-02; D-08/D-09) [Wave 3]
+
+**Wave 4** *(blocked on 05-03)*
+
+- [ ] 05-04-PLAN.md — Native crypto.native.ts (auth-tag concat/split) + on-device Maestro interop gate + manual round-trip (APP-02, CRYPTO-01/02/03 native half; D-02b/D-04/D-05) [Wave 4]
 
 ### Phase 6: Native Uploader Flow
 
@@ -239,7 +255,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. Upload Page Redesign | v1.0 | 3/3 | Complete | 2026-07-10 |
 | 3. Download Page Redesign & Dark Mode Complete | v1.0 | 4/4 | Complete | 2026-07-11 |
 | 4. Security, Reliability & Test Hardening | v1.0 | 3/3 | Complete | 2026-07-11 |
-| 5. Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton | v1.1 | 0/TBD | Not started | - |
+| 5. Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton | v1.1 | 0/4 | Planned | - |
 | 6. Native Uploader Flow | v1.1 | 0/TBD | Not started | - |
 | 7. Native Downloader Flow | v1.1 | 0/TBD | Not started | - |
 | 8. Android Release | v1.1 | 0/TBD | Not started | - |
