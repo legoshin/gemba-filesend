@@ -95,13 +95,28 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| _v1.1 requirements mapped during roadmap creation_ | — | Pending |
+| CRYPTO-01 | Phase 5 | Pending |
+| CRYPTO-02 | Phase 5 | Pending |
+| CRYPTO-03 | Phase 5 | Pending |
+| APP-01 | Phase 5 | Pending |
+| APP-02 | Phase 5 | Pending |
+| UP-01 | Phase 6 | Pending |
+| UP-02 | Phase 6 | Pending |
+| UP-03 | Phase 6 | Pending |
+| UP-04 | Phase 6 | Pending |
+| DL-01 | Phase 7 | Pending |
+| DL-02 | Phase 7 | Pending |
+| DL-03 | Phase 7 | Pending |
+| ANDROID-01 | Phase 8 | Pending |
+| ANDROID-02 | Phase 8 | Pending |
+| IOS-01 | Phase 9 | Pending |
+| IOS-02 | Phase 9 | Pending |
 
 **Coverage:**
 
 - v1.1 requirements: 16 total (3 CRYPTO + 2 APP + 4 UP + 3 DL + 2 ANDROID + 2 IOS)
-- Mapped to phases: filled by roadmapper
+- Mapped to phases: 16/16 ✓ (Phase 5: CRYPTO-01..03, APP-01..02 · Phase 6: UP-01..04 · Phase 7: DL-01..03 · Phase 8: ANDROID-01..02 · Phase 9: IOS-01..02)
 - v1.0 shipped: 21 requirements (Phases 1–4, complete)
 
 ---
-*Requirements defined: 2026-07-10 · v1.1 native-mobile requirements added: 2026-07-12*
+*Requirements defined: 2026-07-10 · v1.1 native-mobile requirements added: 2026-07-12 · v1.1 traceability mapped to Phases 5–9: 2026-07-12*

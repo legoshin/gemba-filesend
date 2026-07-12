@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Native Mobile Apps
 status: planning
-last_updated: "2026-07-12T06:59:59.149Z"
+last_updated: "2026-07-12T08:15:00.000Z"
 last_activity: 2026-07-12
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,19 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-10)
+See: .planning/PROJECT.md (updated 2026-07-12)
 
 **Core value:** Anyone can share a file securely — encrypted end-to-end, no account, no friction — through a single link.
-**Current focus:** Phase 04 — security-reliability-test-hardening
+**Current focus:** Phase 5 — Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-12 — Milestone v1.1 started
+Phase: 5 of 9 (Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton) — 1st phase of v1.1
+Plan: — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-07-12 — ROADMAP.md v1.1 created (Phases 5-9), 16/16 requirements mapped
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -102,6 +104,7 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-02: Live Upstash verification (real 429 + real DECR/410) deferred to deploy by explicit user decision — creds not provisioned in this env; all code + build criteria satisfied, concurrency correctness proven by the hermetic fake in 04-03
 - [Phase ?]: 04-03: Vitest is the project's first test runner (D-11); vitest.config.ts adds a resolve.alias for @ to ./src because Vitest does not read tsconfig paths by default
 - [Phase ?]: 04-03: TEST-03 REL-01 concurrency regression uses a hermetic in-memory Redis fake injected via the counter's optional client arg (D-13); validateClientMeta + MAX_* bounds promoted to named exports (no logic change) so TEST-04 tests the real predicate
+- Roadmap (v1.1): 5 phases derived directly from HANDOVER hard-sequencing constraints — Phase 5 bundles the monorepo/Expo scaffold with the crypto-interop walking skeleton (APP-01/02, CRYPTO-01..03) and gates all screens; Phase 6 (uploader) and Phase 7 (downloader) sequenced after the gate passes; Phase 8 (Android) and Phase 9 (iOS) are the final release phases, each split into an automated EAS build success criterion and a separate human-gated store-submission criterion.
 
 ### Pending Todos
 
@@ -123,6 +126,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T20:12:54.549Z
-Stopped at: Completed 04-03-PLAN.md (TEST-01..04 Vitest suite, 27 passing)
+Last session: 2026-07-12T08:15:00.000Z
+Stopped at: ROADMAP.md v1.1 created (Phases 5-9, 16/16 requirements mapped); REQUIREMENTS.md traceability filled
 Resume file: None
