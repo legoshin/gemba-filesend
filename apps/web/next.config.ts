@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 // Pragmatic, enforced Content-Security-Policy (not nonce-based, not
@@ -22,6 +23,16 @@ const cspDirectives = [
 ];
 
 const nextConfig: NextConfig = {
+  // Pin the workspace root explicitly (05-01 monorepo move): this app now
+  // lives at apps/web inside an npm-workspaces monorepo, so Turbopack's
+  // automatic lockfile-based root inference can walk past the repo root
+  // into an unrelated ancestor directory that happens to have its own
+  // lockfile. The root must be the monorepo root (not apps/web itself) —
+  // npm workspaces hoists `next` and other deps to the root node_modules,
+  // so Turbopack needs the wider root to resolve them.
+  turbopack: {
+    root: path.join(__dirname, "../.."),
+  },
   async headers() {
     return [
       {
