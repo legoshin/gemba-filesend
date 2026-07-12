@@ -18,13 +18,18 @@ const IV_BYTES = 12;
 const GCM_TAG_BYTES = 16;
 
 /**
- * jest-expo core-only pre-check (D-05 correction): unit-tests ONLY the
- * shared pure-TS core (Base64URL codec, [iv][ciphertext+tag] packing layout)
- * against the same frozen golden vectors apps/web/src/golden-vectors.test.ts
- * asserts against. This suite MUST NOT import react-native-quick-crypto or
- * crypto.native.ts — the real on-device native-module gate is Maestro in
- * 05-04, not this suite. Running under "jest-expo/node" (plain Node test
- * environment) confirms this never touches an RN native-module mock.
+ * jest-expo web/fallback-adapter pre-check (WR-01 correction): exercises
+ * @gemba/crypto against the same frozen golden vectors that
+ * apps/web/src/golden-vectors.test.ts asserts against. Test 1 covers the
+ * shared pure-TS core (Base64URL codec, [iv][ciphertext+tag] packing layout);
+ * tests 2 and 3 additionally drive real AES-GCM (importKeyBase64 /
+ * encryptPackedWithIv / decryptPacked) through the platform-resolved
+ * "./crypto" adapter, which — under jest.config.js's pinned .web.ts resolution
+ * — is crypto.web.ts (globalThis.crypto.subtle), NOT a pure-TS-only path.
+ * This suite MUST NOT import react-native-quick-crypto or crypto.native.ts —
+ * the real on-device native-module gate is Maestro in 05-04, not this suite.
+ * Running under "jest-expo/node" (plain Node test environment) with the
+ * .web.ts-first resolver confirms this never touches an RN native module.
  */
 describe("apps/mobile shared-core pre-check (D-05)", () => {
   it("toBase64Url/fromBase64Url round-trips arbitrary bytes", () => {
