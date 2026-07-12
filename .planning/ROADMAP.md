@@ -177,7 +177,7 @@ Decimal phases appear between their surrounding integers in numeric order. Phase
 
 **Wave 2** *(blocked on 05-01)*
 
-- [ ] 05-02-PLAN.md — Shared @gemba/crypto + @gemba/shared, web adapter, golden-vector web byte-equality/cross-decrypt gate (APP-01, CRYPTO-01/02/03 web half; D-01/D-02/D-03/D-04) [Wave 2]
+- [x] 05-02-PLAN.md — Shared @gemba/crypto + @gemba/shared, web adapter, golden-vector web byte-equality/cross-decrypt gate (APP-01, CRYPTO-01/02/03 web half; D-01/D-02/D-03/D-04) [Wave 2]
 
 **Wave 3** *(blocked on 05-02)*
 
@@ -255,7 +255,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. Upload Page Redesign | v1.0 | 3/3 | Complete | 2026-07-10 |
 | 3. Download Page Redesign & Dark Mode Complete | v1.0 | 4/4 | Complete | 2026-07-11 |
 | 4. Security, Reliability & Test Hardening | v1.0 | 3/3 | Complete | 2026-07-11 |
-| 5. Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton | v1.1 | 1/4 | In Progress|  |
+| 5. Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton | v1.1 | 2/4 | In Progress|  |
 | 6. Native Uploader Flow | v1.1 | 0/TBD | Not started | - |
 | 7. Native Downloader Flow | v1.1 | 0/TBD | Not started | - |
 | 8. Android Release | v1.1 | 0/TBD | Not started | - |

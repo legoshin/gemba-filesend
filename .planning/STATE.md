@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Native Mobile Apps
 status: executing
-stopped_at: Phase 05 Plan 01 executed (Tasks 1-2 complete; Task 3 Vercel Root Directory change deferred to deploy time)
-last_updated: "2026-07-12T10:56:09.606Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-07-12T11:25:25.519Z"
 last_activity: 2026-07-12 -- Phase 05 execution started
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-12)
 ## Current Position
 
 Phase: 05 (monorepo-expo-scaffold-crypto-interop-walking-skeleton) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-12 -- Phase 05 execution started
 
@@ -71,6 +71,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P02 | ~18min | 2 tasks | 5 files |
 | Phase 04 P03 | 10min | 3 tasks | 6 files |
 | Phase 05 P01 | 25min | 2 tasks | 6 files |
+| Phase 05 P02 | 20min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 05-01: Moved screenshots/, play-screenshots/, and root screenshot-*.png into apps/web alongside README.md/ANDROID.md which reference them (not explicitly listed in plan's file set)
 - [Phase ?]: 05-01: Pinned turbopack.root to the monorepo root in apps/web/next.config.ts to fix Turbopack root-inference walking into an unrelated ancestor directory post-relocation
 - [Phase ?]: 05-01: Vercel Root Directory change (D-07) deferred to deploy time per plan's own resume-signal text; flagged as required pre-production-deploy action
+- [Phase ?]: Split @gemba/crypto into encoding.ts (platform-free core) + crypto.ts (neutral fallback) + crypto.web.ts (Web Crypto adapter) to avoid a circular import between index.ts and the platform adapter, and so tsc/Node resolve './crypto' without bundler-level resolveExtensions config
+- [Phase ?]: Deleted apps/web/src/lib/crypto.ts outright (no shim) — all callers import @gemba/crypto directly, per the plan's acceptance criteria
 
 ### Pending Todos
 
@@ -131,6 +134,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-12T10:56:09.601Z
-Stopped at: Phase 05 Plan 01 executed (Tasks 1-2 complete; Task 3 Vercel Root Directory change deferred to deploy time)
-Resume file: .planning/phases/05-monorepo-expo-scaffold-crypto-interop-walking-skeleton/05-02-PLAN.md
+Last session: 2026-07-12T11:25:18.850Z
+Stopped at: Completed 05-02-PLAN.md
+Resume file: None
