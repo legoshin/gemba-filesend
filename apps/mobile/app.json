@@ -20,7 +20,7 @@
       "react-native-quick-crypto"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": false
     }
   }
 }
