@@ -11,14 +11,14 @@ Native iOS + Android apps (React Native + Expo) — thin uploader/downloader fro
 
 The walking skeleton and #1 risk. Native has no `crypto.subtle`; it must reproduce `src/lib/crypto.ts` exactly. Build and prove this **before any screen**.
 
-- [ ] **CRYPTO-01**: Native AES-128-GCM encrypt/decrypt reproduces the web packed (IV-prepended) format byte-for-byte via `react-native-quick-crypto`
-- [ ] **CRYPTO-02**: Native SHA-256 password hashing and Base64URL encoding match the web implementation exactly
-- [ ] **CRYPTO-03**: An automated interop test proves a file encrypted on web decrypts on native and vice-versa (walking-skeleton gate — no UI until this passes)
+- [x] **CRYPTO-01**: Native AES-128-GCM encrypt/decrypt reproduces the web packed (IV-prepended) format byte-for-byte via `react-native-quick-crypto`
+- [x] **CRYPTO-02**: Native SHA-256 password hashing and Base64URL encoding match the web implementation exactly
+- [x] **CRYPTO-03**: An automated interop test proves a file encrypted on web decrypts on native and vice-versa (walking-skeleton gate — no UI until this passes)
 
 ### App Foundation
 
 - [x] **APP-01**: Monorepo restructure — `apps/mobile` (Expo) coexists with the Next app; crypto/validation/types are single-sourced in a shared `packages/crypto` imported by both web and native
-- [ ] **APP-02**: Expo app scaffold launches on the iOS simulator and Android emulator under app identifier `gemba.filesend`
+- [x] **APP-02**: Expo app scaffold launches on the iOS simulator and Android emulator under app identifier `gemba.filesend`
 
 ### Uploader
 

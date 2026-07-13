@@ -30,7 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order. Phase
 
 **🚧 v1.1 Native Mobile Apps (in progress):**
 
-- [ ] **Phase 5: Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton** - Restructure as a monorepo, scaffold the Expo app, and prove byte-for-byte web↔native crypto parity — the #1 risk gate, closed before any screen is built
+- [x] **Phase 5: Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton** - Restructure as a monorepo, scaffold the Expo app, and prove byte-for-byte web↔native crypto parity — the #1 risk gate, closed before any screen is built (completed 2026-07-13)
 - [ ] **Phase 6: Native Uploader Flow** - Pick, encrypt in-app, upload via the existing API, and share the resulting link
 - [ ] **Phase 7: Native Downloader Flow** - Open a share link, decrypt in-app, and save/share the file
 - [ ] **Phase 8: Android Release** - EAS Build produces a signed AAB; new Google Play listing under `gemba.filesend` (submission human-gated)
@@ -255,7 +255,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. Upload Page Redesign | v1.0 | 3/3 | Complete | 2026-07-10 |
 | 3. Download Page Redesign & Dark Mode Complete | v1.0 | 4/4 | Complete | 2026-07-11 |
 | 4. Security, Reliability & Test Hardening | v1.0 | 3/3 | Complete | 2026-07-11 |
-| 5. Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton | v1.1 | 4/4 | Complete   | 2026-07-12 |
+| 5. Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton | v1.1 | 4/4 | Complete    | 2026-07-13 |
 | 6. Native Uploader Flow | v1.1 | 0/TBD | Not started | - |
 | 7. Native Downloader Flow | v1.1 | 0/TBD | Not started | - |
 | 8. Android Release | v1.1 | 0/TBD | Not started | - |
