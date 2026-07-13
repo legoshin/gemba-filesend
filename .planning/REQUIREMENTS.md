@@ -95,11 +95,11 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CRYPTO-01 | Phase 5 | Pending (on-device Maestro gate open — 05-04 Task 3) |
-| CRYPTO-02 | Phase 5 | Pending (on-device Maestro gate open — 05-04 Task 3) |
-| CRYPTO-03 | Phase 5 | Pending (on-device Maestro gate open — 05-04 Task 3) |
+| CRYPTO-01 | Phase 5 | Complete (iOS on-device VECTORS PASS 2026-07-13) |
+| CRYPTO-02 | Phase 5 | Complete (iOS on-device VECTORS PASS 2026-07-13) |
+| CRYPTO-03 | Phase 5 | Complete (iOS on-device VECTORS PASS 2026-07-13; Android + manual round-trip accepted-deferred to release phase per user) |
 | APP-01 | Phase 5 | Complete |
-| APP-02 | Phase 5 | Pending (on-device launch confirmation open — 05-04 Task 3) |
+| APP-02 | Phase 5 | Complete (native app launched on iOS Simulator under gemba.filesend) |
 | UP-01 | Phase 6 | Pending |
 | UP-02 | Phase 6 | Pending |
 | UP-03 | Phase 6 | Pending |
