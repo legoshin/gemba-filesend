@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-12)
 Phase: 6
 Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-07-13
+Last activity: 2026-09-08 - Completed quick task 260908-s9a: allow kyl.gemba.uk to frame send.gemba.uk
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -131,6 +131,12 @@ None yet.
 None currently open.
 
 Resolved: Public Sans webfont did not load in production build (Turbopack/Lightning CSS dropped the remote Google Fonts @import regardless of ordering) — fixed in 03-03 via a document-head <link rel="stylesheet"> in src/app/layout.tsx, independent of the CSS @import pipeline; confirmed present in the npm run build output for all prerendered pages. Final deployed-Vercel visual confirmation remains a Plan 04 DARK-02 sign-off checklist row.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260908-s9a | Allow kyl.gemba.uk to frame send.gemba.uk (CSP frame-ancestors allowlist; dropped deny-all X-Frame-Options) | 2026-09-08 | b88190f | [260908-s9a-allow-kyl-gemba-framing](./quick/260908-s9a-allow-kyl-gemba-framing/) |
 
 ## Deferred Items
 
