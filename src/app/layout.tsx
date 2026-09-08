@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppShell } from "@/components/app-shell";
+import { EmbedProvider } from "@/components/embed-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -72,7 +73,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AppShell>{children}</AppShell>
+          <EmbedProvider>
+            <AppShell>{children}</AppShell>
+          </EmbedProvider>
           <Toaster />
         </ThemeProvider>
         {/*
