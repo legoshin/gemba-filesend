@@ -35,6 +35,7 @@ interface FileInfo {
   downloadsRemaining: number;
   expiresIn: string;
   passwordProtected: boolean;
+  verifyRequired: boolean;
   keyBase64: string;
 }
 
@@ -51,6 +52,7 @@ function isMetaPayload(obj: unknown): obj is {
   type: string;
   size: number;
   passwordProtected: boolean;
+  verifyRequired: boolean;
   downloadsRemaining: number;
   expiresAt: number;
 } {
@@ -61,6 +63,7 @@ function isMetaPayload(obj: unknown): obj is {
     typeof o.type === "string" &&
     typeof o.size === "number" &&
     typeof o.passwordProtected === "boolean" &&
+    typeof o.verifyRequired === "boolean" &&
     typeof o.downloadsRemaining === "number" &&
     typeof o.expiresAt === "number"
   );
@@ -90,6 +93,14 @@ export default function DownloadPage() {
   const [progressLabel, setProgressLabel] = useState("Downloading…");
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
   const [hasPasswordError, setHasPasswordError] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState("");
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifyToken, setVerifyToken] = useState("");
+  const [verifyStep, setVerifyStep] = useState<
+    "idle" | "code-sent" | "verified"
+  >("idle");
+  const [hasVerifyCodeError, setHasVerifyCodeError] = useState(false);
+  const [verifyBusy, setVerifyBusy] = useState(false);
 
   const fetchFileInfo = useCallback(async (shareLink: string) => {
     let id = "";
@@ -155,6 +166,7 @@ export default function DownloadPage() {
       downloadsRemaining: data.downloadsRemaining,
       expiresIn: formatExpiresIn(data.expiresAt),
       passwordProtected: data.passwordProtected,
+      verifyRequired: data.verifyRequired,
       keyBase64,
     });
     setState("preview");
@@ -163,6 +175,61 @@ export default function DownloadPage() {
   const handleFetchInfo = () => {
     if (!link.trim()) return;
     void fetchFileInfo(link);
+  };
+
+  const handleRequestCode = async () => {
+    if (!fileInfo || !verifyEmail.trim() || verifyBusy) return;
+    setVerifyBusy(true);
+    try {
+      const res = await fetch(
+        `/api/files/${encodeURIComponent(fileInfo.id)}/request-code`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email: verifyEmail.trim() }),
+        },
+      );
+      if (!res.ok) {
+        toast.error("Couldn't send a verification code — try again");
+        return;
+      }
+      setVerifyStep("code-sent");
+      toast.success("If that address is on the list, a code is on its way");
+    } catch {
+      toast.error("Network error requesting a verification code");
+    } finally {
+      setVerifyBusy(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!fileInfo || verifyCode.length !== 6 || verifyBusy) return;
+    setVerifyBusy(true);
+    setHasVerifyCodeError(false);
+    try {
+      const res = await fetch(
+        `/api/files/${encodeURIComponent(fileInfo.id)}/verify-code`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ code: verifyCode }),
+        },
+      );
+      const data = (await res.json().catch(() => null)) as {
+        verified?: boolean;
+        token?: string;
+      } | null;
+      if (res.ok && data?.verified && data.token) {
+        setVerifyToken(data.token);
+        setVerifyStep("verified");
+        return;
+      }
+      setHasVerifyCodeError(true);
+    } catch {
+      toast.error("Network error verifying the code");
+    } finally {
+      setVerifyBusy(false);
+    }
   };
 
   useEffect(() => {
@@ -180,6 +247,10 @@ export default function DownloadPage() {
       toast.error("Please enter the password to download");
       return;
     }
+    if (fileInfo.verifyRequired && !verifyToken) {
+      toast.error("Please verify your email to download");
+      return;
+    }
 
     setState("downloading");
     setProgress(0);
@@ -187,10 +258,12 @@ export default function DownloadPage() {
     setHasPasswordError(false);
 
     let isPasswordError = false;
+    let isVerifyError = false;
 
     try {
       const headers: Record<string, string> = {};
       if (fileInfo.passwordProtected) headers["x-password"] = password;
+      if (fileInfo.verifyRequired) headers["x-verify-token"] = verifyToken;
 
       // Step 1: ask our API for a presigned download URL. The function
       // enforces password + counter checks and returns { url } pointing at
@@ -203,6 +276,14 @@ export default function DownloadPage() {
       if (!authRes.ok) {
         const text = await authRes.text().catch(() => "");
         if (authRes.status === 401 || authRes.status === 403) {
+          // The verification gate runs before the password gate server-side
+          // (checkVerification before checkPassword), and its response body
+          // says "verification" — distinguish so the right inline error (and
+          // reset) fires instead of a misleading "incorrect password".
+          if (fileInfo.verifyRequired && /verif/i.test(text)) {
+            isVerifyError = true;
+            throw new Error("Verification required or expired");
+          }
           isPasswordError = true;
           throw new Error("Incorrect password");
         }
@@ -296,6 +377,14 @@ export default function DownloadPage() {
         setHasPasswordError(true);
         return;
       }
+      if (isVerifyError) {
+        setVerifyToken("");
+        setVerifyStep("idle");
+        setVerifyCode("");
+        setHasVerifyCodeError(false);
+        toast.error("Verification expired — request a new code");
+        return;
+      }
       toast.error(
         "Download failed: " +
           (err instanceof Error ? err.message : "Unknown error"),
@@ -311,6 +400,11 @@ export default function DownloadPage() {
     setProgressLabel("Downloading…");
     setFileInfo(null);
     setHasPasswordError(false);
+    setVerifyEmail("");
+    setVerifyCode("");
+    setVerifyToken("");
+    setVerifyStep("idle");
+    setHasVerifyCodeError(false);
   };
 
   return (
@@ -387,6 +481,16 @@ export default function DownloadPage() {
                     PASSWORD REQUIRED
                   </Chip>
                 )}
+                {fileInfo.verifyRequired &&
+                  (verifyStep === "verified" ? (
+                    <Chip variant="success" icon={<Icon name="Check" size={16} />}>
+                      RECIPIENT VERIFIED
+                    </Chip>
+                  ) : (
+                    <Chip variant="neutral" icon={<Icon name="Mail01" size={16} />}>
+                      VERIFICATION REQUIRED
+                    </Chip>
+                  ))}
                 <Chip variant="success" icon={<Icon name="ShieldTick" size={16} />}>
                   E2E ENCRYPTED
                 </Chip>
@@ -403,6 +507,85 @@ export default function DownloadPage() {
                   never reaches our server.
                 </p>
               </div>
+
+              {fileInfo.verifyRequired && verifyStep !== "verified" && (
+                <div className="space-y-3">
+                  <Label htmlFor="verify-email" className="flex items-center gap-2">
+                    <Icon name="Mail01" size={16} className="text-[var(--text-subdued)]" />
+                    Recipient Verification
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="verify-email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={verifyEmail}
+                      disabled={verifyStep === "code-sent"}
+                      onChange={(e) => setVerifyEmail(e.target.value)}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" &&
+                        verifyStep === "idle" &&
+                        handleRequestCode()
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="shrink-0"
+                      disabled={
+                        !verifyEmail.trim() ||
+                        verifyBusy ||
+                        verifyStep === "code-sent"
+                      }
+                      onClick={handleRequestCode}
+                    >
+                      Get verification code
+                    </Button>
+                  </div>
+                  {verifyStep === "code-sent" && (
+                    <>
+                      <p className="gemba-body-sm text-[var(--text-subdued)]">
+                        If that address is on the list, a code is on its way
+                        — check your inbox.
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          id="verify-code"
+                          inputMode="numeric"
+                          placeholder="6-digit code"
+                          value={verifyCode}
+                          aria-invalid={hasVerifyCodeError}
+                          className={
+                            hasVerifyCodeError
+                              ? "shadow-[inset_0_0_0_1px_var(--gemba-critical),var(--shadow-field)]"
+                              : undefined
+                          }
+                          onChange={(e) => {
+                            setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+                            setHasVerifyCodeError(false);
+                          }}
+                          onKeyDown={(e) => e.key === "Enter" && handleVerifyCode()}
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="shrink-0"
+                          disabled={verifyCode.length !== 6 || verifyBusy}
+                          onClick={handleVerifyCode}
+                        >
+                          Verify
+                        </Button>
+                      </div>
+                      {hasVerifyCodeError && (
+                        <p className="gemba-body-sm flex items-center gap-1 text-[var(--gemba-critical)]">
+                          <Icon name="AlertCircle" size={16} />
+                          Incorrect or expired code — try again.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
 
               {fileInfo.passwordProtected && (
                 <div className="space-y-2">
