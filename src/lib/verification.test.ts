@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RedisLike } from "@/lib/redis";
 import { sha256Hex } from "@/lib/crypto";
+import type { StoredMeta } from "@/lib/storage";
 import {
   MAX_VERIFY_ATTEMPTS,
   generateSixDigitCode,
@@ -9,6 +10,7 @@ import {
   storeVerificationCode,
   verifyCode,
 } from "@/lib/verification";
+import { checkVerification } from "@/app/api/files/[id]/route";
 
 /**
  * In-memory Redis fake implementing the surface verification.ts uses:
@@ -146,5 +148,79 @@ describe("isVerifyTokenValid fail-closed behavior (T-05-08)", () => {
     await expect(
       isVerifyTokenValid("file-6", "some-token", throwing),
     ).rejects.toThrow();
+  });
+});
+
+function baseMeta(overrides: Partial<StoredMeta> = {}): StoredMeta {
+  return {
+    id: "file-gate",
+    name: "report.pdf",
+    type: "application/pdf",
+    size: 1024,
+    downloadsRemaining: 3,
+    expiresAt: Date.now() + 3600_000,
+    createdAt: Date.now(),
+    ...overrides,
+  };
+}
+
+describe("checkVerification gate (VERIFY-05)", () => {
+  it("returns null (allow) when the file has no recipientEmails, regardless of token", async () => {
+    const fake = createFakeRedis();
+    const meta = baseMeta({ recipientEmails: undefined });
+    expect(await checkVerification("file-gate", meta, null, fake)).toBeNull();
+    expect(
+      await checkVerification("file-gate", meta, "any-token", fake),
+    ).toBeNull();
+  });
+
+  it("returns 401 when gated and no token is presented", async () => {
+    const fake = createFakeRedis();
+    const meta = baseMeta({ recipientEmails: ["a@example.com"] });
+    const res = await checkVerification("file-gate", meta, null, fake);
+    expect(res).not.toBeNull();
+    expect(res!.status).toBe(401);
+  });
+
+  it("returns 403 for a wrong token", async () => {
+    const fake = createFakeRedis();
+    const meta = baseMeta({ recipientEmails: ["a@example.com"] });
+    const res = await checkVerification(
+      "file-gate",
+      meta,
+      "not-a-real-token",
+      fake,
+    );
+    expect(res).not.toBeNull();
+    expect(res!.status).toBe(403);
+  });
+
+  it("returns 403 for a token issued for a different file id", async () => {
+    const fake = createFakeRedis();
+    const meta = baseMeta({ recipientEmails: ["a@example.com"] });
+    const token = await issueVerifyToken("other-file-id", fake);
+    const res = await checkVerification("file-gate", meta, token, fake);
+    expect(res).not.toBeNull();
+    expect(res!.status).toBe(403);
+  });
+
+  it("returns null (allow) for the correct token issued for this id", async () => {
+    const fake = createFakeRedis();
+    const meta = baseMeta({ recipientEmails: ["a@example.com"] });
+    const token = await issueVerifyToken("file-gate", fake);
+    expect(await checkVerification("file-gate", meta, token, fake)).toBeNull();
+  });
+
+  it("returns 503 (fail closed) when Redis errors, never null", async () => {
+    const throwing = createThrowingRedis();
+    const meta = baseMeta({ recipientEmails: ["a@example.com"] });
+    const res = await checkVerification(
+      "file-gate",
+      meta,
+      "some-token",
+      throwing,
+    );
+    expect(res).not.toBeNull();
+    expect(res!.status).toBe(503);
   });
 });

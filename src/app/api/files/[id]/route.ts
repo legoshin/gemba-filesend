@@ -18,7 +18,8 @@ import {
   checkDownloadLimit,
   checkPasswordAttemptLimit,
 } from "@/lib/rate-limit";
-import { decrementDownloadCounter } from "@/lib/redis";
+import { decrementDownloadCounter, type RedisLike } from "@/lib/redis";
+import { isVerifyTokenValid } from "@/lib/verification";
 import { clientIp } from "@/lib/request-ip";
 
 export const runtime = "nodejs";
@@ -39,6 +40,36 @@ async function checkPassword(
   return null;
 }
 
+/**
+ * Recipient-email verification gate (Phase 5, VERIFY-05). Positioned
+ * identically to checkPassword() and called BEFORE it in both download
+ * handlers, so an unverified/failed request never reaches
+ * decrementDownloadCounter() (RESEARCH Pitfall 2 / T-05-06).
+ *
+ * FAIL CLOSED on a Redis error (503) — mirrors the existing
+ * "counter unavailable" 503 below rather than silently allowing the
+ * download (T-05-08).
+ */
+export async function checkVerification(
+  id: string,
+  meta: StoredMeta,
+  token: string | null,
+  redis?: RedisLike,
+): Promise<Response | null> {
+  if (!meta.recipientEmails?.length) return null; // not gated
+  if (!token) return new Response("verification required", { status: 401 });
+  let ok: boolean;
+  try {
+    ok = await isVerifyTokenValid(id, token, redis);
+  } catch {
+    return new Response("verification unavailable", { status: 503 });
+  }
+  if (!ok) {
+    return new Response("invalid or expired verification", { status: 403 });
+  }
+  return null;
+}
+
 async function handleBlobDownload(
   req: NextRequest,
   id: string,
@@ -54,6 +85,12 @@ async function handleBlobDownload(
     await blobDeleteEntry(meta);
     return new Response("exhausted", { status: 410 });
   }
+  const verifyFail = await checkVerification(
+    id,
+    meta,
+    req.headers.get("x-verify-token"),
+  );
+  if (verifyFail) return verifyFail;
   if (meta.passwordHash) {
     const pwLimited = await checkPasswordAttemptLimit(id, ip);
     if (pwLimited) return pwLimited;
@@ -133,6 +170,12 @@ async function handleFsDownload(
     await fsDeleteEntry(id);
     return new Response("exhausted", { status: 410 });
   }
+  const verifyFail = await checkVerification(
+    id,
+    meta,
+    req.headers.get("x-verify-token"),
+  );
+  if (verifyFail) return verifyFail;
   if (meta.passwordHash) {
     const pwLimited = await checkPasswordAttemptLimit(id, ip);
     if (pwLimited) return pwLimited;

@@ -39,6 +39,9 @@ export async function GET(
     type: meta.type,
     size: meta.size,
     passwordProtected: Boolean(meta.passwordHash),
+    // Never returns the emails themselves (T-05-07) — presence + length of
+    // recipientEmails IS the verification-required flag (D-05-11).
+    verifyRequired: Boolean(meta.recipientEmails?.length),
     downloadsRemaining: meta.downloadsRemaining,
     expiresAt: meta.expiresAt,
   });
