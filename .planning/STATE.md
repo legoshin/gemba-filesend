@@ -1,42 +1,42 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Native Mobile Apps
+milestone: v1.0
+milestone_name: milestone
 status: verifying
-stopped_at: "Completed 05-04-PLAN.md (Tasks 1-2; Task 3 checkpoint:human-verify pending)"
-last_updated: "2026-07-13T12:35:30.208Z"
-last_activity: 2026-07-13
+stopped_at: Completed 04-03-PLAN.md (TEST-01..04 Vitest suite, 27 passing)
+last_updated: "2026-07-11T20:12:54.553Z"
+last_activity: 2026-07-11 -- Completed Plan 04-02 (SEC-02 rate limiting + REL-01 atomic counter)
 progress:
-  total_phases: 5
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
-  percent: 20
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 17
+  completed_plans: 17
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-12)
+See: .planning/PROJECT.md (updated 2026-07-10)
 
 **Core value:** Anyone can share a file securely — encrypted end-to-end, no account, no friction — through a single link.
-**Current focus:** Phase 05 — monorepo-expo-scaffold-crypto-interop-walking-skeleton
+**Current focus:** Phase 04 — security-reliability-test-hardening
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
+Phase: 04 (security-reliability-test-hardening) — EXECUTING
+Plan: 3 of 3
 Status: Phase complete — ready for verification
-Last activity: 2026-09-08 - Completed quick task 260908-s9a: allow kyl.gemba.uk to frame send.gemba.uk
+Last activity: 2026-07-11 -- Completed Plan 04-02 (SEC-02 rate limiting + REL-01 atomic counter)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████░░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 18
+- Total plans completed: 14
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -47,7 +47,6 @@ Progress: [░░░░░░░░░░] 0%
 | 01 | 7 | - | - |
 | 02 | 3 | - | - |
 | 3 | 4 | - | - |
-| 5 | 4 | - | - |
 
 **Recent Trend:**
 
@@ -71,10 +70,6 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P01 | 8min | 1 tasks | 1 files |
 | Phase 04 P02 | ~18min | 2 tasks | 5 files |
 | Phase 04 P03 | 10min | 3 tasks | 6 files |
-| Phase 05 P01 | 25min | 2 tasks | 6 files |
-| Phase 05 P02 | 20min | 3 tasks | 18 files |
-| Phase 05 P03 | 25min | 3 tasks | 13 files |
-| Phase 05 P04 | 15min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -110,17 +105,6 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-02: Live Upstash verification (real 429 + real DECR/410) deferred to deploy by explicit user decision — creds not provisioned in this env; all code + build criteria satisfied, concurrency correctness proven by the hermetic fake in 04-03
 - [Phase ?]: 04-03: Vitest is the project's first test runner (D-11); vitest.config.ts adds a resolve.alias for @ to ./src because Vitest does not read tsconfig paths by default
 - [Phase ?]: 04-03: TEST-03 REL-01 concurrency regression uses a hermetic in-memory Redis fake injected via the counter's optional client arg (D-13); validateClientMeta + MAX_* bounds promoted to named exports (no logic change) so TEST-04 tests the real predicate
-- Roadmap (v1.1): 5 phases derived directly from HANDOVER hard-sequencing constraints — Phase 5 bundles the monorepo/Expo scaffold with the crypto-interop walking skeleton (APP-01/02, CRYPTO-01..03) and gates all screens; Phase 6 (uploader) and Phase 7 (downloader) sequenced after the gate passes; Phase 8 (Android) and Phase 9 (iOS) are the final release phases, each split into an automated EAS build success criterion and a separate human-gated store-submission criterion.
-- [Phase ?]: 05-01: Moved screenshots/, play-screenshots/, and root screenshot-*.png into apps/web alongside README.md/ANDROID.md which reference them (not explicitly listed in plan's file set)
-- [Phase ?]: 05-01: Pinned turbopack.root to the monorepo root in apps/web/next.config.ts to fix Turbopack root-inference walking into an unrelated ancestor directory post-relocation
-- [Phase ?]: 05-01: Vercel Root Directory change (D-07) deferred to deploy time per plan's own resume-signal text; flagged as required pre-production-deploy action
-- [Phase ?]: Split @gemba/crypto into encoding.ts (platform-free core) + crypto.ts (neutral fallback) + crypto.web.ts (Web Crypto adapter) to avoid a circular import between index.ts and the platform adapter, and so tsc/Node resolve './crypto' without bundler-level resolveExtensions config
-- [Phase ?]: Deleted apps/web/src/lib/crypto.ts outright (no shim) — all callers import @gemba/crypto directly, per the plan's acceptance criteria
-- [Phase ?]: New Architecture has no toggle on Expo SDK 57 (always-on); removed app.json newArchEnabled/jsEngine fields and expo-build-properties newArchEnabled options
-- [Phase ?]: apps/mobile pins its own typescript@6.0.3 (SDK 57 requirement), scoped independently of apps/web's typescript^5
-- [Phase ?]: Auth-tag concat/split lives entirely in crypto.native.ts (encryptRaw/decryptRaw), not the shared core (D-02b)
-- [Phase ?]: Native CryptoKey is a module-local opaque {raw: Uint8Array} type, not the DOM CryptoKey
-- [Phase ?]: eas.json development profile: added android.buildType apk for emulator-installable dev-client builds
 
 ### Pending Todos
 
@@ -132,12 +116,6 @@ None currently open.
 
 Resolved: Public Sans webfont did not load in production build (Turbopack/Lightning CSS dropped the remote Google Fonts @import regardless of ordering) — fixed in 03-03 via a document-head <link rel="stylesheet"> in src/app/layout.tsx, independent of the CSS @import pipeline; confirmed present in the npm run build output for all prerendered pages. Final deployed-Vercel visual confirmation remains a Plan 04 DARK-02 sign-off checklist row.
 
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260908-s9a | Allow kyl.gemba.uk to frame send.gemba.uk (CSP frame-ancestors allowlist; dropped deny-all X-Frame-Options) | 2026-09-08 | b88190f | [260908-s9a-allow-kyl-gemba-framing](./quick/260908-s9a-allow-kyl-gemba-framing/) |
-
 ## Deferred Items
 
 Items acknowledged and carried forward from previous milestone close:
@@ -148,6 +126,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-12T12:04:07.180Z
-Stopped at: Completed 05-04-PLAN.md (Tasks 1-2; Task 3 checkpoint:human-verify pending)
+Last session: 2026-07-11T20:12:54.549Z
+Stopped at: Completed 04-03-PLAN.md (TEST-01..04 Vitest suite, 27 passing)
 Resume file: None

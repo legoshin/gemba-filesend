@@ -1,59 +1,53 @@
 # Requirements: Gemba Filesend
 
-**Defined:** 2026-07-10 · **v1.1 added:** 2026-07-12
+**Defined:** 2026-07-10
 **Core Value:** Anyone can share a file securely — encrypted end-to-end, no account, no friction — through a single link.
 
-## Milestone v1.1 Requirements (Native Mobile Apps)
+## v1 Requirements
 
-Native iOS + Android apps (React Native + Expo) — thin uploader/downloader front-ends over the existing API. Each maps to a roadmap phase. Store identifier `gemba.filesend` for both platforms. Store submission is human-gated.
+Requirements for this milestone (redesign + hardening). Each maps to a roadmap phase.
 
-### Crypto Parity
+### Design Foundation
 
-The walking skeleton and #1 risk. Native has no `crypto.subtle`; it must reproduce `src/lib/crypto.ts` exactly. Build and prove this **before any screen**.
+- [x] **DESIGN-01**: Gemba design tokens (`design-system/tokens/` + `styles.css`) are wired into the app via a single global import at the app root
+- [x] **DESIGN-02**: App code uses the semantic token aliases (`--text-*`, `--surface-*`, `--border-*`, `--button-*`, radii, shadows, rings) instead of raw colour/spacing/shadow values
+- [x] **DESIGN-03**: Public Sans is the app's default typeface and the Gemba type scale (H1–H5, body, small) is available via helper classes/tokens
 
-- [x] **CRYPTO-01**: Native AES-128-GCM encrypt/decrypt reproduces the web packed (IV-prepended) format byte-for-byte via `react-native-quick-crypto`
-- [x] **CRYPTO-02**: Native SHA-256 password hashing and Base64URL encoding match the web implementation exactly
-- [x] **CRYPTO-03**: An automated interop test proves a file encrypted on web decrypts on native and vice-versa (walking-skeleton gate — no UI until this passes)
+### Components
 
-### App Foundation
+- [x] **COMP-01**: Button ranks (Primary, Secondary, Tertiary, Ghost — default/small/square) exist in the app's component layer per the design system
+- [x] **COMP-02**: Form controls (Input, Checkbox, Radio, Toggle) match the design system
+- [x] **COMP-03**: Chip/status component (ALL-CAPS label, signal colour on 8% tint) matches the design system
+- [x] **COMP-04**: A single `Icon` wrapper renders Untitled UI stroke icons (`currentColor`); app UI icons use it — no emoji as UI icons
+- [x] **COMP-05**: Card/surface recipe (white surface, 16px radius, inset-ring border + soft cool-grey shadow) is applied to card surfaces
 
-- [x] **APP-01**: Monorepo restructure — `apps/mobile` (Expo) coexists with the Next app; crypto/validation/types are single-sourced in a shared `packages/crypto` imported by both web and native
-- [x] **APP-02**: Expo app scaffold launches on the iOS simulator and Android emulator under app identifier `gemba.filesend`
+### Pages
 
-### Uploader
+- [x] **PAGE-01**: Home page is redesigned to the design system
+- [x] **PAGE-02**: Upload page (dropzone, options, share link) is redesigned to the design system
+- [x] **PAGE-03**: Download page (metadata, password entry, download/decrypt) is redesigned to the design system
 
-- [ ] **UP-01**: User can pick a file from the device and see it staged for upload
-- [ ] **UP-02**: App encrypts the file in-app and uploads via the existing API, producing a share link with the decryption key in the URL fragment (key never sent to server)
-- [ ] **UP-03**: User can set share controls (password, download limit, expiry) matching the web app
-- [ ] **UP-04**: User can copy or share the resulting link via clipboard / native share sheet
+### Dark Mode
 
-### Downloader
+- [x] **DARK-01**: A dark-mode token layer is authored — every semantic alias resolves to a correct dark value
+- [x] **DARK-02**: All pages and components render correctly in light, dark, and system themes via `next-themes`
+- [x] **DARK-03**: Logos / brand mark swap to the correct asset per theme, verified on web, PWA, and Android TWA
 
-- [ ] **DL-01**: User can open a share link (deep link or paste) and the app fetches the file metadata
-- [ ] **DL-02**: If password-protected, user can enter the password; the app fetches the ciphertext and decrypts in-app
-- [ ] **DL-03**: User can save or share the decrypted file to the device
+### Security
 
-### Android Release
+- [x] **SEC-01**: Security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options) are set on app responses
+- [x] **SEC-02**: Per-IP rate limiting protects the upload and download endpoints (abuse + password brute-force)
 
-- [ ] **ANDROID-01**: EAS Build produces a signed AAB for `gemba.filesend`
-- [ ] **ANDROID-02**: App is published to a new Google Play listing (submission human-gated: Play service-account JSON / Play App Signing)
+### Reliability
 
-### iOS Release
+- [x] **REL-01**: The download-counter race is fixed — concurrent downloads cannot exceed the configured download limit
 
-- [ ] **IOS-01**: EAS Build produces a signed IPA for bundle id `gemba.filesend`
-- [ ] **IOS-02**: App is submitted to App Store Connect (submission human-gated on an Apple Developer account)
+### Testing
 
-## Shipped (v1.0 — Redesign + Hardening)
-
-Delivered across Phases 1–4. Retained for reference.
-
-- [x] **DESIGN-01..03** — Gemba tokens wired globally; semantic aliases; Public Sans type scale (Phase 1)
-- [x] **COMP-01..05** — Button ranks, form controls, Chip, `Icon` wrapper, card/inset-ring recipe (Phase 1)
-- [x] **PAGE-01..03** — Home, upload, download redesigned to the design system (Phases 1–3)
-- [x] **DARK-01..03** — Dark token layer; all surfaces theme-aware; per-theme logos (Phases 1–3)
-- [x] **SEC-01..02** — Security headers; per-IP rate limiting on upload/download (Phase 4)
-- [x] **REL-01** — Download-counter race fixed via atomic Redis counter (Phase 4)
-- [x] **TEST-01..04** — Vitest suite: crypto round-trip, password, download-counter, metadata (Phase 4)
+- [x] **TEST-01**: Unit tests cover the crypto encrypt/decrypt round-trip and packed format
+- [x] **TEST-02**: Unit tests cover password hashing and validation
+- [x] **TEST-03**: Tests cover download-counter decrement and limit enforcement, including the REL-01 race fix
+- [x] **TEST-04**: Unit tests cover metadata serialization/validation
 
 ## v2 Requirements
 
@@ -82,11 +76,8 @@ Explicitly excluded for this milestone.
 | Feature | Reason |
 |---------|--------|
 | User accounts / authentication | Product is deliberately anonymous; sharing is link-based |
-| Server/API changes for native | Native apps are thin clients over the existing API; no backend work needed |
-| Push notifications, in-app account/history | Beyond the anonymous uploader/downloader core; no server state to notify on |
-| Retaining/updating the existing TWA (`mba.ge.filesend`) | Superseded by the native `gemba.filesend` listing; TWA retired (user decision) |
 | Marketing website redesign | Design system covers a website too, but this repo is the file-send app only |
-| Streaming/chunked encryption, larger presign TTL, cleanup indexing | Performance/scaling work; not required for native parity |
+| Streaming/chunked encryption, larger presign TTL, cleanup indexing | Performance/scaling work; not required for redesign + core hardening |
 | AES-256 / PBKDF2 migration | Real value but needs a separate crypto-migration milestone (see v2) |
 
 ## Traceability
@@ -95,28 +86,36 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CRYPTO-01 | Phase 5 | Complete (iOS on-device VECTORS PASS 2026-07-13) |
-| CRYPTO-02 | Phase 5 | Complete (iOS on-device VECTORS PASS 2026-07-13) |
-| CRYPTO-03 | Phase 5 | Complete (iOS on-device VECTORS PASS 2026-07-13; Android + manual round-trip accepted-deferred to release phase per user) |
-| APP-01 | Phase 5 | Complete |
-| APP-02 | Phase 5 | Complete (native app launched on iOS Simulator under gemba.filesend) |
-| UP-01 | Phase 6 | Pending |
-| UP-02 | Phase 6 | Pending |
-| UP-03 | Phase 6 | Pending |
-| UP-04 | Phase 6 | Pending |
-| DL-01 | Phase 7 | Pending |
-| DL-02 | Phase 7 | Pending |
-| DL-03 | Phase 7 | Pending |
-| ANDROID-01 | Phase 8 | Pending |
-| ANDROID-02 | Phase 8 | Pending |
-| IOS-01 | Phase 9 | Pending |
-| IOS-02 | Phase 9 | Pending |
+| DESIGN-01 | Phase 1 | Complete |
+| DESIGN-02 | Phase 1 | Complete |
+| DESIGN-03 | Phase 1 | Complete |
+| COMP-01 | Phase 1 | Complete |
+| COMP-02 | Phase 1 | Complete |
+| COMP-03 | Phase 1 | Complete |
+| COMP-04 | Phase 1 | Complete |
+| COMP-05 | Phase 1 | Complete |
+| PAGE-01 | Phase 1 | Complete |
+| DARK-01 | Phase 1 | Complete |
+| DARK-03 | Phase 1 | Complete |
+| PAGE-02 | Phase 2 | Complete |
+| PAGE-03 | Phase 3 | Complete |
+| DARK-02 | Phase 3 | Complete |
+| SEC-01 | Phase 4 | Complete |
+| SEC-02 | Phase 4 | Complete |
+| REL-01 | Phase 4 | Complete |
+| TEST-01 | Phase 4 | Complete |
+| TEST-02 | Phase 4 | Complete |
+| TEST-03 | Phase 4 | Complete |
+| TEST-04 | Phase 4 | Complete |
 
 **Coverage:**
 
-- v1.1 requirements: 16 total (3 CRYPTO + 2 APP + 4 UP + 3 DL + 2 ANDROID + 2 IOS)
-- Mapped to phases: 16/16 ✓ (Phase 5: CRYPTO-01..03, APP-01..02 · Phase 6: UP-01..04 · Phase 7: DL-01..03 · Phase 8: ANDROID-01..02 · Phase 9: IOS-01..02)
-- v1.0 shipped: 21 requirements (Phases 1–4, complete)
+- v1 requirements: 21 total
+- Mapped to phases: 21 (100%)
+- Unmapped: 0
+
+*Note: an earlier draft of this file undercounted the total as 18; the enumerated list above (3 DESIGN + 5 COMP + 3 PAGE + 3 DARK + 2 SEC + 1 REL + 4 TEST) is 21 — corrected during roadmap creation.*
 
 ---
-*Requirements defined: 2026-07-10 · v1.1 native-mobile requirements added: 2026-07-12 · v1.1 traceability mapped to Phases 5–9: 2026-07-12*
+*Requirements defined: 2026-07-10*
+*Last updated: 2026-07-10 after roadmap creation*
