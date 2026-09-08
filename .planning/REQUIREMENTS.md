@@ -42,12 +42,22 @@ Requirements for this milestone (redesign + hardening). Each maps to a roadmap p
 
 - [x] **REL-01**: The download-counter race is fixed — concurrent downloads cannot exceed the configured download limit
 
+### Recipient Verification (Phase 5)
+
+- [ ] **VERIFY-01**: Sender can add recipient email(s) + a "verify recipient before download" toggle in the upload Options; enabling verification requires ≥1 valid email (client-blocked + server-rejected)
+- [ ] **VERIFY-02**: Recipient emails persist in file metadata in both storage modes and are never returned to any client; the meta endpoint exposes only a `verifyRequired` boolean
+- [ ] **VERIFY-03**: `request-code` emails a one-time code to a matching listed recipient via Mailgun, returns an enumeration-safe generic response, is rate-limited, and fails loud when Mailgun env is unset
+- [ ] **VERIFY-04**: `verify-code` validates the code with an attempt cap + TTL and mints a short-lived opaque verify-token
+- [ ] **VERIFY-05**: `GET /api/files/[id]` gates ciphertext access on a valid verify-token when verification is required — in both blob and fs modes, before the download counter decrements (a failed/absent code never consumes a download), alongside the existing password check
+- [ ] **VERIFY-06**: Download page presents the request-code → enter-code → verified flow and resends the verify-token via the `x-verify-token` header
+
 ### Testing
 
 - [x] **TEST-01**: Unit tests cover the crypto encrypt/decrypt round-trip and packed format
 - [x] **TEST-02**: Unit tests cover password hashing and validation
 - [x] **TEST-03**: Tests cover download-counter decrement and limit enforcement, including the REL-01 race fix
 - [x] **TEST-04**: Unit tests cover metadata serialization/validation
+- [ ] **TEST-05**: Unit tests cover the one-time-code + verify-token logic (generation, hashing, TTL/attempt-cap, token issue/validate) and the verification gate
 
 ## v2 Requirements
 

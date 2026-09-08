@@ -148,10 +148,12 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 ### Phase 5: Recipient Email Verification
 
 **Goal:** Add an optional per-upload gate: the sender lists one or more recipient emails and enables "verify recipient before download". When enabled, the recipient must request a one-time code (sent via Mailgun to any listed address) and enter it before the encrypted file is served. Adds upload Options UI, request-code/verify-code API endpoints, Redis-backed TTL codes, and rate limiting. Preserves the client-side-encryption model (the AES key stays in the URL fragment; the code only gates who can pull the ciphertext).
-**Requirements**: TBD (derived during /gsd-plan-phase 5)
+**Requirements**: VERIFY-01, VERIFY-02, VERIFY-03, VERIFY-04, VERIFY-05, VERIFY-06, TEST-05
 **Depends on:** Phase 4
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 5 to break down)
+- [ ] 05-01-PLAN.md — Server verification spine (tracer): code/token domain lib, widened Redis, recipientEmails metadata, gate inserted into GET /api/files/[id] in both modes + meta verifyRequired (Wave 1)
+- [ ] 05-02-PLAN.md — request-code + verify-code endpoints, Mailgun sender (bare fetch), two rate limiters, upload-side recipientEmails validation/storage (Wave 2)
+- [ ] 05-03-PLAN.md — Upload Options recipient UI + verify toggle, download verify-code flow + x-verify-token header, Mailgun env docs, human end-to-end/platform-parity checkpoint (Wave 3)
