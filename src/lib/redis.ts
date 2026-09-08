@@ -4,17 +4,23 @@
 // when UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set, use a real
 // Upstash Redis client (module-level singleton). When unset (local dev), fall
 // back to a single-instance in-memory shim implementing only the surface used
-// here (set + decr over a module Map). Concurrency correctness of the counter
-// is proven by the hermetic in-memory fake in Plan 04-03, NOT by this dev
-// shim — the shim exists only so `npm run dev` works without Upstash creds.
+// here (set + decr + get + del over a module Map, the latter two added in
+// Phase 5 for the verification-code/token domain). Concurrency correctness of
+// the counter is proven by the hermetic in-memory fake in Plan 04-03, NOT by
+// this dev shim — the shim exists only so `npm run dev` works without Upstash
+// creds.
 //
 // ONE shared client backs both per-IP rate limiting (SEC-02) and the atomic
 // download counter (REL-01) — D-10: a single store solves both.
 
 import { Redis } from "@upstash/redis";
 
-/** Minimal Redis surface consumed by this module + @upstash/ratelimit. */
-export type RedisLike = Pick<Redis, "set" | "decr">;
+/**
+ * Minimal Redis surface consumed by this module + @upstash/ratelimit.
+ * Widened (Phase 5) to include `get`/`del` for the verification-code and
+ * verify-token domain in src/lib/verification.ts.
+ */
+export type RedisLike = Pick<Redis, "set" | "decr" | "get" | "del">;
 
 /**
  * Single-instance in-memory dev fallback. NOT safe across serverless
@@ -23,18 +29,29 @@ export type RedisLike = Pick<Redis, "set" | "decr">;
  * by isAuthorized() in src/app/api/cleanup/route.ts.
  */
 function createDevShim(): RedisLike {
-  const store = new Map<string, number>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const store = new Map<string, any>();
   const shim = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async set(key: string, value: any, opts?: { nx?: boolean; ex?: number }) {
       if (opts?.nx && store.has(key)) return null;
-      store.set(key, Number(value));
+      // Stored as-is (mirrors @upstash/redis's automatic JSON de/serialization
+      // — objects round-trip through get() unchanged, numbers stay numbers).
+      store.set(key, value);
       return "OK";
     },
     async decr(key: string) {
-      const next = (store.get(key) ?? 0) - 1;
+      const next = (Number(store.get(key)) || 0) - 1;
       store.set(key, next);
       return next;
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async get(key: string): Promise<any> {
+      return store.has(key) ? store.get(key) : null;
+    },
+    async del(key: string) {
+      const existed = store.delete(key);
+      return existed ? 1 : 0;
     },
   };
   return shim as unknown as RedisLike;

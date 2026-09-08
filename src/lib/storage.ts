@@ -20,4 +20,8 @@ export interface StoredMeta {
   createdAt: number;
   /** Only set in blob mode — public URL of the encrypted ciphertext. */
   blobUrl?: string;
+  /** Lowercased, trimmed recipient emails. Presence + non-empty length IS the
+   *  "verification required" flag — do not add a separate boolean (Pitfall 5,
+   *  mirrors passwordProtected: Boolean(meta.passwordHash)). */
+  recipientEmails?: string[];
 }
