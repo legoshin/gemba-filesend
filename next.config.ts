@@ -20,7 +20,12 @@ const cspDirectives = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://*.blob.vercel-storage.com",
-  "connect-src 'self' https://*.blob.vercel-storage.com",
+  // https://vercel.com is the Vercel Blob API host that @vercel/blob/client's
+  // upload() actually talks to (createMultipartUpload/uploadPart/complete +
+  // the non-multipart put() path all hit https://vercel.com/api/blob/* by
+  // default) — without it every client-side blob upload is silently blocked
+  // by this CSP and retries against a dead endpoint until it times out.
+  "connect-src 'self' https://vercel.com https://*.blob.vercel-storage.com",
   "worker-src 'self'",
   "manifest-src 'self'",
   "frame-ancestors 'self' https://kyl.gemba.uk",
