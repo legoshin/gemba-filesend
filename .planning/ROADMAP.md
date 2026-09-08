@@ -135,7 +135,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -143,3 +143,15 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 2. Upload Page Redesign | 3/3 | Complete    | 2026-07-10 |
 | 3. Download Page Redesign & Dark Mode Complete | 4/4 | Complete    | 2026-07-11 |
 | 4. Security, Reliability & Test Hardening | 3/3 | Complete   | 2026-07-11 |
+| 5. Recipient Email Verification | 0/? | Planning | — |
+
+### Phase 5: Recipient Email Verification
+
+**Goal:** Add an optional per-upload gate: the sender lists one or more recipient emails and enables "verify recipient before download". When enabled, the recipient must request a one-time code (sent via Mailgun to any listed address) and enter it before the encrypted file is served. Adds upload Options UI, request-code/verify-code API endpoints, Redis-backed TTL codes, and rate limiting. Preserves the client-side-encryption model (the AES key stays in the URL fragment; the code only gates who can pull the ciphertext).
+**Requirements**: TBD (derived during /gsd-plan-phase 5)
+**Depends on:** Phase 4
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 5 to break down)
