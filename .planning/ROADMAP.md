@@ -1,8 +1,13 @@
-# Roadmap: Gemba Filesend — Redesign + Hardening
+# Roadmap: Gemba Filesend
 
 ## Overview
 
-This milestone re-skins Gemba Filesend to the Gemba design system end-to-end and closes the highest-priority security/reliability gaps. Foundation tokens and the shared component layer land together with a fully-themed home page (Phase 1), then each remaining page — upload (Phase 2), download (Phase 3) — is redesigned in place reusing those components, with the download phase also closing out full light/dark/system theme coverage across the whole app. A final hardening phase (Phase 4) adds security headers, rate limiting, fixes the download-counter race, and brings the crypto/password/counter/metadata logic under test.
+This roadmap spans two milestones. **v1.0** (Phases 1–4, shipped) re-skinned Gemba Filesend to the Gemba design system, added a proper dark mode, and closed the highest-priority security/reliability gaps. **v1.1** (Phases 5–9, in progress) adds native iOS + Android apps (React Native + Expo) as thin uploader/downloader clients over the existing API. The crypto-interop walking skeleton — proving byte-for-byte web↔native encrypt/decrypt parity — is built and gated first (Phase 5), before any screen exists. The native uploader (Phase 6) and downloader (Phase 7) flows follow. Android (Phase 8) and iOS (Phase 9) releases close the milestone, each split into an automated EAS build step (Claude) and a human-gated store-submission step (user).
+
+## Milestones
+
+- ✅ **v1.0 Redesign + Hardening** - Phases 1-4 (shipped 2026-07-11)
+- 🚧 **v1.1 Native Mobile Apps** - Phases 5-9 (in progress)
 
 ## Phases
 
@@ -11,14 +16,30 @@ This milestone re-skins Gemba Filesend to the Gemba design system end-to-end and
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-Decimal phases appear between their surrounding integers in numeric order.
+Decimal phases appear between their surrounding integers in numeric order. Phase numbering is continuous across milestones (v1.1 continues at Phase 5, not reset to 1).
+
+<details>
+<summary>✅ v1.0 Redesign + Hardening (Phases 1-4) — SHIPPED 2026-07-11</summary>
 
 - [x] **Phase 1: Design Foundation & Home Page** - Wire Gemba tokens app-wide, build the shared component layer, redesign home page in light + dark (completed 2026-07-10)
 - [x] **Phase 2: Upload Page Redesign** - Redesign the upload flow (dropzone, options, share link) to the design system, theme-aware (completed 2026-07-10)
 - [x] **Phase 3: Download Page Redesign & Dark Mode Complete** - Redesign the download flow to the design system; verify light/dark/system theming across the entire app (completed 2026-07-11)
 - [x] **Phase 4: Security, Reliability & Test Hardening** - Security headers, rate limiting, fix the download-counter race, add unit test coverage (completed 2026-07-11)
 
+</details>
+
+**🚧 v1.1 Native Mobile Apps (in progress):**
+
+- [x] **Phase 5: Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton** - Restructure as a monorepo, scaffold the Expo app, and prove byte-for-byte web↔native crypto parity — the #1 risk gate, closed before any screen is built (completed 2026-07-13)
+- [ ] **Phase 6: Native Uploader Flow** - Pick, encrypt in-app, upload via the existing API, and share the resulting link
+- [ ] **Phase 7: Native Downloader Flow** - Open a share link, decrypt in-app, and save/share the file
+- [ ] **Phase 8: Android Release** - EAS Build produces a signed AAB; new Google Play listing under `gemba.filesend` (submission human-gated)
+- [ ] **Phase 9: iOS Release** - EAS Build produces a signed IPA; submitted to App Store Connect (gated on Apple Developer account)
+
 ## Phase Details
+
+<details>
+<summary>v1.0 Redesign + Hardening — Phase Details (SHIPPED 2026-07-11)</summary>
 
 ### Phase 1: Design Foundation & Home Page
 
@@ -132,14 +153,110 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] 04-03-PLAN.md — TEST-01..04: Vitest baseline + crypto round-trip/packed-format, password hash/validate, metadata validation, and the hermetic REL-01 counter/concurrency test [Wave 2]
 
+</details>
+
+### Phase 5: Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton
+
+**Goal**: The codebase is restructured as a monorepo with a single-sourced crypto package, the Expo app runs on both iOS and Android, and web-native encryption parity is proven by an automated test — the milestone's #1 risk, resolved before the uploader or downloader is built.
+**Mode:** mvp
+**Depends on**: Phase 4 (v1.0 complete — existing web app + API)
+**Requirements**: APP-01, APP-02, CRYPTO-01, CRYPTO-02, CRYPTO-03
+**Success Criteria** (what must be TRUE):
+
+  1. Repo is restructured as a monorepo: `apps/mobile` (Expo) coexists with the Next app; `packages/crypto` is single-sourced and imported by both web and native code.
+  2. The Expo app launches on the iOS simulator and Android emulator under app identifier `gemba.filesend`.
+  3. Native AES-128-GCM encrypt/decrypt reproduces the web packed (IV-prepended) format byte-for-byte using the project's native crypto library.
+  4. Native SHA-256 password hashing and Base64URL encoding match the web implementation exactly.
+  5. An automated interop test proves a file encrypted on web decrypts on native and vice-versa — this must pass before any uploader/downloader work begins.
+
+**Plans**: 4 plans
+
+**Wave 1**
+
+- [x] 05-01-PLAN.md — Monorepo restructure: npm workspaces + move Next app to apps/web (APP-01; D-06/D-07) [Wave 1]
+
+**Wave 2** *(blocked on 05-01)*
+
+- [x] 05-02-PLAN.md — Shared @gemba/crypto + @gemba/shared, web adapter, golden-vector web byte-equality/cross-decrypt gate (APP-01, CRYPTO-01/02/03 web half; D-01/D-02/D-03/D-04) [Wave 2]
+
+**Wave 3** *(blocked on 05-02)*
+
+- [x] 05-03-PLAN.md — Expo scaffold under gemba.filesend (dev-client + New Arch + expo-router) + supply-chain install gate + jest-expo core pre-check (APP-02; D-08/D-09) [Wave 3]
+
+**Wave 4** *(blocked on 05-03)*
+
+- [x] 05-04-PLAN.md — Native crypto.native.ts (auth-tag concat/split) + on-device Maestro interop gate + manual round-trip (APP-02, CRYPTO-01/02/03 native half; D-02b/D-04/D-05) [Wave 4]
+
+### Phase 6: Native Uploader Flow
+
+**Goal**: Users can pick a file, encrypt it in-app, upload it via the existing API, and share the resulting link — the native uploader screen matches the web app's capabilities.
+**Mode:** mvp
+**Depends on**: Phase 5
+**Requirements**: UP-01, UP-02, UP-03, UP-04
+**Success Criteria** (what must be TRUE):
+
+  1. User can pick a file from the device and see it staged for upload.
+  2. App encrypts the file in-app and uploads it via the existing API, producing a share link with the decryption key in the URL fragment (key never sent to the server).
+  3. User can set share controls — password, download limit, expiry — matching the web app.
+  4. User can copy the link to the clipboard or share it via the native share sheet.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 7: Native Downloader Flow
+
+**Goal**: Users can open a share link in the native app, decrypt the file in-app on the download screen, and save or share the result.
+**Mode:** mvp
+**Depends on**: Phase 6
+**Requirements**: DL-01, DL-02, DL-03
+**Success Criteria** (what must be TRUE):
+
+  1. User can open a share link (deep link or paste) and the app fetches the file metadata.
+  2. If the file is password-protected, user can enter the password on-screen; the app fetches the ciphertext and decrypts in-app.
+  3. User can save the decrypted file to the device or share it via the native share sheet.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 8: Android Release
+
+**Goal**: The Android app is built, signed, and released to Google Play under a new listing (`gemba.filesend`), with the automated build separated from the human-gated store submission.
+**Mode:** mvp
+**Depends on**: Phase 7
+**Requirements**: ANDROID-01, ANDROID-02
+**Success Criteria** (what must be TRUE):
+
+  1. EAS Build produces a signed AAB for `gemba.filesend`.
+  2. [Human-gated] The AAB is submitted to a new Google Play listing once the user supplies the Play service-account JSON (or completes the upload) and confirms the Play App Signing status.
+
+**Plans**: TBD
+
+### Phase 9: iOS Release
+
+**Goal**: The iOS app is built, signed, and submitted to App Store Connect under bundle id `gemba.filesend`, with the automated build separated from the human-gated store submission.
+**Mode:** mvp
+**Depends on**: Phase 8
+**Requirements**: IOS-01, IOS-02
+**Success Criteria** (what must be TRUE):
+
+  1. EAS Build produces a signed IPA for bundle id `gemba.filesend`.
+  2. [Human-gated] The IPA is submitted to App Store Connect once the user provides an Apple Developer account.
+
+**Plans**: TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Design Foundation & Home Page | 7/7 | Complete    | 2026-07-10 |
-| 2. Upload Page Redesign | 3/3 | Complete    | 2026-07-10 |
-| 3. Download Page Redesign & Dark Mode Complete | 4/4 | Complete    | 2026-07-11 |
-| 4. Security, Reliability & Test Hardening | 3/3 | Complete   | 2026-07-11 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Design Foundation & Home Page | v1.0 | 7/7 | Complete | 2026-07-10 |
+| 2. Upload Page Redesign | v1.0 | 3/3 | Complete | 2026-07-10 |
+| 3. Download Page Redesign & Dark Mode Complete | v1.0 | 4/4 | Complete | 2026-07-11 |
+| 4. Security, Reliability & Test Hardening | v1.0 | 3/3 | Complete | 2026-07-11 |
+| 5. Monorepo, Expo Scaffold & Crypto-Interop Walking Skeleton | v1.1 | 4/4 | Complete    | 2026-07-13 |
+| 6. Native Uploader Flow | v1.1 | 0/TBD | Not started | - |
+| 7. Native Downloader Flow | v1.1 | 0/TBD | Not started | - |
+| 8. Android Release | v1.1 | 0/TBD | Not started | - |
+| 9. iOS Release | v1.1 | 0/TBD | Not started | - |

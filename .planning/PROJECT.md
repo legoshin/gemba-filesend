@@ -2,11 +2,25 @@
 
 ## What This Is
 
-Gemba Filesend is an anonymous, client-side-encrypted file-sharing web app: a user drops files, they're encrypted in the browser (the key never leaves the client — it lives in the share link's URL fragment), and the recipient decrypts on download. It ships as a web app, an installable PWA, and an Android app (TWA) on Google Play. This milestone re-skins the entire app to the **Gemba design system** (`design-system/`), adds a proper **dark mode**, and closes the highest-priority **security/reliability gaps**.
+Gemba Filesend is an anonymous, client-side-encrypted file-sharing web app: a user drops files, they're encrypted in the browser (the key never leaves the client — it lives in the share link's URL fragment), and the recipient decrypts on download. It ships as a web app, an installable PWA, and an Android app (TWA) on Google Play. The v1.0 milestone re-skinned the app to the **Gemba design system** (`design-system/`), added a proper **dark mode**, and closed the highest-priority **security/reliability gaps**. This milestone (v1.1) adds **native iOS + Android apps** (React Native + Expo) — thin uploader/downloader front-ends over the existing API, published under the identifier `gemba.filesend`.
 
 ## Core Value
 
 Anyone can share a file securely — encrypted end-to-end, no account, no friction — through a single link. Everything else serves that.
+
+## Current Milestone: v1.1 Native Mobile Apps
+
+**Goal:** Ship native iOS + Android apps (React Native + Expo) — a file uploader and downloader as thin clients over the existing API — with byte-for-byte crypto parity with the web app, published under the identifier `gemba.filesend`.
+
+**Target features:**
+- Crypto-interop walking skeleton (web↔native encrypt/decrypt parity) — the #1 risk gate, built before any screen
+- Monorepo + Expo scaffold sharing a single-sourced `packages/crypto`
+- Native uploader flow (pick → encrypt → upload → share link)
+- Native downloader flow (open link → fetch → decrypt → save)
+- Android release to a new Google Play listing under `gemba.filesend`
+- iOS release to the App Store (gated on Apple Developer account)
+
+**Full milestone context:** `.planning/HANDOVER-native-mobile-milestone.md`
 
 ## Requirements
 
@@ -25,27 +39,31 @@ Anyone can share a file securely — encrypted end-to-end, no account, no fricti
 - ✓ Theme scaffolding: `next-themes` + light/dark toggle, `gemba-logo.svg` + `gemba-logo-dark.svg` in `public/` — existing
 - ✓ Upload page redesigned to the Gemba design system (dropzone, share options, share-link result), theme-aware light/dark, reusing the Phase 1 component layer — Validated in Phase 2 (PAGE-02)
 - ✓ Download page redesigned to the Gemba design system (all states, error cards, secure row, inline password error); 3-way light/dark/system theme control; Public Sans production-font fix; full-app light/dark/system theming human-signed-off — Validated in Phase 3 (PAGE-03, DARK-02)
+- ✓ Gemba design tokens wired globally; shared UI components refactored to the system; home/upload/download redesigned; Untitled UI `Icon` wrapper — Validated in Phases 1–3 (v1.0 redesign)
+- ✓ Dark-mode token layer authored; every surface theme-aware via `next-themes`; logos adapt per theme — Validated in Phases 1–3 (DARK-01..03)
+- ✓ Automated test suite (Vitest 33/33): crypto round-trip, password validation, download-counter, metadata — Validated in Phase 4 (TEST-01..04)
+- ✓ Enforced security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options) — Validated in Phase 4 (SEC-01)
+- ✓ Rate limiting on upload/download endpoints (Upstash) — Validated in Phase 4 (SEC-02)
+- ✓ Download-counter race fixed (atomic Redis counter) — Validated in Phase 4 (REL-01)
 
 ### Active
 
-<!-- Current scope. This milestone: redesign + hardening. -->
+<!-- Current scope. This milestone (v1.1): native iOS + Android apps over the existing API. Detailed REQ-IDs live in REQUIREMENTS.md. -->
 
-**Redesign (apply Gemba design system):**
-- [ ] Wire Gemba design tokens (`design-system/tokens/` + `styles.css`) globally into the Next.js app
-- [ ] Refactor shared UI components to the design system (button ranks, Input/Checkbox/Radio/Toggle, Chip, Icon wrapper, card/inset-ring recipe)
-- [ ] Redesign all pages to the system: home, upload, download
-- [ ] Replace ad-hoc icons with the Untitled UI `Icon` wrapper (`currentColor` stroke icons, no emoji as UI icons)
+**Crypto parity (walking skeleton — #1 risk, build first):**
+- [ ] Reproduce `src/lib/crypto.ts` byte-for-byte on native (AES-128-GCM, IV-prepended pack, SHA-256 password hash, Base64URL) via `react-native-quick-crypto`
+- [ ] Prove web↔native encrypt/decrypt interop parity before any screen is built
 
-**Dark mode:**
-- [ ] Define a dark-mode token layer (design system tokens are currently light-only `:root`)
-- [ ] Make every redesigned surface theme-aware (light/dark) via `next-themes`
-- [ ] Adapt logos/brand mark to dark mode (correct asset per theme)
+**Project shape:**
+- [ ] Monorepo — `apps/mobile` (Expo) alongside the Next app, sharing a `packages/crypto` (+ types) single-sourced
 
-**Hardening (highest-priority gaps from codebase map):**
-- [ ] Automated tests: crypto round-trip, password validation, download-counter, metadata (target 80% on those units)
-- [ ] Security headers: CSP, HSTS, X-Frame-Options, X-Content-Type-Options
-- [ ] Rate limiting on upload/download endpoints (anti-abuse, password brute-force)
-- [ ] Fix download-counter race condition (concurrent requests over-decrement)
+**Native flows:**
+- [ ] Uploader: document picker → encrypt in-app → upload via existing API → share link
+- [ ] Downloader: parse link (key in fragment) → fetch ciphertext → decrypt → save/share
+
+**Store releases (submission human-gated):**
+- [ ] Android: EAS Build AAB → NEW Google Play listing under `gemba.filesend` (TWA `mba.ge.filesend` retired; fresh Play App Signing)
+- [ ] iOS: EAS Build → App Store Connect (gated on Apple Developer account)
 
 ### Out of Scope
 
@@ -82,6 +100,11 @@ Anyone can share a file securely — encrypted end-to-end, no account, no fricti
 | Coarse phase granularity | Focused redesign; fewer broad phases (foundation → components → pages → dark mode/logos → hardening). | — Pending |
 | Author a dark token layer (not just toggle) | Design system tokens are light-only; dark mode needs real dark values mapped to semantic aliases. | — Pending |
 | Reuse existing shadcn/Radix component layer | Avoid a second divergent UI kit; lift design-system structure into current components. | — Pending |
+| Native stack = React Native + Expo | One TypeScript codebase for both platforms; reuse crypto logic, API, and types. | — v1.1 |
+| Crypto interop is the walking skeleton | Byte-for-byte parity with `src/lib/crypto.ts` is the #1 risk; native has no `crypto.subtle`, use `react-native-quick-crypto`. Build/prove before any screen. | — v1.1 |
+| Store identifier `gemba.filesend` for both stores | User decision (2026-07-12). Forward-order, permanent per store; ≠ existing TWA `mba.ge.filesend` → NEW Google Play listing, TWA retired, fresh Play App Signing (no keystore recovery). | — v1.1 |
+| Monorepo (`apps/mobile` + `packages/crypto`) | Single-source crypto/validation/types across web and native; avoid divergent copies. | — v1.1 |
+| Store submission is human-gated | User supplies Play service-account JSON, confirms Play App Signing, and provides the Apple Developer account; Claude builds/signs via EAS. | — v1.1 |
 
 ## Evolution
 
@@ -101,4 +124,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-11 — Phase 3 complete (download page redesigned + full-app light/dark/system theming verified; DARK-02 human-signed-off)*
+*Last updated: 2026-07-12 — Milestone v1.1 (Native Mobile Apps) started; v1.0 redesign + hardening (Phases 1–4) moved to Validated.*
