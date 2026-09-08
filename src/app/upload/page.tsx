@@ -46,6 +46,7 @@ interface DirectMetaPayload {
   salt?: string;
   downloadsRemaining: number;
   expiresAt: number;
+  recipientEmails?: string[];
 }
 
 interface UploadResult {
@@ -106,6 +107,19 @@ function generateClientId(): string {
     .join("");
 }
 
+/**
+ * Normalizes the comma/newline-separated recipient email input into a
+ * deduplicated array: split, trim, lowercase, drop empties.
+ */
+function parseRecipientEmails(raw: string): string[] {
+  const seen = new Set<string>();
+  for (const part of raw.split(/[,\n]/)) {
+    const email = part.trim().toLowerCase();
+    if (email.length > 0) seen.add(email);
+  }
+  return Array.from(seen);
+}
+
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -131,6 +145,7 @@ async function uploadOneFile(opts: {
   downloadsRemaining: number;
   expiresAt: number;
   origin: string;
+  recipientEmails: string[];
   onProgress: (percent: number) => void;
 }): Promise<string> {
   const {
@@ -141,6 +156,7 @@ async function uploadOneFile(opts: {
     downloadsRemaining,
     expiresAt,
     origin,
+    recipientEmails,
     onProgress,
   } = opts;
 
@@ -164,6 +180,7 @@ async function uploadOneFile(opts: {
       password: usePassword ? password : undefined,
       downloadsRemaining,
       expiresAt,
+      recipientEmails: recipientEmails.length > 0 ? recipientEmails : undefined,
     });
     await upload(`gemba/blob/${id}.bin`, encryptedBlob, {
       access: "private",
@@ -190,6 +207,7 @@ async function uploadOneFile(opts: {
       salt,
       downloadsRemaining,
       expiresAt,
+      recipientEmails: recipientEmails.length > 0 ? recipientEmails : undefined,
     };
     id = await uploadDirect(encryptedBlob, meta, (loaded, total) => {
       if (total > 0) onProgress((loaded / total) * 100);
@@ -205,6 +223,8 @@ export default function UploadPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [password, setPassword] = useState("");
   const [usePassword, setUsePassword] = useState(false);
+  const [useVerify, setUseVerify] = useState(false);
+  const [recipientEmails, setRecipientEmails] = useState("");
   const [downloadLimit, setDownloadLimit] = useState("1");
   const [expiryValue, setExpiryValue] = useState("1");
   const [expiryUnit, setExpiryUnit] = useState<ExpiryUnit>("days");
@@ -235,6 +255,13 @@ export default function UploadPage() {
     if (files.length === 0) return;
     if (usePassword && password.length === 0) {
       toast.error("Enter a password or disable password protection");
+      return;
+    }
+    const parsedEmails = parseRecipientEmails(recipientEmails);
+    if (useVerify && parsedEmails.length === 0) {
+      toast.error(
+        "Add at least one recipient email or turn off recipient verification",
+      );
       return;
     }
     if (!storageMode) {
@@ -274,6 +301,7 @@ export default function UploadPage() {
           downloadsRemaining,
           expiresAt,
           origin: window.location.origin,
+          recipientEmails: useVerify ? parsedEmails : [],
           onProgress: (pct) => {
             setUploadState("uploading");
             setProgressLabel(`Uploading "${file.name}"…`);
@@ -389,6 +417,8 @@ export default function UploadPage() {
     setResults([]);
     setPassword("");
     setUsePassword(false);
+    setUseVerify(false);
+    setRecipientEmails("");
     setDownloadLimit("1");
     setExpiryValue("1");
     setExpiryUnit("days");
@@ -540,6 +570,39 @@ export default function UploadPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="verify-toggle" className="flex items-center gap-2">
+                    <Icon name="Mail01" size={16} className="text-[var(--text-subdued)]" />
+                    Verify Recipient
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Email a one-time code recipients must enter before download
+                  </p>
+                </div>
+                <Switch
+                  id="verify-toggle"
+                  checked={useVerify}
+                  onCheckedChange={setUseVerify}
+                />
+              </div>
+
+              {useVerify && (
+                <div className="space-y-2">
+                  <Label htmlFor="recipient-emails">Recipient email(s)</Label>
+                  <Input
+                    id="recipient-emails"
+                    placeholder="alice@example.com, bob@example.com"
+                    value={recipientEmails}
+                    onChange={(e) => setRecipientEmails(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Comma-separated, up to 10 addresses. Anyone on the list
+                    can request a code to unlock the download.
+                  </p>
                 </div>
               )}
 
