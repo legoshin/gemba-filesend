@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 Phase: 04 (security-reliability-test-hardening) — EXECUTING
 Plan: 3 of 3
 Status: Phase complete — ready for verification
-Last activity: 2026-09-08 -- Completed quick task 260908-tv6 (upload embed mode); shipped frame-ancestors + upload-freeze fix
+Last activity: 2026-09-08 -- Phase 5 (Recipient Email Verification) code-complete + tested (62/62); HELD at Wave 3 human-verify checkpoint (needs Mailgun env + deploy). NOT pushed to production.
 
 Progress: [██████░░░░] 67%
 
@@ -112,7 +112,7 @@ None yet.
 
 ### Blockers/Concerns
 
-None currently open.
+**Phase 5 checkpoint (open):** Recipient Email Verification is code-complete on local `main` (unpushed) — Waves 1-3 built, 62/62 tests + build green. The Wave 3 human-verify checkpoint (05-03 Task 4) is BLOCKED pending: (a) user sets Mailgun env vars in Vercel (`MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, `MAILGUN_SENDING_REGION`, `MAILGUN_FROM`) across Preview+Production, and (b) a deploy for live-send verification. Not pushed to production because request-code fails-loud (500) when Mailgun env is unset. `.env.example` update was blocked by harness deny-rule — env block documented in .planning/codebase/STACK.md instead; needs manual append to `.env.example`.
 
 Resolved: Public Sans webfont did not load in production build (Turbopack/Lightning CSS dropped the remote Google Fonts @import regardless of ordering) — fixed in 03-03 via a document-head <link rel="stylesheet"> in src/app/layout.tsx, independent of the CSS @import pipeline; confirmed present in the npm run build output for all prerendered pages. Final deployed-Vercel visual confirmation remains a Plan 04 DARK-02 sign-off checklist row.
 
