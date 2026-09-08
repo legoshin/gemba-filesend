@@ -3,6 +3,8 @@ import {
   MAX_BLOB_BYTES,
   MAX_DOWNLOADS,
   MAX_EXPIRY_MS,
+  MAX_RECIPIENT_EMAILS,
+  normalizeRecipientEmails,
   validateClientMeta,
 } from "@/app/api/files/route";
 import type { StoredMeta } from "@/lib/storage";
@@ -97,6 +99,82 @@ describe("validateClientMeta (TEST-04)", () => {
     expect(
       validateClientMeta({ ...validPayload(), expiresAt: "later" }),
     ).toBe(false);
+  });
+});
+
+describe("validateClientMeta recipientEmails (VERIFY-01, VERIFY-02)", () => {
+  it("accepts an omitted recipientEmails (optional field)", () => {
+    expect(validateClientMeta(validPayload())).toBe(true);
+  });
+
+  it("accepts an empty array — treated as no verification", () => {
+    expect(
+      validateClientMeta({ ...validPayload(), recipientEmails: [] }),
+    ).toBe(true);
+  });
+
+  it(`accepts up to MAX_RECIPIENT_EMAILS (${MAX_RECIPIENT_EMAILS}) valid emails`, () => {
+    const emails = Array.from(
+      { length: MAX_RECIPIENT_EMAILS },
+      (_, i) => `recipient${i}@example.com`,
+    );
+    expect(
+      validateClientMeta({ ...validPayload(), recipientEmails: emails }),
+    ).toBe(true);
+  });
+
+  it("rejects more than MAX_RECIPIENT_EMAILS entries", () => {
+    const emails = Array.from(
+      { length: MAX_RECIPIENT_EMAILS + 1 },
+      (_, i) => `recipient${i}@example.com`,
+    );
+    expect(
+      validateClientMeta({ ...validPayload(), recipientEmails: emails }),
+    ).toBe(false);
+  });
+
+  it("rejects a non-array recipientEmails value", () => {
+    expect(
+      validateClientMeta({
+        ...validPayload(),
+        recipientEmails: "not-an-array",
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects an entry that is not a valid email", () => {
+    expect(
+      validateClientMeta({
+        ...validPayload(),
+        recipientEmails: ["not-an-email"],
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects an entry over the length cap", () => {
+    const tooLong = "a".repeat(250) + "@example.com";
+    expect(
+      validateClientMeta({
+        ...validPayload(),
+        recipientEmails: [tooLong],
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("normalizeRecipientEmails", () => {
+  it("returns undefined for undefined", () => {
+    expect(normalizeRecipientEmails(undefined)).toBeUndefined();
+  });
+
+  it("returns undefined for an empty array", () => {
+    expect(normalizeRecipientEmails([])).toBeUndefined();
+  });
+
+  it("trims and lowercases every entry", () => {
+    expect(
+      normalizeRecipientEmails([" Foo@Example.com ", "BAR@example.com"]),
+    ).toEqual(["foo@example.com", "bar@example.com"]);
   });
 });
 

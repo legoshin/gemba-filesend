@@ -18,6 +18,11 @@ export const dynamic = "force-dynamic";
 export const MAX_DOWNLOADS = 100;
 export const MAX_EXPIRY_MS = 365 * 24 * 3600_000;
 export const MAX_BLOB_BYTES = 15 * 1024 ** 3; // 15 GiB
+/** Recipient email cap per upload (D-05-05) — keeps StoredMeta JSON small
+ *  and caps Mailgun send volume/file. */
+export const MAX_RECIPIENT_EMAILS = 10;
+const MAX_EMAIL_LENGTH = 254;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface ClientPayload {
   id: string;
@@ -27,6 +32,7 @@ interface ClientPayload {
   password?: string;
   downloadsRemaining: number;
   expiresAt: number;
+  recipientEmails?: string[];
 }
 
 interface UploadMetaPayload {
@@ -37,6 +43,34 @@ interface UploadMetaPayload {
   salt?: string;
   downloadsRemaining: number;
   expiresAt: number;
+  recipientEmails?: string[];
+}
+
+/**
+ * Normalizes a client-supplied recipientEmails value: undefined/empty array
+ * both collapse to `undefined` (no verification, D-05-11/Pitfall 5 — presence
+ * + non-empty length of the stored array IS the verifyRequired flag, so an
+ * empty array must never be stored as a truthy-length marker). Otherwise
+ * trims + lowercases every entry.
+ */
+export function normalizeRecipientEmails(
+  v: unknown,
+): string[] | undefined {
+  if (!Array.isArray(v) || v.length === 0) return undefined;
+  return v.map((e) => String(e).trim().toLowerCase());
+}
+
+function isValidRecipientEmailsField(v: unknown): boolean {
+  if (v === undefined) return true;
+  if (!Array.isArray(v)) return false;
+  if (v.length > MAX_RECIPIENT_EMAILS) return false;
+  return v.every(
+    (e) =>
+      typeof e === "string" &&
+      e.length > 0 &&
+      e.length <= MAX_EMAIL_LENGTH &&
+      EMAIL_RE.test(e),
+  );
 }
 
 export function validateClientMeta<T extends {
@@ -45,12 +79,14 @@ export function validateClientMeta<T extends {
   size?: unknown;
   downloadsRemaining?: unknown;
   expiresAt?: unknown;
+  recipientEmails?: unknown;
 }>(obj: T): obj is T & {
   name: string;
   type: string;
   size: number;
   downloadsRemaining: number;
   expiresAt: number;
+  recipientEmails?: string[];
 } {
   return (
     typeof obj.name === "string" &&
@@ -63,7 +99,8 @@ export function validateClientMeta<T extends {
     obj.downloadsRemaining <= MAX_DOWNLOADS &&
     typeof obj.expiresAt === "number" &&
     obj.expiresAt > Date.now() &&
-    obj.expiresAt <= Date.now() + MAX_EXPIRY_MS
+    obj.expiresAt <= Date.now() + MAX_EXPIRY_MS &&
+    isValidRecipientEmailsField(obj.recipientEmails)
   );
 }
 
@@ -105,6 +142,7 @@ async function handleBlobUpload(req: NextRequest): Promise<NextResponse> {
           salt,
           downloadsRemaining: payload.downloadsRemaining,
           expiresAt: payload.expiresAt,
+          recipientEmails: normalizeRecipientEmails(payload.recipientEmails),
         };
 
         return {
@@ -128,6 +166,7 @@ async function handleBlobUpload(req: NextRequest): Promise<NextResponse> {
           expiresAt: decoded.expiresAt,
           createdAt: Date.now(),
           blobUrl: blob.url,
+          recipientEmails: decoded.recipientEmails,
         };
         await blobWriteMeta(stored);
         // REL-01: Redis is the live download-counter authority (D-09). Seed
@@ -200,6 +239,7 @@ async function handleDirectUpload(req: NextRequest): Promise<NextResponse> {
     downloadsRemaining: meta.downloadsRemaining,
     expiresAt: meta.expiresAt,
     createdAt: Date.now(),
+    recipientEmails: normalizeRecipientEmails(meta.recipientEmails),
   });
 
   // REL-01: seed the atomic download counter symmetrically with the blob path
