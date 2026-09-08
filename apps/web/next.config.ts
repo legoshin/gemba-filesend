@@ -7,6 +7,14 @@ import type { NextConfig } from "next";
 // documented acceptance: the next-themes no-flash script and the /sw.js
 // registration script (src/app/layout.tsx) are inline, and nonce-based CSP
 // (D-07) is deferred to a future hardening milestone.
+// The CSP framing directive below allows exactly one trusted, user-controlled
+// cross-origin embedder — https://kyl.gemba.uk — in addition to 'self'; this
+// is a deliberate, accepted clickjacking-style exception scoped to that
+// single origin only (see quick task 260908-s9a). Every other cross-origin
+// embed remains blocked. The deny-all X-Frame-Options response header was
+// removed because it can only express DENY/SAMEORIGIN and cannot allowlist
+// a specific cross-origin embedder, leaving the CSP directive as the sole
+// framing-control mechanism.
 const cspDirectives = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
@@ -16,7 +24,7 @@ const cspDirectives = [
   "connect-src 'self' https://*.blob.vercel-storage.com",
   "worker-src 'self'",
   "manifest-src 'self'",
-  "frame-ancestors 'none'",
+  "frame-ancestors 'self' https://kyl.gemba.uk",
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
@@ -64,10 +72,6 @@ const nextConfig: NextConfig = {
           {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
-          },
-          {
-            key: "X-Frame-Options",
-            value: "DENY",
           },
           {
             key: "X-Content-Type-Options",
