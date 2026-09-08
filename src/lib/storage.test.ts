@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   MAX_BLOB_BYTES,
   MAX_DOWNLOADS,
@@ -11,6 +11,7 @@ import {
   seedDownloadCounter,
   type RedisLike,
 } from "@/lib/redis";
+import { mailgunBaseUrl, sendVerificationEmail } from "@/lib/mailgun";
 
 const ONE_DAY_MS = 24 * 3600_000;
 
@@ -209,5 +210,88 @@ describe("seedDownloadCounter / decrementDownloadCounter (TEST-03)", () => {
     expect(Math.min(...results)).toBeGreaterThanOrEqual(
       -(parallelAttempts - limit),
     );
+  });
+});
+
+describe("mailgunBaseUrl (D-05-06)", () => {
+  const ORIGINAL_REGION = process.env.MAILGUN_SENDING_REGION;
+
+  afterEach(() => {
+    if (ORIGINAL_REGION === undefined) {
+      delete process.env.MAILGUN_SENDING_REGION;
+    } else {
+      process.env.MAILGUN_SENDING_REGION = ORIGINAL_REGION;
+    }
+  });
+
+  it("resolves to the US base URL when unset", () => {
+    delete process.env.MAILGUN_SENDING_REGION;
+    expect(mailgunBaseUrl()).toBe("https://api.mailgun.net");
+  });
+
+  it("resolves to the US base URL when explicitly 'us'", () => {
+    process.env.MAILGUN_SENDING_REGION = "us";
+    expect(mailgunBaseUrl()).toBe("https://api.mailgun.net");
+  });
+
+  it("resolves to the EU base URL when 'eu' (case-insensitive)", () => {
+    process.env.MAILGUN_SENDING_REGION = "eu";
+    expect(mailgunBaseUrl()).toBe("https://api.eu.mailgun.net");
+    process.env.MAILGUN_SENDING_REGION = "EU";
+    expect(mailgunBaseUrl()).toBe("https://api.eu.mailgun.net");
+  });
+});
+
+describe("sendVerificationEmail (D-05-06 fail-loud)", () => {
+  const ORIGINAL_ENV = {
+    MAILGUN_API_KEY: process.env.MAILGUN_API_KEY,
+    MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN,
+    MAILGUN_FROM: process.env.MAILGUN_FROM,
+  };
+
+  beforeEach(() => {
+    delete process.env.MAILGUN_API_KEY;
+    delete process.env.MAILGUN_DOMAIN;
+    delete process.env.MAILGUN_FROM;
+  });
+
+  afterEach(() => {
+    for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    vi.restoreAllMocks();
+  });
+
+  it("rejects when MAILGUN_API_KEY is unset", async () => {
+    process.env.MAILGUN_DOMAIN = "example.com";
+    process.env.MAILGUN_FROM = "noreply@example.com";
+    await expect(
+      sendVerificationEmail("recipient@example.com", "123456", "file.zip"),
+    ).rejects.toThrow(/Mailgun env vars not configured/);
+  });
+
+  it("rejects when MAILGUN_DOMAIN is unset", async () => {
+    process.env.MAILGUN_API_KEY = "key";
+    process.env.MAILGUN_FROM = "noreply@example.com";
+    await expect(
+      sendVerificationEmail("recipient@example.com", "123456", "file.zip"),
+    ).rejects.toThrow(/Mailgun env vars not configured/);
+  });
+
+  it("rejects when MAILGUN_FROM is unset", async () => {
+    process.env.MAILGUN_API_KEY = "key";
+    process.env.MAILGUN_DOMAIN = "example.com";
+    await expect(
+      sendVerificationEmail("recipient@example.com", "123456", "file.zip"),
+    ).rejects.toThrow(/Mailgun env vars not configured/);
+  });
+
+  it("never calls fetch when env vars are missing (no partial send attempt)", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    await expect(
+      sendVerificationEmail("recipient@example.com", "123456", "file.zip"),
+    ).rejects.toThrow();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

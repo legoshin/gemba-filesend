@@ -31,6 +31,8 @@ function intEnv(name: string, fallback: number): number {
 let uploadLimiter: Ratelimit | null = null;
 let downloadLimiter: Ratelimit | null = null;
 let passwordLimiter: Ratelimit | null = null;
+let requestCodeLimiter: Ratelimit | null = null;
+let verifyCodeLimiter: Ratelimit | null = null;
 
 function buildLimiter(limit: number, prefix: string): Ratelimit | null {
   if (!hasUpstash()) return null;
@@ -68,6 +70,26 @@ function getPasswordLimiter(): Ratelimit | null {
     );
   }
   return passwordLimiter;
+}
+
+function getRequestCodeLimiter(): Ratelimit | null {
+  if (!requestCodeLimiter) {
+    requestCodeLimiter = buildLimiter(
+      intEnv("RATE_LIMIT_REQUEST_CODE_PER_MIN", 1),
+      "rl:rc",
+    );
+  }
+  return requestCodeLimiter;
+}
+
+function getVerifyCodeLimiter(): Ratelimit | null {
+  if (!verifyCodeLimiter) {
+    verifyCodeLimiter = buildLimiter(
+      intEnv("RATE_LIMIT_VERIFY_CODE_PER_MIN", 5),
+      "rl:vc",
+    );
+  }
+  return verifyCodeLimiter;
 }
 
 /** Shared enforcement: null = allow/continue, Response = 429 short-circuit. */
@@ -114,4 +136,27 @@ export async function checkPasswordAttemptLimit(
   ip: string,
 ): Promise<Response | null> {
   return enforce(getPasswordLimiter(), fileId + ":" + ip);
+}
+
+/**
+ * Request-code throttle: RATE_LIMIT_REQUEST_CODE_PER_MIN per (file id + IP)
+ * per minute (D-05-07) — this single window doubles as the resend cooldown.
+ */
+export async function checkRequestCodeLimit(
+  fileId: string,
+  ip: string,
+): Promise<Response | null> {
+  return enforce(getRequestCodeLimiter(), fileId + ":" + ip);
+}
+
+/**
+ * Verify-code brute-force throttle: RATE_LIMIT_VERIFY_CODE_PER_MIN per
+ * (file id + IP) per minute (D-05-07), on top of the per-code attempt
+ * lockout in src/lib/verification.ts.
+ */
+export async function checkVerifyAttemptLimit(
+  fileId: string,
+  ip: string,
+): Promise<Response | null> {
+  return enforce(getVerifyCodeLimiter(), fileId + ":" + ip);
 }
