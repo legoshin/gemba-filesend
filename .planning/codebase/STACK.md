@@ -119,6 +119,16 @@
 - `CRON_SECRET` - Authorization token for cleanup endpoint (Vercel Cron)
   - Format: Bearer token validation
   - When unset: Cleanup endpoint allows any request (development only)
+- `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` - shared Redis store backing rate limiting + the atomic download counter
+  - When unset: rate limiting is disabled (allow-all) and the download counter uses an in-memory dev shim
+- `RATE_LIMIT_UPLOAD_PER_MIN` (default 10), `RATE_LIMIT_DOWNLOAD_PER_MIN` (default 30), `RATE_LIMIT_PASSWORD_PER_MIN` (default 5)
+
+**Recipient verification (Mailgun) — Phase 5:**
+- `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, `MAILGUN_SENDING_REGION` (us|eu, default us), `MAILGUN_FROM` - required for the "verify recipient before download" feature to send one-time codes
+  - Operator-set in Vercel only, never committed
+  - **PENDING from user:** Mailgun sending domain + region (CONTEXT.md decision 3) — code is built against these env vars now; the live-send checkpoint is blocked until they're set
+  - When ANY is unset: a verify-gated file's request-code call fails LOUD with HTTP 500 (D-05-06), never a silent "sent"
+- `RATE_LIMIT_REQUEST_CODE_PER_MIN` (default 1), `RATE_LIMIT_VERIFY_CODE_PER_MIN` (default 5) - optional tunables for the verification endpoints
 
 **Configuration Method:**
 - `.env.local` - Present (local development)
