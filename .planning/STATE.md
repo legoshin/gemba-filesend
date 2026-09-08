@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 Phase: 04 (security-reliability-test-hardening) — EXECUTING
 Plan: 3 of 3
 Status: Phase complete — ready for verification
-Last activity: 2026-07-11 -- Completed Plan 04-02 (SEC-02 rate limiting + REL-01 atomic counter)
+Last activity: 2026-09-08 -- Completed quick task 260908-tv6 (upload embed mode); shipped frame-ancestors + upload-freeze fix
 
 Progress: [██████░░░░] 67%
 
@@ -115,6 +115,14 @@ None yet.
 None currently open.
 
 Resolved: Public Sans webfont did not load in production build (Turbopack/Lightning CSS dropped the remote Google Fonts @import regardless of ordering) — fixed in 03-03 via a document-head <link rel="stylesheet"> in src/app/layout.tsx, independent of the CSS @import pipeline; confirmed present in the npm run build output for all prerendered pages. Final deployed-Vercel visual confirmation remains a Plan 04 DARK-02 sign-off checklist row.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260908-tv6 | Embed mode for /upload (?mode=embed hides app chrome + heading; ?color= sets background, strict-hex validated) | 2026-09-08 | edd529a | [260908-tv6-embed-mode](./quick/260908-tv6-embed-mode/) |
+
+_Also shipped on `main` this session (outside the quick-task tracker): `frame-ancestors` allowlist for kyl.gemba.uk, and the upload-freeze fix (CSP connect-src missing https://vercel.com — see .planning/debug/resolved/upload-freeze-encrypting.md)._
 
 ## Deferred Items
 
