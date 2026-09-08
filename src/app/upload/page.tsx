@@ -19,6 +19,7 @@ import { Icon } from "@/components/icon";
 import { Separator } from "@/components/ui/separator";
 import { FileDropzone } from "@/components/file-dropzone";
 import { toast } from "sonner";
+import { useEmbed } from "@/components/embed-provider";
 import {
   encryptPacked,
   exportKeyBase64,
@@ -215,6 +216,7 @@ export default function UploadPage() {
   const [results, setResults] = useState<UploadResult[]>([]);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [storageMode, setStorageMode] = useState<StorageMode | null>(null);
+  const { isEmbed } = useEmbed();
 
   useEffect(() => {
     void (async () => {
@@ -396,12 +398,14 @@ export default function UploadPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
-      <div className="mb-8 text-center">
-        <h1 className="gemba-h2">Upload Files</h1>
-        <p className="mt-2 text-muted-foreground">
-          Select files to encrypt and share securely.
-        </p>
-      </div>
+      {!isEmbed && (
+        <div className="mb-8 text-center">
+          <h1 className="gemba-h2">Upload Files</h1>
+          <p className="mt-2 text-muted-foreground">
+            Select files to encrypt and share securely.
+          </p>
+        </div>
+      )}
 
       {uploadState === "done" ? (
         <Card>
