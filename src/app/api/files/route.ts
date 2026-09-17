@@ -33,6 +33,8 @@ interface ClientPayload {
   downloadsRemaining: number;
   expiresAt: number;
   recipientEmails?: string[];
+  /** Explicit `false` marks a user-chosen unencrypted-upload fallback. */
+  encrypted?: boolean;
 }
 
 interface UploadMetaPayload {
@@ -44,6 +46,7 @@ interface UploadMetaPayload {
   downloadsRemaining: number;
   expiresAt: number;
   recipientEmails?: string[];
+  encrypted?: boolean;
 }
 
 /**
@@ -80,6 +83,7 @@ export function validateClientMeta<T extends {
   downloadsRemaining?: unknown;
   expiresAt?: unknown;
   recipientEmails?: unknown;
+  encrypted?: unknown;
 }>(obj: T): obj is T & {
   name: string;
   type: string;
@@ -87,6 +91,7 @@ export function validateClientMeta<T extends {
   downloadsRemaining: number;
   expiresAt: number;
   recipientEmails?: string[];
+  encrypted?: boolean;
 } {
   return (
     typeof obj.name === "string" &&
@@ -100,7 +105,8 @@ export function validateClientMeta<T extends {
     typeof obj.expiresAt === "number" &&
     obj.expiresAt > Date.now() &&
     obj.expiresAt <= Date.now() + MAX_EXPIRY_MS &&
-    isValidRecipientEmailsField(obj.recipientEmails)
+    isValidRecipientEmailsField(obj.recipientEmails) &&
+    (obj.encrypted === undefined || typeof obj.encrypted === "boolean")
   );
 }
 
@@ -143,6 +149,7 @@ async function handleBlobUpload(req: NextRequest): Promise<NextResponse> {
           downloadsRemaining: payload.downloadsRemaining,
           expiresAt: payload.expiresAt,
           recipientEmails: normalizeRecipientEmails(payload.recipientEmails),
+          encrypted: payload.encrypted,
         };
 
         return {
@@ -167,6 +174,7 @@ async function handleBlobUpload(req: NextRequest): Promise<NextResponse> {
           createdAt: Date.now(),
           blobUrl: blob.url,
           recipientEmails: decoded.recipientEmails,
+          encrypted: decoded.encrypted,
         };
         await blobWriteMeta(stored);
         // REL-01: Redis is the live download-counter authority (D-09). Seed
@@ -240,6 +248,7 @@ async function handleDirectUpload(req: NextRequest): Promise<NextResponse> {
     expiresAt: meta.expiresAt,
     createdAt: Date.now(),
     recipientEmails: normalizeRecipientEmails(meta.recipientEmails),
+    encrypted: meta.encrypted,
   });
 
   // REL-01: seed the atomic download counter symmetrically with the blob path

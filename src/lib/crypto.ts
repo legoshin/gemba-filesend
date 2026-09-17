@@ -3,6 +3,41 @@
 
 const AES_KEY_BITS = 128;
 const IV_BYTES = 12;
+const READ_CHUNK_BYTES = 8 * 1024 * 1024; // 8MB
+
+/** Thrown when the client-side read+encrypt step fails, so callers can
+ *  distinguish "encryption failed" from network/validation errors and offer
+ *  an explicit unencrypted-upload fallback. */
+export class EncryptionError extends Error {}
+
+/**
+ * Reads `file` in fixed-size chunks, invoking `onProgress(loaded, total)`
+ * after each chunk lands, and returns the assembled buffer.
+ *
+ * `crypto.subtle.encrypt` is a single atomic call with no progress API, so
+ * this is what gives the caller *real* (not synthetic) progress: for large
+ * files, reading the bytes off disk is the dominant, measurable cost.
+ */
+export async function readFileWithProgress(
+  file: File,
+  onProgress: (loaded: number, total: number) => void,
+): Promise<ArrayBuffer> {
+  const total = file.size;
+  if (total === 0) {
+    onProgress(0, 0);
+    return new ArrayBuffer(0);
+  }
+  const out = new Uint8Array(new ArrayBuffer(total));
+  let loaded = 0;
+  while (loaded < total) {
+    const end = Math.min(loaded + READ_CHUNK_BYTES, total);
+    const chunk = await file.slice(loaded, end).arrayBuffer();
+    out.set(new Uint8Array(chunk), loaded);
+    loaded = end;
+    onProgress(loaded, total);
+  }
+  return out.buffer;
+}
 
 export async function generateKey(): Promise<CryptoKey> {
   return crypto.subtle.generateKey(

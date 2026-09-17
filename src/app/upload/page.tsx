@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -21,10 +29,12 @@ import { FileDropzone } from "@/components/file-dropzone";
 import { toast } from "sonner";
 import { useEmbed } from "@/components/embed-provider";
 import {
+  EncryptionError,
   encryptPacked,
   exportKeyBase64,
   generateKey,
   randomSaltBase64,
+  readFileWithProgress,
   sha256Hex,
 } from "@/lib/crypto";
 
@@ -47,12 +57,17 @@ interface DirectMetaPayload {
   downloadsRemaining: number;
   expiresAt: number;
   recipientEmails?: string[];
+  encrypted?: boolean;
 }
+
+/** Resolution of the "encryption failed" prompt shown to the user. */
+type EncryptionFallbackChoice = "retry" | "unencrypted" | "cancel";
 
 interface UploadResult {
   fileName: string;
   fileSize: number;
   shareLink: string;
+  encrypted: boolean;
 }
 
 function uploadDirect(
@@ -129,16 +144,27 @@ function formatSize(bytes: number): string {
 }
 
 /**
- * Encrypts one file and uploads it. Returns the share link.
+ * Encrypts (unless `encrypt` is false) one file and uploads it. Returns the
+ * share link.
  *
  * Each file is processed end-to-end before the next starts, so peak memory
  * stays at roughly 3× the single largest file (raw bytes + ciphertext +
  * packed output) rather than 3× the combined total of all selected files.
  * That's what keeps multi-file uploads from blowing past the browser's
  * TypedArray limit ("array allocation failed").
+ *
+ * Progress is real, not synthetic: the "encrypting" phase reports actual
+ * bytes read off disk (the dominant, measurable cost for large files — the
+ * subsequent `crypto.subtle.encrypt` call has no progress API of its own),
+ * and the "uploading" phase reports actual network-transfer bytes.
+ *
+ * If the read+encrypt step fails, throws `EncryptionError` so the caller can
+ * offer an explicit, user-chosen unencrypted-upload fallback (never a silent
+ * downgrade).
  */
 async function uploadOneFile(opts: {
   file: File;
+  encrypt: boolean;
   storageMode: StorageMode;
   usePassword: boolean;
   password: string;
@@ -146,10 +172,11 @@ async function uploadOneFile(opts: {
   expiresAt: number;
   origin: string;
   recipientEmails: string[];
-  onProgress: (percent: number) => void;
+  onProgress: (phase: "encrypting" | "uploading", percent: number) => void;
 }): Promise<string> {
   const {
     file,
+    encrypt,
     storageMode,
     usePassword,
     password,
@@ -160,13 +187,27 @@ async function uploadOneFile(opts: {
     onProgress,
   } = opts;
 
-  const data = await file.arrayBuffer();
-  const key = await generateKey();
-  const keyB64 = await exportKeyBase64(key);
-  const encrypted = await encryptPacked(data, key);
-  const encryptedBlob = new Blob([encrypted], {
-    type: "application/octet-stream",
-  });
+  let bodyBlob: Blob;
+  let keyB64: string | undefined;
+
+  if (encrypt) {
+    try {
+      const data = await readFileWithProgress(file, (loaded, total) => {
+        onProgress("encrypting", total > 0 ? (loaded / total) * 100 : 100);
+      });
+      const key = await generateKey();
+      keyB64 = await exportKeyBase64(key);
+      const encrypted = await encryptPacked(data, key);
+      bodyBlob = new Blob([encrypted], { type: "application/octet-stream" });
+    } catch (err) {
+      throw new EncryptionError(
+        err instanceof Error ? err.message : "Encryption failed",
+      );
+    }
+  } else {
+    bodyBlob = file;
+    onProgress("encrypting", 100);
+  }
 
   let id: string;
 
@@ -181,15 +222,16 @@ async function uploadOneFile(opts: {
       downloadsRemaining,
       expiresAt,
       recipientEmails: recipientEmails.length > 0 ? recipientEmails : undefined,
+      encrypted: encrypt ? undefined : false,
     });
-    await upload(`gemba/blob/${id}.bin`, encryptedBlob, {
+    await upload(`gemba/blob/${id}.bin`, bodyBlob, {
       access: "private",
       handleUploadUrl: "/api/files",
       clientPayload,
       contentType: "application/octet-stream",
       multipart: true,
       onUploadProgress: (e) => {
-        onProgress(e.percentage);
+        onProgress("uploading", e.percentage);
       },
     });
   } else {
@@ -208,15 +250,17 @@ async function uploadOneFile(opts: {
       downloadsRemaining,
       expiresAt,
       recipientEmails: recipientEmails.length > 0 ? recipientEmails : undefined,
+      encrypted: encrypt ? undefined : false,
     };
-    id = await uploadDirect(encryptedBlob, meta, (loaded, total) => {
-      if (total > 0) onProgress((loaded / total) * 100);
+    id = await uploadDirect(bodyBlob, meta, (loaded, total) => {
+      if (total > 0) onProgress("uploading", (loaded / total) * 100);
     });
   }
 
   const params = new URLSearchParams({ id });
   if (usePassword) params.set("pw", "1");
-  return `${origin}/download?${params}#${keyB64}`;
+  const link = `${origin}/download?${params}`;
+  return encrypt ? `${link}#${keyB64}` : link;
 }
 
 export default function UploadPage() {
@@ -236,7 +280,35 @@ export default function UploadPage() {
   const [results, setResults] = useState<UploadResult[]>([]);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [storageMode, setStorageMode] = useState<StorageMode | null>(null);
+  const [encryptionFailure, setEncryptionFailure] = useState<{
+    fileName: string;
+    message: string;
+  } | null>(null);
+  const encryptionFallbackResolver = useRef<
+    ((choice: EncryptionFallbackChoice) => void) | null
+  >(null);
   const { isEmbed } = useEmbed();
+
+  /**
+   * Pauses the upload loop and shows the "encryption failed" dialog. Resolves
+   * once the user makes an explicit choice — retry, upload unencrypted, or
+   * cancel. Never resolves on its own (no silent downgrade).
+   */
+  const promptEncryptionFallback = (
+    fileName: string,
+    message: string,
+  ): Promise<EncryptionFallbackChoice> => {
+    return new Promise((resolve) => {
+      encryptionFallbackResolver.current = resolve;
+      setEncryptionFailure({ fileName, message });
+    });
+  };
+
+  const resolveEncryptionFallback = (choice: EncryptionFallbackChoice) => {
+    setEncryptionFailure(null);
+    encryptionFallbackResolver.current?.(choice);
+    encryptionFallbackResolver.current = null;
+  };
 
   useEffect(() => {
     void (async () => {
@@ -289,30 +361,59 @@ export default function UploadPage() {
         const file = files[i];
         setCurrentFileIndex(i);
         setCurrentFileName(file.name);
-        setUploadState("preparing");
-        setProgressLabel(`Encrypting "${file.name}"…`);
-        setUploadProgress(0);
 
-        const shareLink = await uploadOneFile({
-          file,
-          storageMode,
-          usePassword,
-          password,
-          downloadsRemaining,
-          expiresAt,
-          origin: window.location.origin,
-          recipientEmails: useVerify ? parsedEmails : [],
-          onProgress: (pct) => {
-            setUploadState("uploading");
-            setProgressLabel(`Uploading "${file.name}"…`);
-            setUploadProgress(pct);
-          },
-        });
+        let shareLink: string | null = null;
+        let encryptThisFile = true;
+
+        while (shareLink === null) {
+          setUploadState("preparing");
+          setProgressLabel(`Encrypting "${file.name}"…`);
+          setUploadProgress(0);
+
+          try {
+            shareLink = await uploadOneFile({
+              file,
+              encrypt: encryptThisFile,
+              storageMode,
+              usePassword,
+              password,
+              downloadsRemaining,
+              expiresAt,
+              origin: window.location.origin,
+              recipientEmails: useVerify ? parsedEmails : [],
+              onProgress: (phase, pct) => {
+                setUploadState(
+                  phase === "encrypting" ? "preparing" : "uploading",
+                );
+                setProgressLabel(
+                  phase === "encrypting"
+                    ? `Encrypting "${file.name}"…`
+                    : `Uploading "${file.name}"…`,
+                );
+                setUploadProgress(pct);
+              },
+            });
+          } catch (err) {
+            if (!(err instanceof EncryptionError)) throw err;
+
+            const choice = await promptEncryptionFallback(
+              file.name,
+              err.message,
+            );
+            if (choice === "retry") continue;
+            if (choice === "unencrypted") {
+              encryptThisFile = false;
+              continue;
+            }
+            throw err; // cancel — bubble to the outer catch below
+          }
+        }
 
         collected.push({
           fileName: file.name,
           fileSize: file.size,
           shareLink,
+          encrypted: encryptThisFile,
         });
         setResults([...collected]);
       }
@@ -450,7 +551,9 @@ export default function UploadPage() {
             </CardTitle>
             <CardDescription>
               {results.length === 1
-                ? "Your file is encrypted and ready to share."
+                ? results[0].encrypted
+                  ? "Your file is encrypted and ready to share."
+                  : "Your file is ready to share."
                 : "Each file has its own share link below."}
             </CardDescription>
           </CardHeader>
@@ -465,6 +568,11 @@ export default function UploadPage() {
                       {formatSize(r.fileSize)}
                     </span>
                   </div>
+                  {!r.encrypted && (
+                    <Chip variant="warning" icon={<Icon name="AlertCircle" size={16} />}>
+                      NOT ENCRYPTED
+                    </Chip>
+                  )}
                   <div className="flex gap-2">
                     <Input
                       value={r.shareLink}
@@ -664,9 +772,7 @@ export default function UploadPage() {
                       {progressLabel}
                     </span>
                     <span className="gemba-body-sm shrink-0 text-[var(--text-subdued)]">
-                      {uploadState === "uploading"
-                        ? `${Math.min(Math.round(uploadProgress), 100)}%`
-                        : "…"}
+                      {`${Math.min(Math.round(uploadProgress), 100)}%`}
                     </span>
                   </div>
                   {files.length > 1 && (
@@ -675,13 +781,7 @@ export default function UploadPage() {
                       {currentFileName ? ` — ${currentFileName}` : ""}
                     </p>
                   )}
-                  <Progress
-                    value={
-                      uploadState === "uploading"
-                        ? Math.min(uploadProgress, 100)
-                        : undefined
-                    }
-                  />
+                  <Progress value={Math.min(uploadProgress, 100)} />
                 </div>
               </CardContent>
             </Card>
@@ -702,6 +802,47 @@ export default function UploadPage() {
           </Button>
         </div>
       )}
+
+      <Dialog open={encryptionFailure !== null}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Icon
+                name="AlertCircle"
+                size={20}
+                className="text-[var(--gemba-critical)]"
+              />
+              Encryption failed
+            </DialogTitle>
+            <DialogDescription>
+              {`Couldn't encrypt "${encryptionFailure?.fileName}": ${encryptionFailure?.message}. `}
+              You can retry, or upload this file without encryption —
+              anyone with the link will be able to read it, since there
+              will be no encryption key.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => resolveEncryptionFallback("cancel")}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => resolveEncryptionFallback("retry")}
+            >
+              Retry Encryption
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => resolveEncryptionFallback("unencrypted")}
+            >
+              Upload Unencrypted
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

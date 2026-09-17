@@ -36,6 +36,9 @@ interface FileInfo {
   expiresIn: string;
   passwordProtected: boolean;
   verifyRequired: boolean;
+  /** False only for files the uploader explicitly chose to send unencrypted
+   *  after an encryption failure (the "upload unencrypted" fallback). */
+  encrypted: boolean;
   keyBase64: string;
 }
 
@@ -55,6 +58,7 @@ function isMetaPayload(obj: unknown): obj is {
   verifyRequired: boolean;
   downloadsRemaining: number;
   expiresAt: number;
+  encrypted: boolean;
 } {
   if (typeof obj !== "object" || obj === null) return false;
   const o = obj as Record<string, unknown>;
@@ -65,7 +69,8 @@ function isMetaPayload(obj: unknown): obj is {
     typeof o.passwordProtected === "boolean" &&
     typeof o.verifyRequired === "boolean" &&
     typeof o.downloadsRemaining === "number" &&
-    typeof o.expiresAt === "number"
+    typeof o.expiresAt === "number" &&
+    typeof o.encrypted === "boolean"
   );
 }
 
@@ -117,10 +122,9 @@ export default function DownloadPage() {
       setState("invalid-link");
       return;
     }
-    if (!keyBase64) {
-      setState("invalid-link");
-      return;
-    }
+    // Note: keyBase64 may legitimately be empty — files uploaded via the
+    // explicit "upload unencrypted" fallback have no key. Whether one is
+    // required is decided below, once the server reports `encrypted`.
 
     let res: Response;
     try {
@@ -157,6 +161,11 @@ export default function DownloadPage() {
       return;
     }
 
+    if (data.encrypted && !keyBase64) {
+      setState("invalid-link");
+      return;
+    }
+
     setFileInfo({
       id,
       name: data.name,
@@ -167,6 +176,7 @@ export default function DownloadPage() {
       expiresIn: formatExpiresIn(data.expiresAt),
       passwordProtected: data.passwordProtected,
       verifyRequired: data.verifyRequired,
+      encrypted: data.encrypted,
       keyBase64,
     });
     setState("preview");
@@ -328,37 +338,50 @@ export default function DownloadPage() {
         }
       }
 
-      const encrypted = new Uint8Array(received);
+      const downloadedBytes = new Uint8Array(received);
       let offset = 0;
       for (const c of chunks) {
-        encrypted.set(c, offset);
+        downloadedBytes.set(c, offset);
         offset += c.byteLength;
       }
 
-      // An AES-GCM encrypted payload is at minimum IV (12) + auth tag (16)
-      // = 28 bytes. Anything shorter is a truncated or wrong-shaped
-      // response, not a valid ciphertext.
-      if (encrypted.byteLength < 28) {
-        const preview = new TextDecoder("utf-8", { fatal: false }).decode(
-          encrypted,
+      let fileBytes: Uint8Array<ArrayBuffer>;
+      if (fileInfo.encrypted) {
+        // An AES-GCM encrypted payload is at minimum IV (12) + auth tag (16)
+        // = 28 bytes. Anything shorter is a truncated or wrong-shaped
+        // response, not a valid ciphertext.
+        if (downloadedBytes.byteLength < 28) {
+          const preview = new TextDecoder("utf-8", { fatal: false }).decode(
+            downloadedBytes,
+          );
+          throw new Error(
+            `Server returned only ${downloadedBytes.byteLength} bytes${preview ? `: "${preview}"` : ""}. The file may have expired, been exhausted, or the link is invalid.`,
+          );
+        }
+        if (total > 0 && downloadedBytes.byteLength < total) {
+          throw new Error(
+            `Download truncated: received ${downloadedBytes.byteLength} of ${total} bytes. Try again.`,
+          );
+        }
+
+        setProgressLabel("Decrypting…");
+        setProgress(100);
+
+        const key = await importKeyBase64(fileInfo.keyBase64);
+        fileBytes = new Uint8Array(
+          await decryptPacked(downloadedBytes.buffer, key),
         );
-        throw new Error(
-          `Server returned only ${encrypted.byteLength} bytes${preview ? `: "${preview}"` : ""}. The file may have expired, been exhausted, or the link is invalid.`,
-        );
+      } else {
+        if (total > 0 && downloadedBytes.byteLength < total) {
+          throw new Error(
+            `Download truncated: received ${downloadedBytes.byteLength} of ${total} bytes. Try again.`,
+          );
+        }
+        setProgress(100);
+        fileBytes = downloadedBytes;
       }
-      if (total > 0 && encrypted.byteLength < total) {
-        throw new Error(
-          `Download truncated: received ${encrypted.byteLength} of ${total} bytes. Try again.`,
-        );
-      }
 
-      setProgressLabel("Decrypting…");
-      setProgress(100);
-
-      const key = await importKeyBase64(fileInfo.keyBase64);
-      const decrypted = await decryptPacked(encrypted.buffer, key);
-
-      const blob = new Blob([decrypted], { type: fileInfo.type });
+      const blob = new Blob([fileBytes], { type: fileInfo.type });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -369,7 +392,11 @@ export default function DownloadPage() {
       URL.revokeObjectURL(url);
 
       setState("done");
-      toast.success("File downloaded and decrypted!");
+      toast.success(
+        fileInfo.encrypted
+          ? "File downloaded and decrypted!"
+          : "File downloaded (was not encrypted).",
+      );
     } catch (err) {
       setState("preview");
       setProgress(0);
@@ -479,6 +506,11 @@ export default function DownloadPage() {
                 {fileInfo.passwordProtected && (
                   <Chip variant="neutral" icon={<Icon name="Lock01" size={16} />}>
                     PASSWORD REQUIRED
+                  </Chip>
+                )}
+                {!fileInfo.encrypted && (
+                  <Chip variant="warning" icon={<Icon name="AlertCircle" size={16} />}>
+                    NOT ENCRYPTED
                   </Chip>
                 )}
                 {fileInfo.verifyRequired &&

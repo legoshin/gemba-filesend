@@ -44,5 +44,7 @@ export async function GET(
     verifyRequired: Boolean(meta.recipientEmails?.length),
     downloadsRemaining: meta.downloadsRemaining,
     expiresAt: meta.expiresAt,
+    // Legacy records predate this field — undefined must read as encrypted.
+    encrypted: meta.encrypted !== false,
   });
 }

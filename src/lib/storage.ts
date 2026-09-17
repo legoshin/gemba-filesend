@@ -24,4 +24,9 @@ export interface StoredMeta {
    *  "verification required" flag — do not add a separate boolean (Pitfall 5,
    *  mirrors passwordProtected: Boolean(meta.passwordHash)). */
   recipientEmails?: string[];
+  /** Defaults to true — absent on legacy records that predate this field, so
+   *  reads must treat `undefined` as encrypted. Only an explicit `false`
+   *  marks a user-chosen "upload without encryption" fallback (no key was
+   *  ever generated for these). */
+  encrypted?: boolean;
 }
