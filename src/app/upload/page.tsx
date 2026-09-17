@@ -37,6 +37,7 @@ import {
   readFileWithProgress,
   sha256Hex,
 } from "@/lib/crypto";
+import { parseRecipientEmails } from "@/lib/recipient-emails";
 
 type UploadState = "idle" | "preparing" | "uploading" | "done";
 type ExpiryUnit = "hours" | "days" | "months";
@@ -120,19 +121,6 @@ function generateClientId(): string {
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-}
-
-/**
- * Normalizes the comma/newline-separated recipient email input into a
- * deduplicated array: split, trim, lowercase, drop empties.
- */
-function parseRecipientEmails(raw: string): string[] {
-  const seen = new Set<string>();
-  for (const part of raw.split(/[,\n]/)) {
-    const email = part.trim().toLowerCase();
-    if (email.length > 0) seen.add(email);
-  }
-  return Array.from(seen);
 }
 
 function formatSize(bytes: number): string {
