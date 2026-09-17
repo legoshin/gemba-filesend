@@ -69,3 +69,30 @@ once by hand.
 the random ones xcodeproj hands out. Without that, regenerating rewrote every id
 and left a ~400-line diff in `project.pbxproj` after every build. Verified
 reproducible: three consecutive runs produce a byte-identical file.
+
+
+## Fixes, 2026-09-17 — first run on a second Mac
+
+Two failures on a fresh checkout on another machine, both in the tooling rather
+than the app.
+
+1. **`error: fatalError` with nothing else.** That line is SwiftPM's own
+   announcement of a build failure and carries no information; the real cause was
+   buried. Two changes: the test fixtures no longer load via `fatalError` in a
+   static initializer (a crash there takes down the test process and leaves only
+   that word), and `build-app.sh` now extracts the real compiler and assertion
+   lines from the log, filtering SwiftPM's and xcodebuild's own noise, and keeps
+   the full log at `macos/.build-logs/last-run.log`. Verified by breaking a
+   source file on purpose: the output now names the file, line and error.
+   The fixtures also fall back to the copy beside the test source when the
+   resource bundle is not in place, which is the cold-checkout case — verified by
+   deleting the built bundle's copy and re-running the test green.
+
+2. **"the project needs regenerating but the xcodeproj gem is missing"** on a
+   machine that had changed nothing. The staleness check compared mtimes, and a
+   `git clone` stamps every file at checkout time in arbitrary order, so a fresh
+   clone looked stale. It now compares the file names the project references
+   against the files on disk — which is what regeneration actually changes — and
+   a missing gem is a warning that still builds, not a hard stop. Only a first
+   checkout with no committed project fails outright, with install instructions.
+   Verified all four combinations (clean/stale × gem present/absent).

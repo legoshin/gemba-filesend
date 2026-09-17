@@ -57,9 +57,16 @@ cd macos && ruby scripts/generate-project.rb     # after adding or removing a so
 xcodebuild -project GembaFilesend.xcodeproj -scheme GembaFilesend -configuration Debug build
 ```
 
-Requires Xcode 27 / Swift 6, macOS 14+ deployment target, and the `xcodeproj`
-gem for project generation (`gem install xcodeproj`). The project is ad-hoc
-signed by default, so it builds and runs on any Mac with no certificate.
+Requires Xcode 27 / Swift 6 and a macOS 14+ deployment target. The project is
+ad-hoc signed by default, so it builds and runs on any Mac with no certificate.
+
+The `xcodeproj` gem is **not** needed to build a checkout — `project.pbxproj` is
+committed. It is only needed to regenerate the project, which the script does
+when the source files on disk no longer match the ones the project references
+(that is, when a file has been added or removed). If the gem is missing at that
+point the script warns and builds with the committed project rather than
+stopping. Install it with `gem install --user-install xcodeproj` when you need
+it.
 
 `project.pbxproj` is generated with numbered object ids rather than the random
 ones xcodeproj normally assigns, so regenerating is reproducible — run the

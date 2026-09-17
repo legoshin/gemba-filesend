@@ -22,17 +22,75 @@ final class VectorTests: XCTestCase {
         let passwordCases: [PasswordCase]
     }
 
-    static let fixtures: Fixtures = {
-        guard let url = Bundle.module.url(forResource: "vectors", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let decoded = try? JSONDecoder().decode(Fixtures.self, from: data)
-        else { fatalError("vectors.json missing — run `node macos/scripts/gen-vectors.mjs`") }
-        return decoded
-    }()
+    /// Loads the vectors, looking in the resource bundle first and falling back
+    /// to the file beside this source. The fallback matters on a cold checkout,
+    /// where the resource bundle may not be in place when the test binary first
+    /// runs — and this must never be a `fatalError`, because that kills the test
+    /// process and SwiftPM reports only the word "fatalError", which tells
+    /// whoever hit it nothing at all.
+    static func loadFixtures() throws -> Fixtures {
+        let candidates = [
+            Bundle.module.url(forResource: "vectors", withExtension: "json"),
+            URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .appendingPathComponent("vectors.json"),
+        ].compactMap { $0 }
+
+        for url in candidates where FileManager.default.fileExists(atPath: url.path) {
+            let data = try Data(contentsOf: url)
+            do {
+                return try JSONDecoder().decode(Fixtures.self, from: data)
+            } catch {
+                throw FixtureError.unreadable(url.path, error)
+            }
+        }
+        throw FixtureError.missing(candidates.map(\.path))
+    }
+
+    enum FixtureError: Error, CustomStringConvertible {
+        case missing([String])
+        case unreadable(String, Error)
+
+        var description: String {
+            switch self {
+            case .missing(let paths):
+                return """
+                Could not find vectors.json — the cross-platform crypto vectors.
+                Looked in: \(paths.joined(separator: ", "))
+                Regenerate it with: node macos/scripts/gen-vectors.mjs
+                """
+            case .unreadable(let path, let error):
+                return """
+                vectors.json at \(path) could not be decoded: \(error)
+                Regenerate it with: node macos/scripts/gen-vectors.mjs
+                """
+            }
+        }
+    }
+
+    /// Cached across the run behind a lock — Swift 6 rejects bare mutable static
+    /// state, and XCTest may run these concurrently.
+    private static let cache = FixtureCache()
+
+    static func fixtures() throws -> Fixtures {
+        if let ready = cache.value { return ready }
+        let loaded = try loadFixtures()
+        cache.value = loaded
+        return loaded
+    }
+
+    final class FixtureCache: @unchecked Sendable {
+        private let lock = NSLock()
+        private var stored: Fixtures?
+        var value: Fixtures? {
+            get { lock.lock(); defer { lock.unlock() }; return stored }
+            set { lock.lock(); stored = newValue; lock.unlock() }
+        }
+    }
 
     /// Web -> Mac: bytes the browser produced must decrypt here.
     func testDecryptsWebProducedPayloads() throws {
-        for v in Self.fixtures.vectors {
+        for v in try Self.fixtures().vectors {
             let key = try ShareKey(base64URL: v.keyBase64Url)
             let packed = try XCTUnwrap(Data(base64Encoded: v.packedBase64), v.name)
             let expected = try XCTUnwrap(Data(base64Encoded: v.plaintextBase64), v.name)
@@ -46,7 +104,7 @@ final class VectorTests: XCTestCase {
     /// which is what the web's `decryptPacked` slices blindly. A layout drift here
     /// is the single failure that would silently break every link we make.
     func testPackedLayoutMatchesWebExpectation() throws {
-        for v in Self.fixtures.vectors {
+        for v in try Self.fixtures().vectors {
             let key = try ShareKey(base64URL: v.keyBase64Url)
             let plaintext = try XCTUnwrap(Data(base64Encoded: v.plaintextBase64))
             let packed = try PackedCrypto.seal(plaintext, key: key)
@@ -100,7 +158,7 @@ final class VectorTests: XCTestCase {
     // MARK: - Encoding + key parity
 
     func testBase64URLMatchesWeb() throws {
-        for c in Self.fixtures.base64UrlCases {
+        for c in try Self.fixtures().base64UrlCases {
             let bytes = try XCTUnwrap(Data(base64Encoded: c.bytesBase64))
             XCTAssertEqual(Base64URL.encode(bytes), c.encoded)
             XCTAssertEqual(Base64URL.decode(c.encoded), bytes)
@@ -131,8 +189,8 @@ final class VectorTests: XCTestCase {
 
     /// Password hashing is server-side, but the app must agree on the formula
     /// to reason about it — sha256Hex(password + salt).
-    func testPasswordHashFormulaMatchesServer() {
-        for c in Self.fixtures.passwordCases {
+    func testPasswordHashFormulaMatchesServer() throws {
+        for c in try Self.fixtures().passwordCases {
             XCTAssertEqual(sha256Hex(c.password + c.salt), c.sha256Hex)
         }
     }

@@ -38,14 +38,32 @@ done
 
 step() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
 fail() { printf '\033[31merror: %s\033[0m\n' "$1" >&2; exit 1; }
-LOG="$(mktemp -t gemba-build)"
-trap 'rm -f "$LOG"' EXIT
+LOG_DIR="$MACOS_DIR/.build-logs"
+mkdir -p "$LOG_DIR"
+LOG="$LOG_DIR/last-run.log"
+
+# SwiftPM and xcodebuild both announce a failure with lines that carry no
+# information ("error: Build failed", "error: fatalError"). Pull out the lines
+# that actually say what broke, and fall back to the tail if none match.
+report_failure() {
+  local real
+  real="$(grep -E "error:|warning: .*not found|XCTAssert|failed -" "$LOG" \
+          | grep -v "error: Build failed\|error: fatalError\|error: SwiftCompile normal\|CoreDevice\|CoreSimulator\|DVTPlugIn" \
+          | head -15)"
+  if [ -n "$real" ]; then
+    printf '%s\n' "$real" >&2
+  else
+    tail -25 "$LOG" >&2
+  fi
+  echo "" >&2
+  echo "  full output: $LOG" >&2
+}
 
 # ------------------------------------------------------------------- tests
 if [ "$RUN_TESTS" -eq 1 ]; then
   step "Testing GembaKit"
   if ! (cd "$MACOS_DIR/GembaKit" && swift test > "$LOG" 2>&1); then
-    tail -25 "$LOG" >&2
+    report_failure
     fail "tests failed — the crypto contract with the web app is what these check, so this is not a build to install"
   fi
   grep -E "Executed [0-9]+ tests" "$LOG" | tail -1 | sed 's/^/  /'
@@ -54,24 +72,57 @@ fi
 # ------------------------------------------------------------------ project
 # The .xcodeproj is generated, so a source file added or removed since it was
 # last written means it is stale. Regenerate rather than fail confusingly later.
-step "Checking the Xcode project is current"
-NEEDS_REGEN=0
-if [ ! -d "$PROJECT" ]; then
-  NEEDS_REGEN=1
-  echo "  no project yet"
-elif [ -n "$(find "$MACOS_DIR/GembaFilesend" "$MACOS_DIR/ShareExtension" "$MACOS_DIR/Configs" "$HERE/generate-project.rb" \
-              -newer "$PROJECT/project.pbxproj" 2>/dev/null | head -1)" ]; then
-  NEEDS_REGEN=1
-  echo "  sources changed since the project was generated"
-fi
-if [ "$NEEDS_REGEN" -eq 1 ]; then
-  if command -v ruby >/dev/null && ruby -e "require 'xcodeproj'" 2>/dev/null; then
+# Staleness is judged by CONTENT, not mtimes: a `git clone` stamps every file
+# with the checkout time in arbitrary order, so an mtime comparison reports a
+# freshly cloned project as stale on a machine that has changed nothing.
+# What regeneration actually changes is which files the project references, so
+# compare that against what is on disk.
+project_files() {
+  grep -oE 'path = "?[A-Za-z0-9_.@-]+\.(swift|icns|plist|entitlements|xcconfig)"?' \
+    "$PROJECT/project.pbxproj" 2>/dev/null \
+    | sed 's/.*path = //; s/"//g' | sort -u
+}
+disk_files() {
+  (cd "$MACOS_DIR" && find GembaFilesend ShareExtension Configs -maxdepth 1 -type f \
+     \( -name '*.swift' -o -name '*.icns' -o -name '*.plist' \
+        -o -name '*.entitlements' -o -name '*.xcconfig' \) 2>/dev/null \
+     -exec basename {} \;) | sort -u
+}
+
+have_generator() {
+  command -v ruby >/dev/null 2>&1 && ruby -e "require 'xcodeproj'" >/dev/null 2>&1
+}
+
+regenerate_or_explain() {
+  if have_generator; then
     ruby "$HERE/generate-project.rb" | sed 's/^/  /'
-  else
-    fail "the project needs regenerating but the xcodeproj gem is missing — run: gem install xcodeproj"
+    return 0
   fi
-else
+  return 1
+}
+
+step "Checking the Xcode project is current"
+if [ ! -d "$PROJECT" ]; then
+  echo "  no project yet — generating"
+  regenerate_or_explain || fail "the project has to be generated on a first checkout, and the xcodeproj gem is missing.
+       Install it with one of:
+         gem install --user-install xcodeproj      # no sudo
+         sudo gem install xcodeproj
+       Then run this script again."
+elif [ "$(project_files)" = "$(disk_files)" ]; then
   echo "  up to date"
+else
+  echo "  source files differ from the project's file list"
+  if ! regenerate_or_explain; then
+    # A warning, not a failure: the committed project builds fine unless a file
+    # was genuinely added or removed, and if one was, the compiler will say so.
+    cat >&2 <<'MESSAGE'
+  warning: the project looks out of date and the xcodeproj gem is missing, so it
+           was not regenerated. Building with the committed project. If a source
+           file was added or removed, install the gem and rerun:
+             gem install --user-install xcodeproj
+MESSAGE
+  fi
 fi
 
 if [ ! -f "$MACOS_DIR/GembaFilesend/AppIcon.icns" ]; then
@@ -83,7 +134,7 @@ fi
 step "Building ($CONFIGURATION)"
 if ! xcodebuild -project "$PROJECT" -scheme GembaFilesend \
      -configuration "$CONFIGURATION" -derivedDataPath "$DERIVED" build > "$LOG" 2>&1; then
-  grep -E "error:" "$LOG" | grep -v "CoreDevice\|CoreSimulator\|DVTPlugIn" | head -20 >&2
+  report_failure
   fail "build failed"
 fi
 BUILT="$DERIVED/Build/Products/$CONFIGURATION/$APP_NAME.app"
