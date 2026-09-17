@@ -37,7 +37,7 @@ import {
   readFileWithProgress,
   sha256Hex,
 } from "@/lib/crypto";
-import { parseRecipientEmails } from "@/lib/recipient-emails";
+import { RecipientChipInput } from "@/components/upload/recipient-chip-input";
 
 type UploadState = "idle" | "preparing" | "uploading" | "done";
 type ExpiryUnit = "hours" | "days" | "months";
@@ -256,7 +256,8 @@ export default function UploadPage() {
   const [password, setPassword] = useState("");
   const [usePassword, setUsePassword] = useState(false);
   const [useVerify, setUseVerify] = useState(false);
-  const [recipientEmails, setRecipientEmails] = useState("");
+  const [useNotify, setUseNotify] = useState(false);
+  const [recipientEmails, setRecipientEmails] = useState<string[]>([]);
   const [downloadLimit, setDownloadLimit] = useState("1");
   const [expiryValue, setExpiryValue] = useState("1");
   const [expiryUnit, setExpiryUnit] = useState<ExpiryUnit>("days");
@@ -317,10 +318,9 @@ export default function UploadPage() {
       toast.error("Enter a password or disable password protection");
       return;
     }
-    const parsedEmails = parseRecipientEmails(recipientEmails);
-    if (useVerify && parsedEmails.length === 0) {
+    if ((useVerify || useNotify) && recipientEmails.length === 0) {
       toast.error(
-        "Add at least one recipient email or turn off recipient verification",
+        "Add at least one recipient email or turn off recipient verification and notification",
       );
       return;
     }
@@ -368,7 +368,7 @@ export default function UploadPage() {
               downloadsRemaining,
               expiresAt,
               origin: window.location.origin,
-              recipientEmails: useVerify ? parsedEmails : [],
+              recipientEmails: useVerify ? recipientEmails : [],
               onProgress: (phase, pct) => {
                 setUploadState(
                   phase === "encrypting" ? "preparing" : "uploading",
@@ -417,7 +417,7 @@ export default function UploadPage() {
       // Isolated try/catch: a notify failure must NEVER roll back the
       // upload result (D-06-04) — this is deliberately separate from the
       // outer try/catch below.
-      if (useVerify && parsedEmails.length > 0) {
+      if (useNotify && recipientEmails.length > 0) {
         try {
           const links = collected.map((r) => ({
             fileName: r.fileName,
@@ -426,7 +426,7 @@ export default function UploadPage() {
           const res = await fetch("/api/notify", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ recipients: parsedEmails, links }),
+            body: JSON.stringify({ recipients: recipientEmails, links }),
           });
           if (!res.ok) {
             throw new Error(`HTTP ${res.status}`);
@@ -532,7 +532,8 @@ export default function UploadPage() {
     setPassword("");
     setUsePassword(false);
     setUseVerify(false);
-    setRecipientEmails("");
+    setUseNotify(false);
+    setRecipientEmails([]);
     setDownloadLimit("1");
     setExpiryValue("1");
     setExpiryUnit("days");
@@ -696,6 +697,29 @@ export default function UploadPage() {
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
+                  <Label htmlFor="notify-toggle" className="flex items-center gap-2">
+                    <Icon name="Send01" size={16} className="text-[var(--text-subdued)]" />
+                    Notify Recipient
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Email recipients the download link when the upload finishes
+                  </p>
+                </div>
+                <Switch
+                  id="notify-toggle"
+                  checked={useNotify}
+                  onCheckedChange={(checked) => {
+                    setUseNotify(checked);
+                    // Turning Notify ON auto-enables Verify (D-06-05); Verify
+                    // stays independently switchable and turning Notify OFF
+                    // leaves Verify at its last value.
+                    if (checked) setUseVerify(true);
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
                   <Label htmlFor="verify-toggle" className="flex items-center gap-2">
                     <Icon name="Mail01" size={16} className="text-[var(--text-subdued)]" />
                     Verify Recipient
@@ -711,18 +735,18 @@ export default function UploadPage() {
                 />
               </div>
 
-              {useVerify && (
+              {(useNotify || useVerify) && (
                 <div className="space-y-2">
                   <Label htmlFor="recipient-emails">Recipient email(s)</Label>
-                  <Input
+                  <RecipientChipInput
                     id="recipient-emails"
-                    placeholder="alice@example.com, bob@example.com"
                     value={recipientEmails}
-                    onChange={(e) => setRecipientEmails(e.target.value)}
+                    onChange={setRecipientEmails}
+                    placeholder="alice@example.com, bob@example.com"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Comma-separated, up to 10 addresses. Anyone on the list
-                    can request a code to unlock the download.
+                    Up to 10 addresses. Press Enter or comma to add each one.
+                    This list is used for both notification and verification.
                   </p>
                 </div>
               )}
