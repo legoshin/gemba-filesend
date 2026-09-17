@@ -33,6 +33,7 @@ let downloadLimiter: Ratelimit | null = null;
 let passwordLimiter: Ratelimit | null = null;
 let requestCodeLimiter: Ratelimit | null = null;
 let verifyCodeLimiter: Ratelimit | null = null;
+let notifyLimiter: Ratelimit | null = null;
 
 function buildLimiter(limit: number, prefix: string): Ratelimit | null {
   if (!hasUpstash()) return null;
@@ -90,6 +91,13 @@ function getVerifyCodeLimiter(): Ratelimit | null {
     );
   }
   return verifyCodeLimiter;
+}
+
+function getNotifyLimiter(): Ratelimit | null {
+  if (!notifyLimiter) {
+    notifyLimiter = buildLimiter(intEnv("RATE_LIMIT_NOTIFY_PER_MIN", 10), "rl:nt");
+  }
+  return notifyLimiter;
 }
 
 /** Shared enforcement: null = allow/continue, Response = 429 short-circuit. */
@@ -159,4 +167,9 @@ export async function checkVerifyAttemptLimit(
   ip: string,
 ): Promise<Response | null> {
   return enforce(getVerifyCodeLimiter(), fileId + ":" + ip);
+}
+
+/** Notify throttle: RATE_LIMIT_NOTIFY_PER_MIN per IP per minute (Phase 6). */
+export async function checkNotifyLimit(ip: string): Promise<Response | null> {
+  return enforce(getNotifyLimiter(), ip);
 }

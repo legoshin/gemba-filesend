@@ -425,6 +425,31 @@ export default function UploadPage() {
           ? `${files.length} files uploaded — one link per file`
           : "File uploaded",
       );
+
+      // Isolated try/catch: a notify failure must NEVER roll back the
+      // upload result (D-06-04) — this is deliberately separate from the
+      // outer try/catch below.
+      if (useVerify && parsedEmails.length > 0) {
+        try {
+          const links = collected.map((r) => ({
+            fileName: r.fileName,
+            url: r.shareLink,
+          }));
+          const res = await fetch("/api/notify", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ recipients: parsedEmails, links }),
+          });
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+        } catch (err) {
+          toast.error(
+            "Couldn't email recipients: " +
+              (err instanceof Error ? err.message : "Unknown error"),
+          );
+        }
+      }
     } catch (err) {
       setUploadState("idle");
       setUploadProgress(0);

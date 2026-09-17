@@ -66,3 +66,49 @@ export async function sendVerificationEmail(
     throw new Error(`Mailgun send failed: HTTP ${res.status} ${text}`);
   }
 }
+
+/**
+ * Notifies `toEmail` that a file was shared with them, listing every link
+ * the upload produced (Phase 6, D-06-02/D-06-09). Mirrors
+ * `sendVerificationEmail`: bare fetch + native FormData, fail-loud on a
+ * missing env var or a non-OK Mailgun response. Sends to exactly ONE
+ * recipient per call — callers must loop per-recipient rather than passing
+ * a combined `to` list (D-06-07, never a shared To/CC).
+ */
+export async function sendShareNotificationEmail(
+  toEmail: string,
+  links: Array<{ fileName: string; url: string }>,
+): Promise<void> {
+  const apiKey = process.env.MAILGUN_API_KEY;
+  const domain = process.env.MAILGUN_DOMAIN;
+  const from = process.env.MAILGUN_FROM;
+  if (!apiKey || !domain || !from) {
+    throw new Error("Mailgun env vars not configured");
+  }
+
+  const linkLines = links
+    .map(({ fileName, url }) => `${fileName}: ${url}`)
+    .join("\n");
+
+  const form = new FormData();
+  form.set("from", from);
+  form.set("to", toEmail);
+  form.set("subject", "A file was shared with you via Gemba Filesend");
+  form.set(
+    "text",
+    `Someone shared a file with you via Gemba Filesend.\n\n${linkLines}`,
+  );
+
+  const res = await fetch(`${mailgunBaseUrl()}/v3/${domain}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: "Basic " + Buffer.from(`api:${apiKey}`).toString("base64"),
+    },
+    body: form,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Mailgun send failed: HTTP ${res.status} ${text}`);
+  }
+}
