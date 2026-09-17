@@ -127,6 +127,12 @@
   --gemba-critical-subdued: rgba(240, 133, 133, 0.16);
   --gemba-neutral-subdued: rgba(255, 255, 255, 0.1);
   --gemba-neutral-signal: #a2a8b4;
+
+  /* Rings adapt to dark: the hairline follows the dark border, and the focus
+     ring flips to light — the light-mode near-black ink focus ring
+     (var(--gemba-ink-800)) is invisible on dark surfaces. */
+  --ring-border: inset 0 0 0 1px var(--border-default);
+  --ring-focus: inset 0 0 0 2px var(--text-primary);
 }
 
 @layer base {
