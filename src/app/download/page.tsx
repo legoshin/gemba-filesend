@@ -473,7 +473,12 @@ export default function DownloadPage() {
       }
     }
 
-    setState("done");
+    // A multi-file share stays on the file list so the recipient can download
+    // the other files; only a single-file share lands on the "done" screen.
+    const isMultiShare = fileInfo.files.length > 1;
+    setState(isMultiShare ? "preview" : "done");
+    setProgress(0);
+    setCurrentName("");
     const multi = indices.length > 1;
     toast.success(
       fileInfo.encrypted
