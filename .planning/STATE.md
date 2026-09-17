@@ -2,16 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
+current_phase: 04
+current_phase_name: security-reliability-test-hardening
 status: verifying
-stopped_at: Completed 04-03-PLAN.md (TEST-01..04 Vitest suite, 27 passing)
-last_updated: "2026-07-11T20:12:54.553Z"
-last_activity: 2026-07-11 -- Completed Plan 04-02 (SEC-02 rate limiting + REL-01 atomic counter)
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-09-17T16:03:43.849Z"
+last_activity: 2026-09-08
+last_activity_desc: Phase 5 (Recipient Email Verification) code-complete + tested (62/62); HELD at Wave 3 human-verify checkpoint (needs Mailgun env + deploy). NOT pushed to production.
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 17
-  completed_plans: 17
-  percent: 100
+  total_phases: 7
+  completed_phases: 5
+  total_plans: 23
+  completed_plans: 22
 ---
 
 # Project State
@@ -30,7 +32,7 @@ Plan: 3 of 3
 Status: Phase complete — ready for verification
 Last activity: 2026-09-08 -- Phase 5 (Recipient Email Verification) code-complete + tested (62/62); HELD at Wave 3 human-verify checkpoint (needs Mailgun env + deploy). NOT pushed to production.
 
-Progress: [██████░░░░] 67%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -70,8 +72,17 @@ Progress: [██████░░░░] 67%
 | Phase 04 P01 | 8min | 1 tasks | 1 files |
 | Phase 04 P02 | ~18min | 2 tasks | 5 files |
 | Phase 04 P03 | 10min | 3 tasks | 6 files |
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 06 P02 | 4min | 3 tasks | 4 files |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 6 added: Notify Recipient by Email — upload-form toggle emails recipients the download link (full link incl. #key sent server-side via Mailgun, user-approved E2E exception). Follows Phase 5 (recipient verification).
 
 ### Decisions
 
@@ -134,6 +145,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T20:12:54.549Z
-Stopped at: Completed 04-03-PLAN.md (TEST-01..04 Vitest suite, 27 passing)
+Last session: 2026-09-17T16:03:43.838Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
