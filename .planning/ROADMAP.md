@@ -176,10 +176,10 @@ Plans:
 **Goal:** Selecting multiple files produces ONE share link (one id, one key) instead of one link per file. Each file is encrypted client-side under the same key with its own IV (existing per-file wire format, no zip), stored separately under the single id; the download page lists every file and downloads/decrypts each individually. Backward-compatible with existing single-file shares; one download-limit counter per id; Phase 6 notify unbroken.
 **Requirements**: MFL-01 (N files → one id/key/link), MFL-02 (per-file encrypt under shared key, wire format unchanged), MFL-03 (multi-file meta + separate per-file storage, no zip), MFL-04 (download page lists + decrypts each file), MFL-05 (legacy single-file shares still work), REL-01 (one download counter per id)
 **Depends on:** Phase 6
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 
-- [ ] 07-01-PLAN.md — Backend: multi-file meta schema + resolveFiles(), fs per-index storage, finalize route, index-addressable bytes/meta, one-per-id counter (Wave 1)
+- [x] 07-01-PLAN.md — Backend: multi-file meta schema + resolveFiles(), fs per-index storage, finalize route, index-addressable bytes/meta, one-per-id counter (Wave 1)
 - [ ] 07-02-PLAN.md — Upload client: N files → one id/key/link, single finalize, one-link result UI, notify one link (Wave 2)
 - [ ] 07-03-PLAN.md — Download client: list all files + per-file decrypt under one key + legacy compat + end-to-end verify (Wave 2)
