@@ -55,3 +55,17 @@ Confirmed two ways: `NSSharingService.sharingServices(forItems:)` now lists
 "Gemba Filesend", and invoking that service on a real file produced a working
 share whose link decrypted byte-identically through the web's crypto.
 The recovery steps are in `macos/README.md`.
+
+
+## Addition, 2026-09-17 — one-command build
+
+`macos/scripts/build-app.sh` does test → regenerate-if-stale → icon → build →
+install → register → verify. The registration step is the point: LaunchServices
+re-registration, `pluginkit -e use`, and a Finder restart all have to happen or
+the Share menu entry never appears, which is the failure this phase already hit
+once by hand.
+
+`scripts/generate-project.rb` now assigns object ids in creation order instead of
+the random ones xcodeproj hands out. Without that, regenerating rewrote every id
+and left a ~400-line diff in `project.pbxproj` after every build. Verified
+reproducible: three consecutive runs produce a byte-identical file.

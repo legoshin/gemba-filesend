@@ -9,6 +9,21 @@
 #
 require "xcodeproj"
 
+# xcodeproj assigns a random 24-hex id to every object it creates, so
+# regenerating produces a project that is functionally identical but textually
+# different — a ~400-line diff after every build, which makes the file useless
+# in review and noisy in git. Numbering the ids in creation order instead makes
+# the generated project reproducible: run this twice and the bytes match, so a
+# diff means something really changed. The script is straight-line, so creation
+# order is stable.
+module DeterministicProjectUUIDs
+  def generate_uuid
+    @deterministic_uuid_counter = (@deterministic_uuid_counter || 0) + 1
+    format("%024X", @deterministic_uuid_counter)
+  end
+end
+Xcodeproj::Project.prepend(DeterministicProjectUUIDs)
+
 ROOT = File.expand_path("..", __dir__)
 PROJECT_PATH = File.join(ROOT, "GembaFilesend.xcodeproj")
 APP_BUNDLE_ID = "uk.gemba.filesend.mac"

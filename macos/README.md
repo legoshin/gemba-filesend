@@ -35,13 +35,36 @@ so there is exactly one implementation of the wire format.
 ## Build and run
 
 ```sh
-cd macos/GembaKit && swift test            # the core, including interop vectors
-cd macos && ruby scripts/generate-project.rb   # only after adding/removing files
+cd macos
+./scripts/build-app.sh                # test, build Release, install, register
+./scripts/build-app.sh --debug        # Debug build (adds the --demo hook)
+./scripts/build-app.sh --no-install   # build only, leave /Applications alone
+./scripts/build-app.sh --skip-tests   # skip the GembaKit tests (not advised)
+```
+
+That is the whole loop: it runs the tests, regenerates the Xcode project if
+sources changed, builds the icon if missing, builds, installs to
+`/Applications`, and does the three-step Share Extension registration that
+macOS needs (LaunchServices, enable, restart Finder) — miss any of those and
+the Share menu entry silently never appears. It finishes by verifying the
+signature and, for Release, that no debug entitlement slipped in.
+
+The pieces on their own, if you want them:
+
+```sh
+cd macos/GembaKit && swift test                  # the core, including interop vectors
+cd macos && ruby scripts/generate-project.rb     # after adding or removing a source file
 xcodebuild -project GembaFilesend.xcodeproj -scheme GembaFilesend -configuration Debug build
 ```
 
-Requires Xcode 27 / Swift 6, macOS 14+ deployment target. The project is ad-hoc
+Requires Xcode 27 / Swift 6, macOS 14+ deployment target, and the `xcodeproj`
+gem for project generation (`gem install xcodeproj`). The project is ad-hoc
 signed by default, so it builds and runs on any Mac with no certificate.
+
+`project.pbxproj` is generated with numbered object ids rather than the random
+ones xcodeproj normally assigns, so regenerating is reproducible — run the
+generator twice and the bytes match. A diff in that file therefore means
+something actually changed, instead of appearing after every build.
 
 ## The crypto contract
 
