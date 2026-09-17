@@ -25,13 +25,40 @@ export async function GET(
   if (!meta) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
+  // Expired / exhausted shares are still deleted (cleanup) and still return 410,
+  // but the body carries the file list + reason so the download page can render
+  // the files with disabled download controls instead of a bare error screen.
   if (meta.expiresAt < Date.now()) {
+    const files = resolveFiles(meta);
     await deleteForMode(meta);
-    return NextResponse.json({ error: "expired" }, { status: 410 });
+    return NextResponse.json(
+      {
+        error: "expired",
+        reason: "expired",
+        name: files[0].name,
+        type: files[0].type,
+        size: files[0].size,
+        files: files.map((f) => ({ name: f.name, type: f.type, size: f.size })),
+        encrypted: meta.encrypted !== false,
+      },
+      { status: 410 },
+    );
   }
   if (meta.downloadsRemaining <= 0) {
+    const files = resolveFiles(meta);
     await deleteForMode(meta);
-    return NextResponse.json({ error: "exhausted" }, { status: 410 });
+    return NextResponse.json(
+      {
+        error: "exhausted",
+        reason: "exhausted",
+        name: files[0].name,
+        type: files[0].type,
+        size: files[0].size,
+        files: files.map((f) => ({ name: f.name, type: f.type, size: f.size })),
+        encrypted: meta.encrypted !== false,
+      },
+      { status: 410 },
+    );
   }
 
   // MFL-05: single read path for both legacy single-file and multi-file

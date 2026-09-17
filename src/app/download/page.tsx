@@ -43,6 +43,9 @@ interface FileInfo {
   /** Every file in the share; length 1 for a legacy single-file share. One
    *  shared key (keyBase64) decrypts them all. */
   files: Array<{ name: string; type: string; sizeBytes: number; size: string }>;
+  /** Set when the share can no longer be downloaded — the file list is shown
+   *  read-only with disabled download controls. */
+  unavailable?: "expired" | "exhausted";
 }
 
 /** Result of downloading one file: null on success, else a classified error. */
@@ -164,6 +167,38 @@ export default function DownloadPage() {
         return;
       }
       if (res.status === 410) {
+        // Expired/exhausted: if the body carries the file list, show it
+        // read-only with disabled controls; otherwise fall back to the screen.
+        const body = (await res.json().catch(() => null)) as {
+          reason?: string;
+          files?: Array<{ name: string; type: string; size: number }>;
+          encrypted?: boolean;
+        } | null;
+        if (body && Array.isArray(body.files) && body.files.length > 0) {
+          const files = body.files.map((f) => ({
+            name: f.name,
+            type: f.type,
+            sizeBytes: f.size,
+            size: formatSize(f.size),
+          }));
+          setFileInfo({
+            id,
+            name: files[0].name,
+            type: files[0].type,
+            sizeBytes: files[0].sizeBytes,
+            size: files[0].size,
+            downloadsRemaining: 0,
+            expiresIn: body.reason === "exhausted" ? "no downloads left" : "expired",
+            passwordProtected: false,
+            verifyRequired: false,
+            encrypted: body.encrypted !== false,
+            keyBase64,
+            files,
+            unavailable: body.reason === "exhausted" ? "exhausted" : "expired",
+          });
+          setState("preview");
+          return;
+        }
         setState("expired");
         return;
       }
@@ -582,6 +617,7 @@ export default function DownloadPage() {
                         type="button"
                         variant="secondary"
                         className="shrink-0 gap-1"
+                        disabled={!!fileInfo.unavailable}
                         onClick={() => handleDownloadOne(i)}
                       >
                         <Icon name="Download01" size={16} />
@@ -593,12 +629,22 @@ export default function DownloadPage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Chip variant="neutral" icon={<Icon name="Download01" size={16} />}>
-                  {fileInfo.downloadsRemaining} DOWNLOADS LEFT
-                </Chip>
-                <Chip variant="neutral" icon={<Icon name="Clock" size={16} />}>
-                  EXPIRES IN {fileInfo.expiresIn.toUpperCase()}
-                </Chip>
+                {fileInfo.unavailable ? (
+                  <Chip variant="warning" icon={<Icon name="AlertCircle" size={16} />}>
+                    {fileInfo.unavailable === "exhausted"
+                      ? "NO DOWNLOADS LEFT"
+                      : "EXPIRED"}
+                  </Chip>
+                ) : (
+                  <>
+                    <Chip variant="neutral" icon={<Icon name="Download01" size={16} />}>
+                      {fileInfo.downloadsRemaining} DOWNLOADS LEFT
+                    </Chip>
+                    <Chip variant="neutral" icon={<Icon name="Clock" size={16} />}>
+                      EXPIRES IN {fileInfo.expiresIn.toUpperCase()}
+                    </Chip>
+                  </>
+                )}
                 {fileInfo.passwordProtected && (
                   <Chip variant="neutral" icon={<Icon name="Lock01" size={16} />}>
                     PASSWORD REQUIRED
@@ -754,9 +800,19 @@ export default function DownloadPage() {
             >
               Cancel
             </Button>
-            <Button className="flex-1 gap-2" onClick={handleDownloadAll}>
+            <Button
+              className="flex-1 gap-2"
+              disabled={!!fileInfo.unavailable}
+              onClick={handleDownloadAll}
+            >
               <Icon name="Download01" size={16} />
-              {fileInfo.files.length > 1 ? "Download all" : "Download and decrypt"}
+              {fileInfo.unavailable
+                ? fileInfo.unavailable === "exhausted"
+                  ? "No downloads left"
+                  : "Expired"
+                : fileInfo.files.length > 1
+                  ? "Download all"
+                  : "Download and decrypt"}
             </Button>
           </div>
         </div>
