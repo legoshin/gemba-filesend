@@ -33,9 +33,7 @@ import {
   encryptPacked,
   exportKeyBase64,
   generateKey,
-  randomSaltBase64,
   readFileWithProgress,
-  sha256Hex,
 } from "@/lib/crypto";
 import { RecipientChipInput } from "@/components/upload/recipient-chip-input";
 
@@ -49,40 +47,46 @@ const EXPIRY_UNIT_MS: Record<ExpiryUnit, number> = {
   months: 30 * 24 * 3600_000,
 };
 
-interface DirectMetaPayload {
-  name: string;
-  type: string;
-  size: number;
-  passwordHash?: string;
-  salt?: string;
-  downloadsRemaining: number;
-  expiresAt: number;
-  recipientEmails?: string[];
-  encrypted?: boolean;
-}
-
 /** Resolution of the "encryption failed" prompt shown to the user. */
 type EncryptionFallbackChoice = "retry" | "unencrypted" | "cancel";
 
-interface UploadResult {
-  fileName: string;
-  fileSize: number;
-  shareLink: string;
-  encrypted: boolean;
+/** One selected file's display metadata in the finished share. */
+interface ShareFile {
+  name: string;
+  size: number;
 }
 
-function uploadDirect(
+/**
+ * The single result of an upload: N files collapse to ONE share link (MFL-01).
+ * The AES key lives only in `shareLink`'s `#` fragment — never in this object's
+ * transport to the server.
+ */
+interface ShareResult {
+  shareLink: string;
+  encrypted: boolean;
+  files: ShareFile[];
+}
+
+/**
+ * Uploads one already-prepared (encrypted-or-raw) part of a multi-file share in
+ * fs mode (MFL-03). Streams the bytes to `POST /api/files` with x-file-id +
+ * x-file-index headers so the route lands it at `{id}/{index}.bin` WITHOUT
+ * writing meta or seeding a counter — `/api/files/finalize` owns the single
+ * meta write + seed for the whole share.
+ */
+function uploadPart(
+  id: string,
+  index: number,
+  total: number,
   body: Blob,
-  meta: DirectMetaPayload,
   onProgress: (loaded: number, total: number) => void,
-): Promise<string> {
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/files");
-
-    const metaJson = JSON.stringify(meta);
-    const metaB64 = btoa(unescape(encodeURIComponent(metaJson)));
-    xhr.setRequestHeader("x-meta", metaB64);
+    xhr.setRequestHeader("x-file-id", id);
+    xhr.setRequestHeader("x-file-index", String(index));
+    xhr.setRequestHeader("x-file-total", String(total));
     xhr.setRequestHeader("content-type", "application/octet-stream");
 
     xhr.upload.onprogress = (e: ProgressEvent) => {
@@ -90,21 +94,10 @@ function uploadDirect(
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const resp = JSON.parse(xhr.responseText) as { id?: string };
-          if (!resp.id) {
-            reject(new Error("server returned no id"));
-            return;
-          }
-          resolve(resp.id);
-        } catch {
-          reject(new Error("invalid server response"));
-        }
+        resolve();
       } else {
         reject(
-          new Error(
-            `HTTP ${xhr.status} ${xhr.responseText || ""}`.trim(),
-          ),
+          new Error(`HTTP ${xhr.status} ${xhr.responseText || ""}`.trim()),
         );
       }
     };
@@ -132,8 +125,9 @@ function formatSize(bytes: number): string {
 }
 
 /**
- * Encrypts (unless `encrypt` is false) one file and uploads it. Returns the
- * share link.
+ * Reads one file off disk and, unless `encrypt` is false, encrypts it under the
+ * SHARED share key with its own random per-file IV via `encryptPacked` (wire
+ * format unchanged). Returns the part Blob ready to upload.
  *
  * Each file is processed end-to-end before the next starts, so peak memory
  * stays at roughly 3× the single largest file (raw bytes + ciphertext +
@@ -141,114 +135,40 @@ function formatSize(bytes: number): string {
  * That's what keeps multi-file uploads from blowing past the browser's
  * TypedArray limit ("array allocation failed").
  *
- * Progress is real, not synthetic: the "encrypting" phase reports actual
- * bytes read off disk (the dominant, measurable cost for large files — the
- * subsequent `crypto.subtle.encrypt` call has no progress API of its own),
- * and the "uploading" phase reports actual network-transfer bytes.
+ * Progress is real, not synthetic: it reports actual bytes read off disk (the
+ * dominant, measurable cost for large files — the subsequent
+ * `crypto.subtle.encrypt` call has no progress API of its own).
  *
  * If the read+encrypt step fails, throws `EncryptionError` so the caller can
  * offer an explicit, user-chosen unencrypted-upload fallback (never a silent
  * downgrade).
  */
-async function uploadOneFile(opts: {
+async function prepareFilePart(opts: {
   file: File;
   encrypt: boolean;
-  storageMode: StorageMode;
-  usePassword: boolean;
-  password: string;
-  downloadsRemaining: number;
-  expiresAt: number;
-  origin: string;
-  recipientEmails: string[];
-  onProgress: (phase: "encrypting" | "uploading", percent: number) => void;
-}): Promise<string> {
-  const {
-    file,
-    encrypt,
-    storageMode,
-    usePassword,
-    password,
-    downloadsRemaining,
-    expiresAt,
-    origin,
-    recipientEmails,
-    onProgress,
-  } = opts;
+  key: CryptoKey;
+  onProgress: (percent: number) => void;
+}): Promise<Blob> {
+  const { file, encrypt, key, onProgress } = opts;
 
-  let bodyBlob: Blob;
-  let keyB64: string | undefined;
-
-  if (encrypt) {
-    try {
-      const data = await readFileWithProgress(file, (loaded, total) => {
-        onProgress("encrypting", total > 0 ? (loaded / total) * 100 : 100);
-      });
-      const key = await generateKey();
-      keyB64 = await exportKeyBase64(key);
-      const encrypted = await encryptPacked(data, key);
-      bodyBlob = new Blob([encrypted], { type: "application/octet-stream" });
-    } catch (err) {
-      throw new EncryptionError(
-        err instanceof Error ? err.message : "Encryption failed",
-      );
-    }
-  } else {
-    bodyBlob = file;
-    onProgress("encrypting", 100);
+  if (!encrypt) {
+    onProgress(100);
+    return file;
   }
 
-  let id: string;
-
-  if (storageMode === "blob") {
-    id = generateClientId();
-    const clientPayload = JSON.stringify({
-      id,
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      password: usePassword ? password : undefined,
-      downloadsRemaining,
-      expiresAt,
-      recipientEmails: recipientEmails.length > 0 ? recipientEmails : undefined,
-      encrypted: encrypt ? undefined : false,
+  try {
+    const data = await readFileWithProgress(file, (loaded, total) => {
+      onProgress(total > 0 ? (loaded / total) * 100 : 100);
     });
-    await upload(`gemba/blob/${id}.bin`, bodyBlob, {
-      access: "private",
-      handleUploadUrl: "/api/files",
-      clientPayload,
-      contentType: "application/octet-stream",
-      multipart: true,
-      onUploadProgress: (e) => {
-        onProgress("uploading", e.percentage);
-      },
-    });
-  } else {
-    let passwordHash: string | undefined;
-    let salt: string | undefined;
-    if (usePassword) {
-      salt = randomSaltBase64();
-      passwordHash = await sha256Hex(password + salt);
-    }
-    const meta: DirectMetaPayload = {
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      passwordHash,
-      salt,
-      downloadsRemaining,
-      expiresAt,
-      recipientEmails: recipientEmails.length > 0 ? recipientEmails : undefined,
-      encrypted: encrypt ? undefined : false,
-    };
-    id = await uploadDirect(bodyBlob, meta, (loaded, total) => {
-      if (total > 0) onProgress("uploading", (loaded / total) * 100);
-    });
+    // Reuse the ONE share key; encryptPacked draws a fresh 12-byte IV per call
+    // so every file gets a unique IV under the same key (GCM-safe).
+    const encrypted = await encryptPacked(data, key);
+    return new Blob([encrypted], { type: "application/octet-stream" });
+  } catch (err) {
+    throw new EncryptionError(
+      err instanceof Error ? err.message : "Encryption failed",
+    );
   }
-
-  const params = new URLSearchParams({ id });
-  if (usePassword) params.set("pw", "1");
-  const link = `${origin}/download?${params}`;
-  return encrypt ? `${link}#${keyB64}` : link;
 }
 
 export default function UploadPage() {
@@ -266,8 +186,8 @@ export default function UploadPage() {
   const [currentFileName, setCurrentFileName] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
-  const [results, setResults] = useState<UploadResult[]>([]);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [result, setResult] = useState<ShareResult | null>(null);
+  const [copied, setCopied] = useState(false);
   const [storageMode, setStorageMode] = useState<StorageMode | null>(null);
   const [encryptionFailure, setEncryptionFailure] = useState<{
     fileName: string;
@@ -338,91 +258,171 @@ export default function UploadPage() {
       Math.max(1, Number(expiryValue) || 1) * EXPIRY_UNIT_MS[expiryUnit];
 
     setUploadState("preparing");
-    setResults([]);
+    setResult(null);
     setCurrentFileIndex(0);
     setUploadProgress(0);
 
-    const collected: UploadResult[] = [];
-
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setCurrentFileIndex(i);
-        setCurrentFileName(file.name);
+      // ONE share id + ONE key for the whole selection (MFL-01/MFL-02). The
+      // key is exported once and only ever appears in the link fragment — it is
+      // never placed in a part-upload, finalize, or notify body.
+      const id = generateClientId();
+      const key = await generateKey();
+      const keyB64 = await exportKeyBase64(key);
 
-        let shareLink: string | null = null;
-        let encryptThisFile = true;
+      // Whole-share encryption flag. An encryption-failure fallback of
+      // "unencrypted" downgrades the ENTIRE share (single key/single flag), so
+      // we restart the part loop with encryption off rather than mixing
+      // encrypted and plaintext files under one share.
+      let encryptShare = true;
+      const blobUrls: string[] = [];
+      let uploaded = false;
 
-        while (shareLink === null) {
-          setUploadState("preparing");
-          setProgressLabel(`Encrypting "${file.name}"…`);
+      while (!uploaded) {
+        blobUrls.length = 0;
+        let restartUnencrypted = false;
+
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          setCurrentFileIndex(i);
+          setCurrentFileName(file.name);
+
+          let part: Blob | null = null;
+          while (part === null) {
+            setUploadState("preparing");
+            setProgressLabel(`Encrypting "${file.name}"…`);
+            setUploadProgress(0);
+
+            try {
+              part = await prepareFilePart({
+                file,
+                encrypt: encryptShare,
+                key,
+                onProgress: (pct) => {
+                  setUploadState("preparing");
+                  setProgressLabel(`Encrypting "${file.name}"…`);
+                  setUploadProgress(pct);
+                },
+              });
+            } catch (err) {
+              if (!(err instanceof EncryptionError)) throw err;
+
+              const choice = await promptEncryptionFallback(
+                file.name,
+                err.message,
+              );
+              if (choice === "retry") continue;
+              if (choice === "unencrypted") {
+                // Downgrade the whole share and restart the part loop.
+                encryptShare = false;
+                restartUnencrypted = true;
+                break;
+              }
+              throw err; // cancel — bubble to the outer catch below
+            }
+          }
+          if (restartUnencrypted) break;
+
+          const partBlob = part as Blob;
+          setUploadState("uploading");
+          setProgressLabel(`Uploading "${file.name}"…`);
           setUploadProgress(0);
 
-          try {
-            shareLink = await uploadOneFile({
-              file,
-              encrypt: encryptThisFile,
-              storageMode,
-              usePassword,
-              password,
-              downloadsRemaining,
-              expiresAt,
-              origin: window.location.origin,
-              recipientEmails: useVerify ? recipientEmails : [],
-              onProgress: (phase, pct) => {
-                setUploadState(
-                  phase === "encrypting" ? "preparing" : "uploading",
-                );
-                setProgressLabel(
-                  phase === "encrypting"
-                    ? `Encrypting "${file.name}"…`
-                    : `Uploading "${file.name}"…`,
-                );
-                setUploadProgress(pct);
+          if (storageMode === "blob") {
+            // Finalize-owned part: token carries only id/index/total/size; the
+            // shared meta (password/expiry/recipients) goes to finalize. No key.
+            const clientPayload = JSON.stringify({
+              finalize: true,
+              id,
+              index: i,
+              total: files.length,
+              size: partBlob.size,
+            });
+            const res = await upload(`gemba/blob/${id}/${i}`, partBlob, {
+              access: "private",
+              handleUploadUrl: "/api/files",
+              clientPayload,
+              contentType: "application/octet-stream",
+              multipart: true,
+              onUploadProgress: (e) => {
+                setUploadProgress(e.percentage);
               },
             });
-          } catch (err) {
-            if (!(err instanceof EncryptionError)) throw err;
-
-            const choice = await promptEncryptionFallback(
-              file.name,
-              err.message,
-            );
-            if (choice === "retry") continue;
-            if (choice === "unencrypted") {
-              encryptThisFile = false;
-              continue;
-            }
-            throw err; // cancel — bubble to the outer catch below
+            blobUrls[i] = res.url;
+          } else {
+            await uploadPart(id, i, files.length, partBlob, (loaded, total) => {
+              if (total > 0) setUploadProgress((loaded / total) * 100);
+            });
           }
         }
 
-        collected.push({
-          fileName: file.name,
-          fileSize: file.size,
-          shareLink,
-          encrypted: encryptThisFile,
-        });
-        setResults([...collected]);
+        if (restartUnencrypted) continue;
+        uploaded = true;
       }
 
+      // Finalize the share exactly once — one meta, one counter (MFL-03).
+      // The key is deliberately absent from this body (T-07-06).
+      setUploadState("preparing");
+      setProgressLabel("Finalizing…");
+      setUploadProgress(100);
+
+      const finalizeFiles = files.map((f, i) => ({
+        name: f.name,
+        type: f.type || "application/octet-stream",
+        size: f.size,
+        ...(storageMode === "blob" ? { blobUrl: blobUrls[i] } : {}),
+      }));
+      const finalizeRes = await fetch("/api/files/finalize", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id,
+          files: finalizeFiles,
+          password: usePassword ? password : undefined,
+          downloadsRemaining,
+          expiresAt,
+          recipientEmails:
+            useVerify && recipientEmails.length > 0
+              ? recipientEmails
+              : undefined,
+          encrypted: encryptShare ? undefined : false,
+        }),
+      });
+      if (!finalizeRes.ok) {
+        throw new Error(
+          `finalize failed: HTTP ${finalizeRes.status} ${
+            (await finalizeRes.text()) || ""
+          }`.trim(),
+        );
+      }
+
+      // ONE link for the whole share. Key only ever after `#`.
+      const params = new URLSearchParams({ id });
+      if (usePassword) params.set("pw", "1");
+      let shareLink = `${window.location.origin}/download?${params}`;
+      if (encryptShare) shareLink += `#${keyB64}`;
+
+      const shareResult: ShareResult = {
+        shareLink,
+        encrypted: encryptShare,
+        files: files.map((f) => ({ name: f.name, size: f.size })),
+      };
+      setResult(shareResult);
       setUploadState("done");
       setUploadProgress(100);
       toast.success(
-        files.length > 1
-          ? `${files.length} files uploaded — one link per file`
-          : "File uploaded",
+        files.length > 1 ? `${files.length} files uploaded` : "File uploaded",
       );
 
-      // Isolated try/catch: a notify failure must NEVER roll back the
-      // upload result (D-06-04) — this is deliberately separate from the
-      // outer try/catch below.
+      // Isolated try/catch: a notify failure must NEVER roll back the upload
+      // result (D-06-04). ONE link for the whole share (T-07-07) — never a key.
       if (useNotify && recipientEmails.length > 0) {
         try {
-          const links = collected.map((r) => ({
-            fileName: r.fileName,
-            url: r.shareLink,
-          }));
+          const shareLabel =
+            shareResult.files.length === 1
+              ? shareResult.files[0].name
+              : `${shareResult.files.length} files`;
+          const links = [{ fileName: shareLabel, url: shareResult.shareLink }];
           const res = await fetch("/api/notify", {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -442,8 +442,6 @@ export default function UploadPage() {
       setUploadState("idle");
       setUploadProgress(0);
       setProgressLabel("");
-      // Keep `results` so the user can still copy links for files that
-      // succeeded before the failure.
       toast.error(
         "Upload failed: " +
           (err instanceof Error ? err.message : "Unknown error"),
@@ -489,36 +487,15 @@ export default function UploadPage() {
     }
   };
 
-  const handleCopy = async (link: string, index: number) => {
+  const handleCopy = async (link: string) => {
     const ok = await writeClipboard(link);
     if (!ok) {
       toast.error("Couldn't access the clipboard — copy the link manually");
       return;
     }
-    setCopiedIndex(index);
+    setCopied(true);
     toast.success("Link copied to clipboard");
-    setTimeout(() => setCopiedIndex(null), 2000);
-  };
-
-  const handleCopyAll = async () => {
-    if (results.length === 0) return;
-    // Single file: copy just the URL so paste-into-anything works.
-    // Multiple files: prefix each line with its filename so the user can tell
-    // which link belongs to which file.
-    const text =
-      results.length === 1
-        ? results[0].shareLink
-        : results.map((r) => `${r.fileName}: ${r.shareLink}`).join("\n");
-    const ok = await writeClipboard(text);
-    if (!ok) {
-      toast.error("Couldn't access the clipboard — copy the link manually");
-      return;
-    }
-    toast.success(
-      results.length > 1
-        ? `Copied ${results.length} links`
-        : "Link copied to clipboard",
-    );
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleReset = () => {
@@ -528,7 +505,7 @@ export default function UploadPage() {
     setCurrentFileName("");
     setUploadProgress(0);
     setProgressLabel("");
-    setResults([]);
+    setResult(null);
     setPassword("");
     setUsePassword(false);
     setUseVerify(false);
@@ -552,63 +529,61 @@ export default function UploadPage() {
         </div>
       )}
 
-      {uploadState === "done" ? (
+      {uploadState === "done" && result ? (
         <Card>
           <CardHeader className="text-center">
             <div className="mx-auto mb-2 flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--gemba-success-subdued)]">
               <Icon name="Check" size={20} className="text-[var(--gemba-success)]" />
             </div>
-            <CardTitle>
-              {results.length === 1
-                ? "Upload Complete"
-                : `${results.length} Files Uploaded`}
-            </CardTitle>
+            <CardTitle>Upload Complete</CardTitle>
             <CardDescription>
-              {results.length === 1
-                ? results[0].encrypted
+              {result.encrypted
+                ? result.files.length === 1
                   ? "Your file is encrypted and ready to share."
-                  : "Your file is ready to share."
-                : "Each file has its own share link below."}
+                  : "Your files are encrypted and ready to share on one link."
+                : result.files.length === 1
+                  ? "Your file is ready to share."
+                  : "Your files are ready to share on one link."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-3">
-              {results.map((r, i) => (
-                <div key={r.shareLink} className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Icon name="File01" size={16} className="shrink-0 text-[var(--icon-subdued)]" />
-                    <span className="gemba-body-strong truncate">{r.fileName}</span>
-                    <span className="gemba-body-sm ml-auto shrink-0 text-[var(--text-subdued)]">
-                      {formatSize(r.fileSize)}
-                    </span>
-                  </div>
-                  {!r.encrypted && (
-                    <Chip variant="warning" icon={<Icon name="AlertCircle" size={16} />}>
-                      NOT ENCRYPTED
-                    </Chip>
-                  )}
-                  <div className="flex gap-2">
-                    <Input
-                      value={r.shareLink}
-                      readOnly
-                      className="font-mono text-xs"
-                    />
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      aria-label="Copy link"
-                      onClick={() => handleCopy(r.shareLink, i)}
-                      className="shrink-0"
-                    >
-                      {copiedIndex === i ? (
-                        <Icon name="Check" size={16} />
-                      ) : (
-                        <Icon name="Copy01" size={16} />
-                      )}
-                    </Button>
-                  </div>
+            <div className="space-y-1.5">
+              {result.files.map((f) => (
+                <div key={f.name} className="flex items-center gap-2">
+                  <Icon name="File01" size={16} className="shrink-0 text-[var(--icon-subdued)]" />
+                  <span className="gemba-body-strong truncate">{f.name}</span>
+                  <span className="gemba-body-sm ml-auto shrink-0 text-[var(--text-subdued)]">
+                    {formatSize(f.size)}
+                  </span>
                 </div>
               ))}
+            </div>
+
+            {!result.encrypted && (
+              <Chip variant="warning" icon={<Icon name="AlertCircle" size={16} />}>
+                NOT ENCRYPTED
+              </Chip>
+            )}
+
+            <div className="flex gap-2">
+              <Input
+                value={result.shareLink}
+                readOnly
+                className="font-mono text-xs"
+              />
+              <Button
+                variant="secondary"
+                size="icon"
+                aria-label="Copy link"
+                onClick={() => handleCopy(result.shareLink)}
+                className="shrink-0"
+              >
+                {copied ? (
+                  <Icon name="Check" size={16} />
+                ) : (
+                  <Icon name="Copy01" size={16} />
+                )}
+              </Button>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -618,7 +593,7 @@ export default function UploadPage() {
                 </Chip>
               )}
               <Chip variant="neutral" icon={<Icon name="Download01" size={16} />}>
-                {downloadLimit} DOWNLOAD{Number(downloadLimit) !== 1 ? "S" : ""} EACH
+                {downloadLimit} DOWNLOAD{Number(downloadLimit) !== 1 ? "S" : ""}
               </Chip>
               <Chip variant="neutral" icon={<Icon name="Clock" size={16} />}>
                 EXPIRES IN {expiryValue}{" "}
@@ -635,9 +610,12 @@ export default function UploadPage() {
               <Button variant="secondary" className="flex-1" onClick={handleReset}>
                 Upload More
               </Button>
-              <Button className="flex-1 gap-2" onClick={handleCopyAll}>
+              <Button
+                className="flex-1 gap-2"
+                onClick={() => handleCopy(result.shareLink)}
+              >
                 <Icon name="Link02" size={20} />
-                {results.length > 1 ? "Copy All Links" : "Copy Link"}
+                Copy Link
               </Button>
             </div>
           </CardContent>
@@ -649,7 +627,7 @@ export default function UploadPage() {
               <CardTitle className="gemba-h4">Select Files</CardTitle>
               <CardDescription>
                 Files are encrypted in your browser before uploading.
-                When you select multiple files, each gets its own share link.
+                When you select multiple files, they share one download link.
               </CardDescription>
             </CardHeader>
             <CardContent>
