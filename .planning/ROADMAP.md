@@ -157,3 +157,27 @@ Plans:
 - [ ] 05-01-PLAN.md — Server verification spine (tracer): code/token domain lib, widened Redis, recipientEmails metadata, gate inserted into GET /api/files/[id] in both modes + meta verifyRequired (Wave 1)
 - [ ] 05-02-PLAN.md — request-code + verify-code endpoints, Mailgun sender (bare fetch), two rate limiters, upload-side recipientEmails validation/storage (Wave 2)
 - [ ] 05-03-PLAN.md — Upload Options recipient UI + verify toggle, download verify-code flow + x-verify-token header, Mailgun env docs, human end-to-end/platform-parity checkpoint (Wave 3)
+
+### Phase 6: Notify Recipient by Email
+
+**Goal:** A sender can, at upload time, notify one or more recipients by email of the shared download link(s). A Notify toggle (auto-enabling Verify) and a single shared interactive chip-input recipient list feed both notify and verify; each recipient receives their own individual email (never a shared To/CC) containing whatever link(s) the upload produced. Reuses the existing bare-fetch Mailgun sender and Upstash rate limiter, works for encrypted + unencrypted uploads, and never blocks or rolls back the upload on failure. Honors the LOCKED, user-approved E2E exception routing the full link (incl. #key) through the server.
+**Requirements**: NOTIFY-01, NOTIFY-02, NOTIFY-03, NOTIFY-04, NOTIFY-05, NOTIFY-06, NOTIFY-07
+**Depends on:** Phase 5
+**Plans:** 3 plans
+
+Plans:
+
+- [ ] 06-01-PLAN.md — Notify server path + end-to-end tracer: sendShareNotificationEmail, checkNotifyLimit, POST /api/notify (validate → rate-limit → per-recipient send → fail-loud 500), minimal client POST (Wave 1)
+- [ ] 06-02-PLAN.md — Client UX: shared recipient-emails normalizer/commit lib, RecipientChipInput (Input+Badge), notify toggle + verify coupling + single shared chip list wired into upload page (Wave 2)
+- [ ] 06-03-PLAN.md — Human-verify gate: live per-recipient sends, coupling/chip UX, encrypted+unencrypted links, platform parity (Wave 3)
+
+### Phase 7: Multi-file Single Download Link
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 7 to break down)
