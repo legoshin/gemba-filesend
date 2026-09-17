@@ -44,10 +44,38 @@ verification (Phase 5).
 - Works for encrypted (link has `#key`) and unencrypted-fallback (no fragment) uploads.
 - Endpoint validates recipient email format + presence of link and file name.
 
+### Notify ↔ Verify coupling + shared list (LOCKED — added 2026-09-17)
+- **Auto-enable verify:** turning the **Notify recipient** toggle ON auto-enables the **Verify
+  recipient** toggle (sensible default — a notified recipient normally also verifies). The user
+  MUST still be able to switch Verify OFF independently while Notify stays ON (not a hard lock).
+  Turning Notify OFF does NOT force Verify off (leave Verify as the user last set it).
+- **Single shared recipient list:** there is ONE recipient-emails list feeding BOTH options.
+  It is shown whenever either Notify or Verify is on; the same list is used for verification
+  gating and for notification sends. Do not create a second/separate email field.
+- **Separate emails per recipient:** when >1 email is entered, send INDIVIDUAL emails — one
+  Mailgun send per recipient, never a shared To/CC that exposes recipients to each other. Applies
+  to notification (upload-time broadcast) and to verification codes (already per-recipient at
+  download time — keep it that way).
+
+### Recipient email input — interactive chips (LOCKED — added 2026-09-17)
+- Replace the current free-text textarea with an interactive **tag/chip input**: when the user
+  enters an email (Enter / comma / blur), it becomes a removable chip/tag with an `[x]` button;
+  invalid entries are rejected with inline feedback rather than silently stored. The committed
+  value remains the same normalized `string[]` the rest of the flow consumes (reuse
+  `parseRecipientEmails` for validation/normalization).
+- Reuse existing shadcn/Radix primitives (e.g. `Input` + `Badge`/chip styling) — do NOT add a new
+  tag-input dependency; match sibling Options styling.
+
 ### Constraints (LOCKED)
 - No change to the `[12-byte IV][ciphertext+tag]` wire format; no weakening of encryption beyond
   the approved key-in-email path.
 - Stack: Next.js 16 / React 19 / Tailwind 4. Mailgun + Upstash already configured in prod.
+
+### Multi-file link handling (LOCKED — added 2026-09-17)
+- Today an upload of N files produces N share links (one per file). Notify MUST handle this
+  generically — email each recipient the link(s) the upload actually produced — so it needs NO
+  rework when Phase 7 (multi-file → single link+key) lands and an upload yields exactly one link.
+  Do not hard-code a single-link assumption; iterate over the upload's result links.
 
 ### Claude's Discretion
 - Exact endpoint path/shape (e.g. `/api/notify` vs `/api/files/[id]/notify`), request body schema,
