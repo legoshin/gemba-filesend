@@ -28,6 +28,7 @@ vi.mock("@upstash/ratelimit", () => {
 import { Ratelimit } from "@upstash/ratelimit";
 import {
   checkDownloadLimit,
+  checkNotifyLimit,
   checkPasswordAttemptLimit,
   checkUploadLimit,
 } from "@/lib/rate-limit";
@@ -128,5 +129,21 @@ describe("rate-limit.ts (WR-03)", () => {
       2,
       "file-two:9.9.9.9",
     );
+  });
+});
+
+describe("checkNotifyLimit (Phase 6)", () => {
+  it("allows (returns null) when Upstash creds are unset (dev fail-open)", async () => {
+    const savedUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const savedToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    try {
+      const result = await checkNotifyLimit("4.4.4.4");
+      expect(result).toBeNull();
+    } finally {
+      if (savedUrl !== undefined) process.env.UPSTASH_REDIS_REST_URL = savedUrl;
+      if (savedToken !== undefined) process.env.UPSTASH_REDIS_REST_TOKEN = savedToken;
+    }
   });
 });
