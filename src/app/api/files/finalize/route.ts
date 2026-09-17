@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeMeta as fsWriteMeta } from "@/lib/server-storage";
+import {
+  writeMeta as fsWriteMeta,
+  readMeta as fsReadMeta,
+} from "@/lib/server-storage";
 import {
   writeMeta as blobWriteMeta,
+  readMeta as blobReadMeta,
   blobPartPathnamePrefix,
 } from "@/lib/blob-storage";
 import {
@@ -102,6 +106,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const mode = getStorageMode();
 
+  // Claim-once (T-07-SEC): NEVER overwrite an existing share's metadata. Without
+  // this, anyone who knows a share id (it is in the public link) could re-POST
+  // finalize to drop passwordHash / clear recipientEmails / change limits and
+  // re-expose already-uploaded parts. Reject a re-finalize instead.
+  const existing =
+    mode === "blob" ? await blobReadMeta(id) : await fsReadMeta(id);
+  if (existing) {
+    return NextResponse.json(
+      { error: "share already exists" },
+      { status: 409 },
+    );
+  }
+
   if (mode === "blob") {
     // T-07-01: every blobUrl must live under this share's prefix.
     const prefix = blobPartPathnamePrefix(id);
@@ -170,9 +187,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     await fsWriteMeta(stored);
   }
 
-  // REL-01: seed the ONE counter for the whole share, TTL aligned to expiry.
+  // REL-01 (T-07-SEC): seed the ONE counter for the whole share as
+  // configuredDownloads × fileCount. The read route decrements once per
+  // byte-serving fetch (server-authoritative — no client "consume" flag), so a
+  // recipient can download the WHOLE share configuredDownloads times. Legacy
+  // single-file shares (fileCount 1) seed exactly as before.
   const ttlSeconds = Math.max(1, Math.ceil((stored.expiresAt - now) / 1000));
-  await seedDownloadCounter(id, stored.downloadsRemaining, ttlSeconds);
+  await seedDownloadCounter(
+    id,
+    stored.downloadsRemaining * storedFiles.length,
+    ttlSeconds,
+  );
 
   return NextResponse.json({ id, files: storedFiles.length });
 }

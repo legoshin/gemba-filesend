@@ -22,7 +22,6 @@ import {
 } from "@/lib/rate-limit";
 import {
   decrementDownloadCounter,
-  peekDownloadCounter,
   type RedisLike,
 } from "@/lib/redis";
 import { isVerifyTokenValid } from "@/lib/verification";
@@ -34,19 +33,18 @@ export const dynamic = "force-dynamic";
 const PRESIGN_TTL_MS = 5 * 60_000;
 
 /**
- * Parses the two Phase-7 read params (MFL-03 / REL-01):
- *   - `index`  — which file in the share to serve (default 0).
- *   - `consume` — "1" (default) spends one download for the WHOLE share;
- *     "0" is a non-decrementing read (still gated on the shared limit).
- * Default consume="1" preserves legacy single-file behavior exactly (one
- * decrement per download).
+ * Parses the Phase-7 read param (MFL-03):
+ *   - `index` — which file in the share to serve (default 0).
+ * The download counter is server-authoritative (T-07-SEC): EVERY byte-serving
+ * read decrements the shared counter. There is deliberately no client-settable
+ * "don't consume" flag — that would let a client download a limited share
+ * unlimited times.
  */
-function parseReadParams(req: NextRequest): { index: number; consume: boolean } {
+function parseReadParams(req: NextRequest): { index: number } {
   const sp = req.nextUrl.searchParams;
   const rawIndex = sp.get("index");
   const index = rawIndex === null ? 0 : Number(rawIndex);
-  const consume = sp.get("consume") !== "0";
-  return { index, consume };
+  return { index };
 }
 
 async function checkPassword(
@@ -122,22 +120,23 @@ async function handleBlobDownload(
 
   // MFL-03: resolve the requested file within the share (legacy no-files meta
   // resolves to a single entry at index 0 carrying meta.blobUrl).
-  const { index, consume } = parseReadParams(req);
+  const { index } = parseReadParams(req);
   const files = resolveFiles(meta);
   const target = files[index];
   if (!target) return new Response("not found", { status: 404 });
   if (!target.blobUrl) return new Response("blob missing", { status: 500 });
 
-  // REL-01 counter policy: consume="1" (default) spends exactly ONE download
-  // for the whole share; consume="0" enforces the shared limit WITHOUT
-  // decrementing. Fail CLOSED on Redis error for the consuming path.
+  // REL-01 (T-07-SEC): server-authoritative counter — every byte-serving read
+  // spends one unit. The share is seeded with configuredDownloads × fileCount,
+  // so a recipient can download the WHOLE share configuredDownloads times.
+  // Fail CLOSED on a Redis error.
   const ttlSeconds = Math.max(1, Math.ceil((meta.expiresAt - Date.now()) / 1000));
-  if (consume) {
+  {
     let remaining: number;
     try {
       remaining = await decrementDownloadCounter(
         id,
-        meta.downloadsRemaining,
+        meta.downloadsRemaining * files.length,
         ttlSeconds,
       );
     } catch {
@@ -148,23 +147,10 @@ async function handleBlobDownload(
       return new Response("exhausted", { status: 410 });
     }
     if (remaining === 0) {
-      // Last legitimate whole-share download: best-effort metadata write purely
-      // for cron visibility (CR-03). Redis stays authoritative for the
-      // allow/deny decision above. Only the WHOLE share is reaped, never per
-      // file. Without this, a blob-mode share downloaded exactly its configured
-      // number of times is never reaped by the cleanup cron until expiry.
+      // Last unit spent: best-effort metadata write purely for cron visibility
+      // (CR-03). Redis stays authoritative for the allow/deny decision above.
+      // Only the WHOLE share is reaped, never per file.
       await blobWriteMeta({ ...meta, downloadsRemaining: 0 });
-    }
-  } else {
-    // Non-decrementing gate: refuse when the shared counter is exhausted.
-    let peek: number | null;
-    try {
-      peek = await peekDownloadCounter(id);
-    } catch {
-      return new Response("counter unavailable", { status: 503 });
-    }
-    if (peek !== null && peek <= 0) {
-      return new Response("exhausted", { status: 410 });
     }
   }
 
@@ -225,7 +211,7 @@ async function handleFsDownload(
 
   // MFL-03: multi-file parts live at {id}/{index}.bin; a legacy no-files meta
   // still streams {id}.bin at index 0.
-  const { index, consume } = parseReadParams(req);
+  const { index } = parseReadParams(req);
   const files = resolveFiles(meta);
   const target = files[index];
   if (!target) return new Response("not found", { status: 404 });
@@ -235,16 +221,16 @@ async function handleFsDownload(
     : await blobSize(id);
   if (onDiskSize == null) return new Response("not found", { status: 404 });
 
-  // REL-01 counter policy: consume="1" (default) spends ONE download for the
-  // whole share; consume="0" enforces the shared limit WITHOUT decrementing.
+  // REL-01 (T-07-SEC): server-authoritative counter — every byte-serving read
+  // spends one unit (share seeded with configuredDownloads × fileCount).
   const ttlSeconds = Math.max(1, Math.ceil((meta.expiresAt - Date.now()) / 1000));
   let deleteOnClose = false;
-  if (consume) {
+  {
     let remaining: number;
     try {
       remaining = await decrementDownloadCounter(
         id,
-        meta.downloadsRemaining,
+        meta.downloadsRemaining * files.length,
         ttlSeconds,
       );
     } catch {
@@ -256,16 +242,6 @@ async function handleFsDownload(
     }
     // Reap the WHOLE share (never per file) once the shared counter hits 0.
     deleteOnClose = remaining === 0;
-  } else {
-    let peek: number | null;
-    try {
-      peek = await peekDownloadCounter(id);
-    } catch {
-      return new Response("counter unavailable", { status: 503 });
-    }
-    if (peek !== null && peek <= 0) {
-      return new Response("exhausted", { status: 410 });
-    }
   }
 
   const nodeStream = isMultiFile
