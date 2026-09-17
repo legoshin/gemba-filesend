@@ -3,9 +3,14 @@ import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import {
   generateId,
   writeBlobFromWebStream,
+  writeBlobPartFromWebStream,
   writeMeta as fsWriteMeta,
 } from "@/lib/server-storage";
-import { writeMeta as blobWriteMeta, blobPathnamePrefix } from "@/lib/blob-storage";
+import {
+  writeMeta as blobWriteMeta,
+  blobPathnamePrefix,
+  blobPartPathnamePrefix,
+} from "@/lib/blob-storage";
 import { getStorageMode, type StoredMeta } from "@/lib/storage";
 import { sha256Hex, randomSaltBase64 } from "@/lib/crypto";
 import { checkUploadLimit } from "@/lib/rate-limit";
@@ -18,6 +23,9 @@ export const dynamic = "force-dynamic";
 export const MAX_DOWNLOADS = 100;
 export const MAX_EXPIRY_MS = 365 * 24 * 3600_000;
 export const MAX_BLOB_BYTES = 15 * 1024 ** 3; // 15 GiB
+/** Max files in a single multi-file share (MFL-03, T-07-04 DoS cap) — keeps
+ *  StoredMeta JSON small and bounds per-share upload/download fan-out. */
+export const MAX_FILES = 25;
 /** Recipient email cap per upload (D-05-05) — keeps StoredMeta JSON small
  *  and caps Mailgun send volume/file. */
 export const MAX_RECIPIENT_EMAILS = 10;
@@ -47,6 +55,50 @@ interface UploadMetaPayload {
   expiresAt: number;
   recipientEmails?: string[];
   encrypted?: boolean;
+}
+
+/**
+ * clientPayload for a multi-file part upload (MFL-03). The token it mints is
+ * marked `finalize: true` so onUploadCompleted writes NO meta and seeds NO
+ * counter — the /api/files/finalize route owns the single meta write + seed for
+ * the whole share (avoids per-part meta races). Only the share id, part index,
+ * and part size are needed at mint time; all shared meta (downloads/expiry/
+ * password/recipients) is supplied to finalize instead.
+ */
+interface PartClientPayload {
+  finalize: true;
+  id: string;
+  index: number;
+  total: number;
+  size: number;
+}
+
+/** Token payload for a finalize-owned part upload. */
+interface PartTokenPayload {
+  finalize: true;
+  id: string;
+  index: number;
+}
+
+function isPartClientPayload(p: unknown): p is PartClientPayload {
+  if (typeof p !== "object" || p === null) return false;
+  const o = p as Record<string, unknown>;
+  return (
+    o.finalize === true &&
+    typeof o.id === "string" &&
+    o.id.length > 0 &&
+    typeof o.index === "number" &&
+    Number.isInteger(o.index) &&
+    o.index >= 0 &&
+    typeof o.total === "number" &&
+    Number.isInteger(o.total) &&
+    o.total >= 1 &&
+    o.total <= MAX_FILES &&
+    o.index < o.total &&
+    typeof o.size === "number" &&
+    o.size > 0 &&
+    o.size <= MAX_BLOB_BYTES
+  );
 }
 
 /**
@@ -119,7 +171,39 @@ async function handleBlobUpload(req: NextRequest): Promise<NextResponse> {
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayloadStr) => {
         if (!clientPayloadStr) throw new Error("missing client payload");
-        const payload = JSON.parse(clientPayloadStr) as Partial<ClientPayload>;
+        const rawPayload = JSON.parse(clientPayloadStr) as unknown;
+
+        // Multi-file part (MFL-03): finalize-owned. The token carries only the
+        // share id + index; onUploadCompleted skips meta/seed for it. The part
+        // pathname MUST live under the trailing-slash share prefix, which also
+        // blocks id-prefix collisions across shares (T-07-02).
+        if (
+          typeof rawPayload === "object" &&
+          rawPayload !== null &&
+          (rawPayload as Record<string, unknown>).finalize === true
+        ) {
+          if (!isPartClientPayload(rawPayload)) {
+            throw new Error("invalid part metadata");
+          }
+          if (!pathname.startsWith(blobPartPathnamePrefix(rawPayload.id))) {
+            throw new Error("pathname mismatch");
+          }
+          const partToken: PartTokenPayload = {
+            finalize: true,
+            id: rawPayload.id,
+            index: rawPayload.index,
+          };
+          return {
+            allowedContentTypes: ["application/octet-stream"],
+            maximumSizeInBytes: MAX_BLOB_BYTES,
+            addRandomSuffix: true,
+            tokenPayload: JSON.stringify(partToken),
+          };
+        }
+
+        // Legacy single-file upload (no finalize marker): onUploadCompleted
+        // writes the meta + seeds the counter itself, unchanged.
+        const payload = rawPayload as Partial<ClientPayload>;
 
         if (!payload.id || typeof payload.id !== "string") {
           throw new Error("invalid id");
@@ -161,7 +245,18 @@ async function handleBlobUpload(req: NextRequest): Promise<NextResponse> {
       },
       onUploadCompleted: async ({ blob, tokenPayload: tp }) => {
         if (!tp) return;
-        const decoded = JSON.parse(tp) as UploadMetaPayload & { id: string };
+        const decodedUnknown = JSON.parse(tp) as unknown;
+        // Finalize-owned part: the finalize route writes the single meta and
+        // seeds the one counter for the whole share, so a part upload must NOT
+        // write meta or seed here (avoids per-part meta races + double seeds).
+        if (
+          typeof decodedUnknown === "object" &&
+          decodedUnknown !== null &&
+          (decodedUnknown as Record<string, unknown>).finalize === true
+        ) {
+          return;
+        }
+        const decoded = decodedUnknown as UploadMetaPayload & { id: string };
         const stored: StoredMeta = {
           id: decoded.id,
           name: decoded.name,
@@ -216,7 +311,50 @@ function parseDirectMetaHeader(header: string | null): UploadMetaPayload | null 
   }
 }
 
+const FS_ID_RE = /^[a-f0-9]{16}$/;
+
+/**
+ * Multi-file part upload in fs mode (MFL-03): the client streams one encrypted
+ * part with x-file-id + x-file-index headers. The part lands at {id}/{index}.bin
+ * and NO meta is written and NO counter is seeded — the /api/files/finalize
+ * route owns the single meta write + seed for the whole share.
+ */
+async function handleDirectPartUpload(
+  req: NextRequest,
+  id: string,
+  indexHeader: string,
+): Promise<NextResponse> {
+  if (!FS_ID_RE.test(id)) {
+    return NextResponse.json({ error: "invalid id" }, { status: 400 });
+  }
+  const index = Number(indexHeader);
+  if (!Number.isInteger(index) || index < 0 || index >= MAX_FILES) {
+    return NextResponse.json({ error: "invalid index" }, { status: 400 });
+  }
+  if (!req.body) {
+    return NextResponse.json({ error: "missing body" }, { status: 400 });
+  }
+  try {
+    await writeBlobPartFromWebStream(id, index, req.body);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "unknown";
+    return NextResponse.json(
+      { error: `store failed: ${message}` },
+      { status: 500 },
+    );
+  }
+  return NextResponse.json({ id, index });
+}
+
 async function handleDirectUpload(req: NextRequest): Promise<NextResponse> {
+  // Multi-file part branch: presence of x-file-id + x-file-index marks a part
+  // upload (finalize owns meta+seed). Absence keeps the legacy single-file path.
+  const partId = req.headers.get("x-file-id");
+  const partIndex = req.headers.get("x-file-index");
+  if (partId !== null && partIndex !== null) {
+    return handleDirectPartUpload(req, partId, partIndex);
+  }
+
   const meta = parseDirectMetaHeader(req.headers.get("x-meta"));
   if (!meta) {
     return NextResponse.json({ error: "invalid metadata" }, { status: 400 });

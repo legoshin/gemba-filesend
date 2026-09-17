@@ -12,6 +12,17 @@ export function blobPathnamePrefix(id: string): string {
   return `${BLOB_PREFIX}/${id}`;
 }
 
+/**
+ * Trailing-slash share prefix for multi-file parts (MFL-03). Used to scope
+ * both the upload-token mint and the finalize blobUrl validation to a single
+ * share id WITHOUT the id-prefix collision the slash-less prefix allows
+ * (e.g. "gemba/blob/abc" is a prefix of "gemba/blob/abcd/0", but
+ * "gemba/blob/abc/" is not). Parts live at `gemba/blob/{id}/{index}`.
+ */
+export function blobPartPathnamePrefix(id: string): string {
+  return `${BLOB_PREFIX}/${id}/`;
+}
+
 export async function readMeta(id: string): Promise<StoredMeta | null> {
   let result;
   try {
