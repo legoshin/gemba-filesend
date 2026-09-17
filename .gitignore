@@ -61,3 +61,15 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# macOS app build output
+.build/
+macos/.build/
+macos/.build-xcode/
+macos/GembaKit/.build/
+macos/**/xcuserdata/
+macos/**/*.xcuserstate
+
+# distribution build output
+.build-dist/
+macos/.verify/

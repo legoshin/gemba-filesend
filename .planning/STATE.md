@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 04
-current_phase_name: security-reliability-test-hardening
-status: verifying
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-09-17T16:33:51.120Z"
-last_activity: 2026-09-08
-last_activity_desc: Phase 5 (Recipient Email Verification) code-complete + tested (62/62); HELD at Wave 3 human-verify checkpoint (needs Mailgun env + deploy). NOT pushed to production.
+current_phase: 08
+current_phase_name: macos-native-app
+status: complete
+stopped_at: Phase 08 complete — app installed locally; distribution deliberately out of scope
+last_updated: "2026-09-17T19:55:00.000Z"
+last_activity: 2026-09-17
+last_activity_desc: Phase 8 (macOS native app) complete — 35 tests green, cross-platform interop verified against production, app installed to /Applications with the Share Extension enabled. Signed locally (ad-hoc) by decision; Developer ID + notarization scripts are in the repo unused.
 progress:
-  total_phases: 7
-  completed_phases: 6
-  total_plans: 26
-  completed_plans: 24
+  total_phases: 8
+  completed_phases: 7
+  total_plans: 30
+  completed_plans: 30
 ---
 
 # Project State
@@ -23,14 +23,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-10)
 
 **Core value:** Anyone can share a file securely — encrypted end-to-end, no account, no friction — through a single link.
-**Current focus:** Phase 04 — security-reliability-test-hardening
+**Current focus:** Phase 08 — macos-native-app
 
 ## Current Position
 
-Phase: 04 (security-reliability-test-hardening) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-09-08 -- Phase 5 (Recipient Email Verification) code-complete + tested (62/62); HELD at Wave 3 human-verify checkpoint (needs Mailgun env + deploy). NOT pushed to production.
+Phase: 08 (macos-native-app) — COMPLETE
+Plan: 4 of 4
+Status: All plans complete. Signed locally by decision; not distributable to other machines.
+Last activity: 2026-09-17 -- Phase 8 (macOS native app): GembaKit crypto+upload core (35 tests green), SwiftUI app, Share Extension, and Developer ID signing/notarization scripts. A Mac-made share link was downloaded through the production API and decrypted by the web's own crypto — interop proven in both directions. 08-04 needs the Developer ID Application certificate installed in this Mac's keychain before a DMG can be produced.
+
+**Open human steps**
+- Phase 08: none. (Distribution deferred by decision — `macos/scripts/package-dmg.sh` is ready if that changes.)
+- Phase 07: multi-file download human-verify (carried over, unchanged).
+- Phase 05: Mailgun env + deploy checkpoint (carried over, unchanged).
 
 Progress: [█████████░] 92%
 

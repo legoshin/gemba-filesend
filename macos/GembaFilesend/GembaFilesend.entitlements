@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Sandboxed from the start: required for the Mac App Store and the right
+         default for a tool that reads files the user picks and talks to one API. -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <!-- Outbound HTTPS to send.gemba.uk and Vercel Blob storage. -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <!-- Read the files the user chooses or drops. Nothing else on disk. -->
+    <key>com.apple.security.files.user-selected.read-only</key>
+    <true/>
+</dict>
+</plist>

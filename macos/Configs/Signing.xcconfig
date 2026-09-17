@@ -1,0 +1,28 @@
+// Signing configuration for the macOS app and its Share Extension.
+//
+// The default is ad-hoc ("-"): the project builds and runs on any Mac with no
+// certificate — right for a fresh checkout, for CI that only runs tests, and
+// for day-to-day development.
+//
+// Distribution signing is deliberately NOT hardcoded here. `scripts/package-dmg.sh`
+// finds the "Developer ID Application" certificate in the keychain, reads the
+// Team ID out of it, and passes both to xcodebuild. So nothing needs editing
+// when the certificate is installed, and nothing breaks when it isn't.
+//
+// Set these two only if you want to sign from Xcode's UI rather than the
+// script (for example to exercise the hardened runtime against a real identity
+// while debugging). xcconfig has no conditional default, so these are plain
+// values — putting a real identity here means a machine without that
+// certificate can no longer build.
+//
+//   CODE_SIGN_IDENTITY = Developer ID Application
+//   DEVELOPMENT_TEAM   = ABCDE12345
+
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+CODE_SIGN_STYLE = Manual
+
+// Required for notarization; harmless without it. The secure timestamp is NOT
+// set here — ad-hoc signatures cannot be timestamped — it is applied by the
+// export step in scripts/package-dmg.sh.
+ENABLE_HARDENED_RUNTIME = YES
