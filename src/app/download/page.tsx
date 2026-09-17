@@ -40,7 +40,13 @@ interface FileInfo {
    *  after an encryption failure (the "upload unencrypted" fallback). */
   encrypted: boolean;
   keyBase64: string;
+  /** Every file in the share; length 1 for a legacy single-file share. One
+   *  shared key (keyBase64) decrypts them all. */
+  files: Array<{ name: string; type: string; sizeBytes: number; size: string }>;
 }
+
+/** Result of downloading one file: null on success, else a classified error. */
+type DownloadFailure = { kind: "password" | "verify" | "other"; message: string };
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -59,10 +65,11 @@ function isMetaPayload(obj: unknown): obj is {
   downloadsRemaining: number;
   expiresAt: number;
   encrypted: boolean;
+  files?: Array<{ name: string; type: string; size: number }>;
 } {
   if (typeof obj !== "object" || obj === null) return false;
   const o = obj as Record<string, unknown>;
-  return (
+  const baseOk =
     typeof o.name === "string" &&
     typeof o.type === "string" &&
     typeof o.size === "number" &&
@@ -70,8 +77,24 @@ function isMetaPayload(obj: unknown): obj is {
     typeof o.verifyRequired === "boolean" &&
     typeof o.downloadsRemaining === "number" &&
     typeof o.expiresAt === "number" &&
-    typeof o.encrypted === "boolean"
-  );
+    typeof o.encrypted === "boolean";
+  if (!baseOk) return false;
+  // files[] is OPTIONAL — a legacy single-file meta (no files array) still
+  // passes. When present, every entry must carry name/type/size.
+  if (o.files !== undefined) {
+    if (!Array.isArray(o.files)) return false;
+    const allValid = o.files.every((f) => {
+      if (typeof f !== "object" || f === null) return false;
+      const e = f as Record<string, unknown>;
+      return (
+        typeof e.name === "string" &&
+        typeof e.type === "string" &&
+        typeof e.size === "number"
+      );
+    });
+    if (!allValid) return false;
+  }
+  return true;
 }
 
 function formatExpiresIn(expiresAt: number): string {
@@ -96,6 +119,7 @@ export default function DownloadPage() {
   const [state, setState] = useState<DownloadState>("input");
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("Downloading…");
+  const [currentName, setCurrentName] = useState("");
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
   const [hasPasswordError, setHasPasswordError] = useState(false);
   const [verifyEmail, setVerifyEmail] = useState("");
@@ -166,18 +190,32 @@ export default function DownloadPage() {
       return;
     }
 
+    // Multi-file share → one row per file; legacy meta (no files[]) → a single
+    // row derived from the top-level fields. One shared key decrypts them all.
+    const rawFiles =
+      data.files && data.files.length > 0
+        ? data.files
+        : [{ name: data.name, type: data.type, size: data.size }];
+    const files = rawFiles.map((f) => ({
+      name: f.name,
+      type: f.type,
+      sizeBytes: f.size,
+      size: formatSize(f.size),
+    }));
+
     setFileInfo({
       id,
-      name: data.name,
-      type: data.type,
-      sizeBytes: data.size,
-      size: formatSize(data.size),
+      name: files[0].name,
+      type: files[0].type,
+      sizeBytes: files[0].sizeBytes,
+      size: files[0].size,
       downloadsRemaining: data.downloadsRemaining,
       expiresIn: formatExpiresIn(data.expiresAt),
       passwordProtected: data.passwordProtected,
       verifyRequired: data.verifyRequired,
       encrypted: data.encrypted,
       keyBase64,
+      files,
     });
     setState("preview");
   }, []);
@@ -251,79 +289,72 @@ export default function DownloadPage() {
     }
   }, [fetchFileInfo]);
 
-  const handleDownload = async () => {
-    if (!fileInfo) return;
-    if (fileInfo.passwordProtected && !password) {
-      toast.error("Please enter the password to download");
-      return;
-    }
-    if (fileInfo.verifyRequired && !verifyToken) {
-      toast.error("Please verify your email to download");
-      return;
-    }
-
-    setState("downloading");
+  // Downloads + decrypts ONE file of the share (by index) with the single
+  // shared key. Returns null on success, or a classified failure. Every fetch
+  // decrements the shared counter server-side (no client "consume" flag), so
+  // fetching all N files == one whole-share download (counter seeded × N).
+  const downloadOne = async (
+    index: number,
+    file: { name: string; type: string; sizeBytes: number },
+  ): Promise<DownloadFailure | null> => {
+    if (!fileInfo) return { kind: "other", message: "No file info" };
     setProgress(0);
-    setProgressLabel("Downloading…");
-    setHasPasswordError(false);
-
-    let isPasswordError = false;
-    let isVerifyError = false;
-
+    setProgressLabel(`Downloading ${file.name}…`);
+    setCurrentName(file.name);
     try {
       const headers: Record<string, string> = {};
       if (fileInfo.passwordProtected) headers["x-password"] = password;
       if (fileInfo.verifyRequired) headers["x-verify-token"] = verifyToken;
 
-      // Step 1: ask our API for a presigned download URL. The function
-      // enforces password + counter checks and returns { url } pointing at
-      // the Blob CDN. Errors (401/403/404/410) come back as non-2xx.
+      // Step 1: ask our API for a presigned download URL for this file index.
+      // The function enforces verify + password + counter checks and returns
+      // { url } pointing at the Blob CDN. Errors come back as non-2xx.
       const authRes = await fetch(
-        `/api/files/${encodeURIComponent(fileInfo.id)}`,
+        `/api/files/${encodeURIComponent(fileInfo.id)}?index=${index}`,
         { headers },
       );
 
       if (!authRes.ok) {
         const text = await authRes.text().catch(() => "");
         if (authRes.status === 401 || authRes.status === 403) {
-          // The verification gate runs before the password gate server-side
-          // (checkVerification before checkPassword), and its response body
-          // says "verification" — distinguish so the right inline error (and
-          // reset) fires instead of a misleading "incorrect password".
+          // Verification gate runs before the password gate server-side; its
+          // body says "verification" — distinguish so the right inline error
+          // fires instead of a misleading "incorrect password".
           if (fileInfo.verifyRequired && /verif/i.test(text)) {
-            isVerifyError = true;
-            throw new Error("Verification required or expired");
+            return { kind: "verify", message: "Verification required or expired" };
           }
-          isPasswordError = true;
-          throw new Error("Incorrect password");
+          return { kind: "password", message: "Incorrect password" };
         }
-        if (authRes.status === 404) throw new Error("File not found");
+        if (authRes.status === 404) return { kind: "other", message: "File not found" };
         if (authRes.status === 410) {
-          throw new Error("File expired or exhausted");
+          return { kind: "other", message: "File expired or exhausted" };
         }
-        throw new Error(text || `HTTP ${authRes.status}`);
+        return { kind: "other", message: text || `HTTP ${authRes.status}` };
       }
 
       const auth = (await authRes.json()) as { url?: string };
-      if (!auth.url) throw new Error("Server did not return a download URL");
+      if (!auth.url) {
+        return { kind: "other", message: "Server did not return a download URL" };
+      }
 
       // Step 2: fetch the encrypted bytes directly from the Blob CDN.
       const res = await fetch(auth.url);
       if (!res.ok) {
-        throw new Error(
-          `Blob CDN returned HTTP ${res.status}. The presigned URL may have expired — try again.`,
-        );
+        return {
+          kind: "other",
+          message: `Blob CDN returned HTTP ${res.status}. The presigned URL may have expired — try again.`,
+        };
       }
 
       const contentType = res.headers.get("content-type") ?? "";
       if (!contentType.includes("octet-stream")) {
         const text = await res.text().catch(() => "");
-        throw new Error(text || `Unexpected response (${contentType})`);
+        return { kind: "other", message: text || `Unexpected response (${contentType})` };
       }
 
       const total =
-        Number(res.headers.get("content-length")) || fileInfo.sizeBytes || 0;
-      if (!res.body) throw new Error("Empty response body");
+        Number(res.headers.get("content-length")) || file.sizeBytes || 0;
+      if (!res.body) return { kind: "other", message: "Empty response body" };
 
       const reader = res.body.getReader();
       const chunks: Uint8Array[] = [];
@@ -347,76 +378,117 @@ export default function DownloadPage() {
 
       let fileBytes: Uint8Array<ArrayBuffer>;
       if (fileInfo.encrypted) {
-        // An AES-GCM encrypted payload is at minimum IV (12) + auth tag (16)
-        // = 28 bytes. Anything shorter is a truncated or wrong-shaped
-        // response, not a valid ciphertext.
+        // AES-GCM payload is at minimum IV (12) + tag (16) = 28 bytes.
         if (downloadedBytes.byteLength < 28) {
           const preview = new TextDecoder("utf-8", { fatal: false }).decode(
             downloadedBytes,
           );
-          throw new Error(
-            `Server returned only ${downloadedBytes.byteLength} bytes${preview ? `: "${preview}"` : ""}. The file may have expired, been exhausted, or the link is invalid.`,
-          );
+          return {
+            kind: "other",
+            message: `Server returned only ${downloadedBytes.byteLength} bytes${preview ? `: "${preview}"` : ""}. The file may have expired, been exhausted, or the link is invalid.`,
+          };
         }
         if (total > 0 && downloadedBytes.byteLength < total) {
-          throw new Error(
-            `Download truncated: received ${downloadedBytes.byteLength} of ${total} bytes. Try again.`,
-          );
+          return {
+            kind: "other",
+            message: `Download truncated: received ${downloadedBytes.byteLength} of ${total} bytes. Try again.`,
+          };
         }
 
-        setProgressLabel("Decrypting…");
+        setProgressLabel(`Decrypting ${file.name}…`);
         setProgress(100);
 
+        // ONE shared key decrypts every file in the share.
         const key = await importKeyBase64(fileInfo.keyBase64);
         fileBytes = new Uint8Array(
           await decryptPacked(downloadedBytes.buffer, key),
         );
       } else {
         if (total > 0 && downloadedBytes.byteLength < total) {
-          throw new Error(
-            `Download truncated: received ${downloadedBytes.byteLength} of ${total} bytes. Try again.`,
-          );
+          return {
+            kind: "other",
+            message: `Download truncated: received ${downloadedBytes.byteLength} of ${total} bytes. Try again.`,
+          };
         }
         setProgress(100);
         fileBytes = downloadedBytes;
       }
 
-      const blob = new Blob([fileBytes], { type: fileInfo.type });
+      const blob = new Blob([fileBytes], { type: file.type });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = fileInfo.name;
+      a.download = file.name;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-
-      setState("done");
-      toast.success(
-        fileInfo.encrypted
-          ? "File downloaded and decrypted!"
-          : "File downloaded (was not encrypted).",
-      );
+      return null;
     } catch (err) {
-      setState("preview");
-      setProgress(0);
-      if (isPasswordError) {
-        setHasPasswordError(true);
-        return;
-      }
-      if (isVerifyError) {
-        setVerifyToken("");
-        setVerifyStep("idle");
-        setVerifyCode("");
-        setHasVerifyCodeError(false);
-        toast.error("Verification expired — request a new code");
-        return;
-      }
-      toast.error(
-        "Download failed: " +
-          (err instanceof Error ? err.message : "Unknown error"),
-      );
+      return {
+        kind: "other",
+        message: err instanceof Error ? err.message : "Unknown error",
+      };
     }
+  };
+
+  // Gate once for the whole share, then download the given file indices
+  // sequentially. Downloading every index is "one whole-share download".
+  const startDownload = async (indices: number[]) => {
+    if (!fileInfo) return;
+    if (fileInfo.passwordProtected && !password) {
+      toast.error("Please enter the password to download");
+      return;
+    }
+    if (fileInfo.verifyRequired && !verifyToken) {
+      toast.error("Please verify your email to download");
+      return;
+    }
+
+    setState("downloading");
+    setProgress(0);
+    setHasPasswordError(false);
+
+    for (const i of indices) {
+      const file = fileInfo.files[i];
+      if (!file) continue;
+      const failure = await downloadOne(i, file);
+      if (failure) {
+        setState("preview");
+        setProgress(0);
+        if (failure.kind === "password") {
+          setHasPasswordError(true);
+          return;
+        }
+        if (failure.kind === "verify") {
+          setVerifyToken("");
+          setVerifyStep("idle");
+          setVerifyCode("");
+          setHasVerifyCodeError(false);
+          toast.error("Verification expired — request a new code");
+          return;
+        }
+        toast.error("Download failed: " + failure.message);
+        return;
+      }
+    }
+
+    setState("done");
+    const multi = indices.length > 1;
+    toast.success(
+      fileInfo.encrypted
+        ? multi
+          ? "All files downloaded and decrypted!"
+          : "File downloaded and decrypted!"
+        : "File downloaded (was not encrypted).",
+    );
+  };
+
+  const handleDownloadAll = () => {
+    if (fileInfo) void startDownload(fileInfo.files.map((_, i) => i));
+  };
+  const handleDownloadOne = (index: number) => {
+    void startDownload([index]);
   };
 
   const handleReset = () => {
@@ -425,6 +497,7 @@ export default function DownloadPage() {
     setState("input");
     setProgress(0);
     setProgressLabel("Downloading…");
+    setCurrentName("");
     setFileInfo(null);
     setHasPasswordError(false);
     setVerifyEmail("");
@@ -484,16 +557,34 @@ export default function DownloadPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-4 rounded-[var(--radius-md)] bg-[var(--surface-card)] p-4 shadow-[var(--ring-border)]">
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-subdued)]">
-                  <Icon name="File01" size={24} className="text-[var(--icon-subdued)]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="gemba-body-strong truncate">{fileInfo.name}</p>
-                  <p className="gemba-body-sm text-[var(--text-subdued)]">
-                    {fileInfo.size} &middot; {fileInfo.type}
-                  </p>
-                </div>
+              <div className="space-y-2">
+                {fileInfo.files.map((f, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 rounded-[var(--radius-md)] bg-[var(--surface-card)] p-4 shadow-[var(--ring-border)]"
+                  >
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-subdued)]">
+                      <Icon name="File01" size={24} className="text-[var(--icon-subdued)]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="gemba-body-strong truncate">{f.name}</p>
+                      <p className="gemba-body-sm text-[var(--text-subdued)]">
+                        {f.size} &middot; {f.type}
+                      </p>
+                    </div>
+                    {fileInfo.files.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="shrink-0 gap-1"
+                        onClick={() => handleDownloadOne(i)}
+                      >
+                        <Icon name="Download01" size={16} />
+                        Download
+                      </Button>
+                    )}
+                  </div>
+                ))}
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -637,7 +728,7 @@ export default function DownloadPage() {
                       setPassword(e.target.value);
                       setHasPasswordError(false);
                     }}
-                    onKeyDown={(e) => e.key === "Enter" && handleDownload()}
+                    onKeyDown={(e) => e.key === "Enter" && handleDownloadAll()}
                   />
                   {hasPasswordError && (
                     <p className="gemba-body-sm flex items-center gap-1 text-[var(--gemba-critical)]">
@@ -658,9 +749,9 @@ export default function DownloadPage() {
             >
               Cancel
             </Button>
-            <Button className="flex-1 gap-2" onClick={handleDownload}>
+            <Button className="flex-1 gap-2" onClick={handleDownloadAll}>
               <Icon name="Download01" size={16} />
-              Download and decrypt
+              {fileInfo.files.length > 1 ? "Download all" : "Download and decrypt"}
             </Button>
           </div>
         </div>
@@ -678,7 +769,7 @@ export default function DownloadPage() {
               <div>
                 <p className="gemba-body-strong">{progressLabel}</p>
                 <p className="gemba-body-sm text-[var(--text-subdued)]">
-                  {fileInfo?.name}
+                  {currentName || fileInfo?.name}
                 </p>
               </div>
               <Progress value={Math.min(progress, 100)} />
