@@ -118,6 +118,20 @@ export async function seedDownloadCounter(
  * additional state; this asymmetry is accepted as a known, low-probability
  * residual risk rather than solved with unseeded speculative bookkeeping.
  */
+/**
+ * Non-decrementing read of dl:{id} (Phase 7, REL-01 consume-flag gate). Used by
+ * a `consume=0` download request to enforce the share's download limit WITHOUT
+ * spending a download — returns the current remaining count, or null when the
+ * key is absent. The consuming path still uses decrementDownloadCounter.
+ */
+export async function peekDownloadCounter(
+  id: string,
+  redis: RedisLike = getRedisClient(),
+): Promise<number | null> {
+  const v = await redis.get(counterKey(id));
+  return v === null || v === undefined ? null : Number(v);
+}
+
 export async function decrementDownloadCounter(
   id: string,
   limit: number,
