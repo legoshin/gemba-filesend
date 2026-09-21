@@ -11,9 +11,9 @@ Re-shape the entire **web** UI (root `src/` Next.js app) onto the **SmoothUI** c
 
 ### Foundation
 
-- [ ] **FND-01**: The `motion` (Framer Motion successor) dependency is installed and available to the web app.
-- [ ] **FND-02**: A shared SmoothUI shape + motion utility layer exists (reusable radii/border/shape tokens and reusable transition/variant presets) that all re-shaped components draw from — no per-component motion magic numbers.
-- [ ] **FND-03**: All SmoothUI motion respects `prefers-reduced-motion` — animations degrade to instant/opacity-only when the user opts out.
+- [x] **FND-01**: The `motion` (Framer Motion successor) dependency is installed and available to the web app.
+- [x] **FND-02**: A shared SmoothUI shape + motion utility layer exists (reusable radii/border/shape tokens and reusable transition/variant presets) that all re-shaped components draw from — no per-component motion magic numbers.
+- [x] **FND-03**: All SmoothUI motion respects `prefers-reduced-motion` — animations degrade to instant/opacity-only when the user opts out.
 
 ### Form Controls
 
@@ -78,9 +78,9 @@ Re-shape the entire **web** UI (root `src/` Next.js app) onto the **SmoothUI** c
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 9 | Pending |
-| FND-02 | Phase 9 | Pending |
-| FND-03 | Phase 9 | Pending |
+| FND-01 | Phase 9 | Complete |
+| FND-02 | Phase 9 | Complete |
+| FND-03 | Phase 9 | Complete |
 | FORM-01 | Phase 10 | Pending |
 | FORM-02 | Phase 10 | Pending |
 | FORM-03 | Phase 10 | Pending |
@@ -105,6 +105,7 @@ Re-shape the entire **web** UI (root `src/` Next.js app) onto the **SmoothUI** c
 | INV-03 | Phase 12 | Pending |
 
 **Coverage:**
+
 - v1.1 requirements: 25 total
 - Mapped to phases: 25 (100%)
 - Unmapped: 0

@@ -1,16 +1,21 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.1
-milestone_name: SmoothUI Re-shape
+current_phase: 9
+current_phase_name: SmoothUI Foundation
+current_plan: 2
 status: planning
-last_updated: "2026-09-21T09:24:14.139Z"
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-09-21T10:24:04.490Z"
 last_activity: 2026-09-21
+last_activity_desc: Plan 09-01 executed (motion dependency, shape/motion preset layer, chip.tsx proof, reduced-motion tests)
+state_head: fe1fab1f33e4e25d4a62e3b1872ff31ac60080ea
 progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 11
+  completed_phases: 4
+  total_plans: 2
+  completed_plans: 1
+milestone_name: SmoothUI Re-shape
 ---
 
 # Project State
@@ -24,10 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 ## Current Position
 
-Phase: 9 of 12 (SmoothUI Foundation) — not started, roadmap just created
-Plan: — (no plans yet; run `/gsd-plan-phase 9`)
-Status: Roadmap created — ready to plan Phase 9
-Last activity: 2026-09-21 — Milestone v1.1 ROADMAP.md written (Phases 9-12), REQUIREMENTS.md traceability filled, 25/25 requirements mapped
+Phase: 9 of 12 (SmoothUI Foundation) — in progress
+Current Plan: 2
+Total Plans in Phase: 2
+Status: Plan 09-01 (motion+shape foundation) complete; Plan 09-02 pending
+Last activity: 2026-09-21 — Plan 09-01 executed (motion dependency, shape/motion preset layer, chip.tsx proof, reduced-motion tests)
 
 ## Performance Metrics
 
@@ -73,6 +79,7 @@ Last activity: 2026-09-21 — Milestone v1.1 ROADMAP.md written (Phases 9-12), R
 |------|----------|-------|-------|
 | Phase 06 P02 | 4min | 3 tasks | 4 files |
 | Phase 07 P01 | 10m | 3 tasks | 9 files |
+| Phase 09 P01 | 25min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -113,6 +120,8 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-02: Live Upstash verification (real 429 + real DECR/410) deferred to deploy by explicit user decision — creds not provisioned in this env; all code + build criteria satisfied, concurrency correctness proven by the hermetic fake in 04-03
 - [Phase ?]: 04-03: Vitest is the project's first test runner (D-11); vitest.config.ts adds a resolve.alias for @ to ./src because Vitest does not read tsconfig paths by default
 - [Phase ?]: 04-03: TEST-03 REL-01 concurrency regression uses a hermetic in-memory Redis fake injected via the counter's optional client arg (D-13); validateClientMeta + MAX_* bounds promoted to named exports (no logic change) so TEST-04 tests the real predicate
+- [Phase 9]: Installed motion citing 09-CONTEXT.md security_approval as authorization (no further blocking checkpoint)
+- [Phase 9]: chip.tsx asChild path uses motion.create(Slot.Root) so both render paths are equally animatable
 
 ### Pending Todos
 
@@ -142,6 +151,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-21T09:24:14.111Z
-Stopped at: v1.1 ROADMAP.md written (Phases 9-12: SmoothUI Foundation, Component Re-shape, Page Motion, Verification & Parity); REQUIREMENTS.md traceability filled (25/25 mapped). Next: `/gsd-plan-phase 9`.
+Last session: 2026-09-21T10:24:04.477Z
+Stopped at: Completed 09-01-PLAN.md
 Resume file: None
