@@ -69,7 +69,9 @@ function RadioGroupItem({
       data-slot="radio-group-item"
       value={value}
       className={cn(
-        "aspect-square size-[18px] shrink-0 rounded-full bg-[var(--surface-card)] shadow-[inset_0_0_0_1.5px_var(--icon-subtle)] transition-[color,box-shadow] outline-none focus-visible:shadow-[var(--ring-focus)] disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:shadow-[inset_0_0_0_1.5px_var(--gemba-critical)] data-[state=checked]:shadow-[inset_0_0_0_1.5px_var(--button-primary-bg)]",
+        // before:-inset expands the click/touch target to ~44px without
+        // growing the visible 18px dot (same technique as checkbox.tsx).
+        "relative aspect-square size-[18px] shrink-0 rounded-full bg-[var(--surface-card)] shadow-[inset_0_0_0_1.5px_var(--icon-subtle)] transition-[color,box-shadow] outline-none before:absolute before:-inset-[13px] before:content-[''] focus-visible:shadow-[var(--ring-focus)] disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:shadow-[inset_0_0_0_1.5px_var(--gemba-critical)] data-[state=checked]:shadow-[inset_0_0_0_1.5px_var(--button-primary-bg)]",
         className
       )}
       {...props}

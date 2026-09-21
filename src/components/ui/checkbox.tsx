@@ -40,7 +40,10 @@ function Checkbox({
         onCheckedChange?.(next)
       }}
       className={cn(
-        "peer size-[18px] shrink-0 rounded-[6px] bg-[var(--surface-card)] shadow-[inset_0_0_0_1.5px_var(--icon-subtle)] transition-shadow outline-none focus-visible:shadow-[var(--ring-focus)] disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:shadow-[inset_0_0_0_1.5px_var(--gemba-critical)] data-[state=checked]:bg-[var(--button-primary-bg)] data-[state=checked]:text-[var(--button-primary-fg)] data-[state=checked]:shadow-none",
+        // rounded-[6px] was off the app's radius scale (--radius-sm=8 is the
+        // nearest step); before:-inset expands the click/touch target to
+        // ~44px without growing the visible 18px box.
+        "peer relative size-[18px] shrink-0 rounded-[var(--radius-sm)] bg-[var(--surface-card)] shadow-[inset_0_0_0_1.5px_var(--icon-subtle)] transition-shadow outline-none before:absolute before:-inset-[13px] before:content-[''] focus-visible:shadow-[var(--ring-focus)] disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:shadow-[inset_0_0_0_1.5px_var(--gemba-critical)] data-[state=checked]:bg-[var(--button-primary-bg)] data-[state=checked]:text-[var(--button-primary-fg)] data-[state=checked]:shadow-none",
         className
       )}
       {...props}
