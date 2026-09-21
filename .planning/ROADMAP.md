@@ -150,7 +150,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Download Page Redesign & Dark Mode Complete | 4/4 | Complete    | 2026-07-11 |
 | 4. Security, Reliability & Test Hardening | 3/3 | Complete   | 2026-07-11 |
 | 5. Recipient Email Verification | 0/? | Planning | — |
-| 9. SmoothUI Foundation | 1/2 | In Progress|  |
+| 9. SmoothUI Foundation | 2/2 | In Progress|  |
 | 10. Component Re-shape | 0/? | Not started | - |
 | 11. Page Motion | 0/? | Not started | - |
 | 12. Verification & Parity | 0/? | Not started | - |
@@ -206,10 +206,10 @@ Plans:
   3. With the OS/browser `prefers-reduced-motion` setting enabled, any motion driven by the utility layer degrades to instant or opacity-only transitions.
   4. `design-system/` documents the new SmoothUI shape + motion language (radii, borders, transition presets, reduced-motion behavior) and explicitly states colour/type tokens are unchanged.
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans executed
 
 - [x] 09-01-PLAN.md — Install `motion`; build the shape + motion utility layer (transitions/variants + reduced-motion resolver + shape tokens), MotionConfig, and one real consumer (FND-01, FND-02, FND-03)
-- [ ] 09-02-PLAN.md — Document the shape + motion language in `design-system/MOTION.md` (colour/type explicitly unchanged) (DOC-01)
+- [x] 09-02-PLAN.md — Document the shape + motion language in `design-system/MOTION.md` (colour/type explicitly unchanged) (DOC-01)
 
 **UI hint**: yes
 

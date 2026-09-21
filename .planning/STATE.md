@@ -5,16 +5,16 @@ current_phase: 9
 current_phase_name: SmoothUI Foundation
 current_plan: 2
 status: planning
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-09-21T10:24:04.490Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-09-21T10:39:23.398Z"
 last_activity: 2026-09-21
 last_activity_desc: Plan 09-01 executed (motion dependency, shape/motion preset layer, chip.tsx proof, reduced-motion tests)
-state_head: fe1fab1f33e4e25d4a62e3b1872ff31ac60080ea
+state_head: a53de21ef49e9567008f1519810c8d61aa15fe5b
 progress:
   total_phases: 11
   completed_phases: 4
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 milestone_name: SmoothUI Re-shape
 ---
 
@@ -80,6 +80,7 @@ Last activity: 2026-09-21 — Plan 09-01 executed (motion dependency, shape/moti
 | Phase 06 P02 | 4min | 3 tasks | 4 files |
 | Phase 07 P01 | 10m | 3 tasks | 9 files |
 | Phase 09 P01 | 25min | 3 tasks | 9 files |
+| Phase 09 P02 | 10min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -122,6 +123,7 @@ Recent decisions affecting current work:
 - [Phase ?]: 04-03: TEST-03 REL-01 concurrency regression uses a hermetic in-memory Redis fake injected via the counter's optional client arg (D-13); validateClientMeta + MAX_* bounds promoted to named exports (no logic change) so TEST-04 tests the real predicate
 - [Phase 9]: Installed motion citing 09-CONTEXT.md security_approval as authorization (no further blocking checkpoint)
 - [Phase 9]: chip.tsx asChild path uses motion.create(Slot.Root) so both render paths are equally animatable
+- [Phase 9]: Placed MOTION.md pointer inside existing VISUAL FOUNDATIONS bullet list per plan's one-line pointer scope guard; tabulated all preset tables from as-built src/lib/motion.ts/shape.ts exports, confirming no drift from RESEARCH.md sketch
 
 ### Pending Todos
 
@@ -151,6 +153,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-21T10:24:04.477Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-09-21T10:39:23.384Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None

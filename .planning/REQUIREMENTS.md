@@ -56,7 +56,7 @@ Re-shape the entire **web** UI (root `src/` Next.js app) onto the **SmoothUI** c
 
 ### Design System Docs
 
-- [ ] **DOC-01**: `design-system/` documents the new SmoothUI shape + motion language (colour/type tokens explicitly unchanged), so the shape/motion decisions are the recorded source of truth.
+- [x] **DOC-01**: `design-system/` documents the new SmoothUI shape + motion language (colour/type tokens explicitly unchanged), so the shape/motion decisions are the recorded source of truth.
 
 ### Invariants (verified, not weakened)
 
@@ -99,7 +99,7 @@ Re-shape the entire **web** UI (root `src/` Next.js app) onto the **SmoothUI** c
 | MOT-02 | Phase 11 | Pending |
 | SHELL-01 | Phase 10 | Pending |
 | SHELL-02 | Phase 10 | Pending |
-| DOC-01 | Phase 9 | Pending |
+| DOC-01 | Phase 9 | Complete |
 | INV-01 | Phase 12 | Pending |
 | INV-02 | Phase 12 | Pending |
 | INV-03 | Phase 12 | Pending |
