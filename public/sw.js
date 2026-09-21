@@ -5,7 +5,7 @@
 // paint when they re-open the app — and a graceful offline screen otherwise.
 //
 // The version literal forces a fresh install whenever this file changes.
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL_CACHE = `gemba-shell-${VERSION}`;
 
 // Routes worth pre-warming. Kept small — Next.js fingerprints the rest of the
@@ -58,6 +58,10 @@ self.addEventListener("fetch", (event) => {
   // break uploads/downloads and the auto-deletion behaviour.
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
+  // The Mac app downloads (/download/GembaFilesend.dmg, install.sh, …) must
+  // always come fresh: a cached copy would outlive a new release and fail its
+  // checksum. The /download page itself has no trailing slash, so it stays cached.
+  if (url.pathname.startsWith("/download/")) return;
 
   // Stale-while-revalidate for the app shell so navigating between Upload
   // and Download is instant after first load.

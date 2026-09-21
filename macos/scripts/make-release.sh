@@ -8,15 +8,22 @@
 #   *.sha256                       checksums beside each file
 #   install.sh                     the command-line installer
 #
+#   ./scripts/make-release.sh --publish        build, then copy into public/download/
 #   ./scripts/make-release.sh --url https://downloads.example.com/filesend
-#   ./scripts/make-release.sh                  (leaves install.sh's URL unset)
 #
-# --url is the folder the dist/ files will be uploaded to. It is written into
-# install.sh, together with the zip's SHA-256, so the installer refuses any file
-# but this exact build. Upload the whole dist/ folder together.
+# The files are hosted by the web app itself, at https://send.gemba.uk/download/
+# (served from the repo's public/download/ folder). That is the default --url:
+# it is written into install.sh, together with the zip's SHA-256, so the
+# installer refuses any file but this exact build.
+#
+# --publish copies the stable-named files (GembaFilesend.dmg/.zip, their .sha256
+# and install.sh) into public/download/. Commit them and deploy the site, and
+#   curl -fsSL https://send.gemba.uk/download/install.sh | bash
+# installs this build.
 #
 # Other options: --skip-tests, --plain-dmg (skip the Finder window styling,
-# which needs permission to control Finder the first time).
+# which needs permission to control Finder the first time), --no-url (leave
+# install.sh's URL unset).
 #
 # The build is universal (Apple silicon + Intel) and ad-hoc signed, not
 # notarized — see "Gatekeeper" in macos/README.md for what that means for the
@@ -28,16 +35,19 @@ MACOS_DIR="$(cd "$HERE/.." && pwd)"
 DIST="$MACOS_DIR/dist"
 BUILD="$MACOS_DIR/.build-release"
 APP_NAME="Gemba Filesend"
-BASE_URL=""
+BASE_URL="https://send.gemba.uk/download"
+PUBLISH=0
 RUN_TESTS=1
 STYLE_DMG=1
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --url) shift; BASE_URL="${1:-}"; [ -n "$BASE_URL" ] || { echo "--url needs a value" >&2; exit 2; } ;;
+    --no-url) BASE_URL="" ;;
+    --publish) PUBLISH=1 ;;
     --skip-tests) RUN_TESTS=0 ;;
     --plain-dmg) STYLE_DMG=0 ;;
-    -h|--help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
   shift
@@ -219,7 +229,19 @@ chmod +x "$DIST/install.sh"
 
 step "Ready: $DIST"
 (cd "$DIST" && ls -1 | sed 's/^/  /')
+
+if [ "$PUBLISH" = 1 ]; then
+  PUBLIC="$(cd "$MACOS_DIR/.." && pwd)/public/download"
+  step "Publishing to $PUBLIC"
+  mkdir -p "$PUBLIC"
+  for f in GembaFilesend.dmg GembaFilesend.dmg.sha256 GembaFilesend.zip GembaFilesend.zip.sha256 install.sh; do
+    cp "$DIST/$f" "$PUBLIC/$f"
+    echo "  $f"
+  done
+  printf '\nCommit public/download/ and deploy the site. Then:\n'
+fi
 if [ -n "$BASE_URL" ]; then
-  printf '\nUpload the whole folder to %s, then anyone installs with:\n\n' "$BASE_URL"
-  printf '  curl -fsSL %s/install.sh | bash\n\n' "$BASE_URL"
+  [ "$PUBLISH" = 1 ] || printf '\nUpload these to %s:\n  GembaFilesend.dmg, GembaFilesend.zip, their .sha256 files, install.sh\nThen:\n' "$BASE_URL"
+  printf '\n  DMG:        %s/GembaFilesend.dmg\n' "$BASE_URL"
+  printf '  Installer:  curl -fsSL %s/install.sh | bash\n\n' "$BASE_URL"
 fi
