@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { decryptPacked, importKeyBase64 } from "@/lib/crypto";
 import { transitions, variants } from "@/lib/motion";
@@ -184,6 +185,7 @@ export default function DownloadPage() {
   >("idle");
   const [hasVerifyCodeError, setHasVerifyCodeError] = useState(false);
   const [verifyBusy, setVerifyBusy] = useState(false);
+  const [isFetchingInfo, setIsFetchingInfo] = useState(false);
 
   const fetchFileInfo = useCallback(async (shareLink: string) => {
     let id = "";
@@ -307,8 +309,9 @@ export default function DownloadPage() {
   }, []);
 
   const handleFetchInfo = () => {
-    if (!link.trim()) return;
-    void fetchFileInfo(link);
+    if (!link.trim() || isFetchingInfo) return;
+    setIsFetchingInfo(true);
+    void fetchFileInfo(link).finally(() => setIsFetchingInfo(false));
   };
 
   const handleRequestCode = async () => {
@@ -607,7 +610,22 @@ export default function DownloadPage() {
         </p>
       </div>
 
-      {state === "input" && (
+      {state === "input" && isFetchingInfo && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="gemba-h4">Fetching File Info</CardTitle>
+            <CardDescription>Loading file details…</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {state === "input" && !isFetchingInfo && (
         <Card>
           <CardHeader>
             <CardTitle className="gemba-h4">Enter Share Link</CardTitle>
