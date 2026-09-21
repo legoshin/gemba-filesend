@@ -1,19 +1,16 @@
 ---
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-current_phase: 08
-current_phase_name: macos-native-app
-status: complete
-stopped_at: Phase 08 complete — app installed locally; distribution deliberately out of scope
-last_updated: "2026-09-21T10:00:00.000Z"
+gsd_state_version: "1.0"
+milestone: v1.1
+milestone_name: SmoothUI Re-shape
+status: planning
+last_updated: "2026-09-21T09:24:14.139Z"
 last_activity: 2026-09-21
-last_activity_desc: Phase 8 extended (08-05) — folder sharing in app + Share menu, SmoothUI-based redesign, command-line installer and DMG via make-release.sh. 41 tests green, verified end to end against production.
 progress:
-  total_phases: 8
-  completed_phases: 7
-  total_plans: 31
-  completed_plans: 31
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -27,17 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 ## Current Position
 
-Phase: 08 (macos-native-app) — COMPLETE
-Plan: 4 of 4
-Status: All plans complete. Signed locally by decision; not distributable to other machines.
-Last activity: 2026-09-17 -- Phase 8 (macOS native app): GembaKit crypto+upload core (35 tests green), SwiftUI app, Share Extension, and Developer ID signing/notarization scripts. A Mac-made share link was downloaded through the production API and decrypted by the web's own crypto — interop proven in both directions. 08-04 needs the Developer ID Application certificate installed in this Mac's keychain before a DMG can be produced.
-
-**Open human steps**
-- Phase 08: none. (Distribution deferred by decision — `macos/scripts/package-dmg.sh` is ready if that changes.)
-- Phase 07: multi-file download human-verify (carried over, unchanged).
-- Phase 05: Mailgun env + deploy checkpoint (carried over, unchanged).
-
-Progress: [█████████░] 92%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-09-21 — Milestone v1.1 started
 
 ## Performance Metrics
 

@@ -2,11 +2,20 @@
 
 ## What This Is
 
-Gemba Filesend is an anonymous, client-side-encrypted file-sharing web app: a user drops files, they're encrypted in the browser (the key never leaves the client — it lives in the share link's URL fragment), and the recipient decrypts on download. It ships as a web app, an installable PWA, and an Android app (TWA) on Google Play. This milestone re-skins the entire app to the **Gemba design system** (`design-system/`), adds a proper **dark mode**, and closes the highest-priority **security/reliability gaps**.
+Gemba Filesend is an anonymous, client-side-encrypted file-sharing web app: a user drops files, they're encrypted in the browser (the key never leaves the client — it lives in the share link's URL fragment), and the recipient decrypts on download. It ships as a web app, an installable PWA, and an Android app (TWA) on Google Play, with a native macOS sender app. The app is already re-skinned to the **Gemba design system** (`design-system/`) with full light/dark mode and hardened security. This milestone re-shapes the entire web UI onto the **SmoothUI** component language (motion-forward geometry) while keeping the existing colour and type tokens unchanged.
 
 ## Core Value
 
 Anyone can share a file securely — encrypted end-to-end, no account, no friction — through a single link. Everything else serves that.
+
+## Current Milestone: v1.1 SmoothUI Re-shape
+
+**Goal:** Re-shape every web UI component onto the SmoothUI component library — new geometry (radii/borders/shape) and SmoothUI motion — while keeping the existing colour palette and Public Sans type, without weakening client-side encryption or breaking web/PWA/TWA parity.
+
+**Target features:**
+- Re-shape the shared component layer (forms, buttons, cards, toasts, progress, dialog/sheet/drawer, dropdown, tabs, badge/chip, avatar, separator, lists, file-dropzone) onto SmoothUI geometry + motion, restyling the existing shadcn/Radix components in place (no parallel UI kit).
+- Add SmoothUI page/section motion, scroll progress, and animated list/image treatments across home, upload, and download.
+- Keep colour + type tokens unchanged; document the new shape + motion language in `design-system/`; hold theme + asset parity across web, PWA, and Android TWA; keep the E2E-encryption boundary intact.
 
 ## Requirements
 
@@ -25,27 +34,33 @@ Anyone can share a file securely — encrypted end-to-end, no account, no fricti
 - ✓ Theme scaffolding: `next-themes` + light/dark toggle, `gemba-logo.svg` + `gemba-logo-dark.svg` in `public/` — existing
 - ✓ Upload page redesigned to the Gemba design system (dropzone, share options, share-link result), theme-aware light/dark, reusing the Phase 1 component layer — Validated in Phase 2 (PAGE-02)
 - ✓ Download page redesigned to the Gemba design system (all states, error cards, secure row, inline password error); 3-way light/dark/system theme control; Public Sans production-font fix; full-app light/dark/system theming human-signed-off — Validated in Phase 3 (PAGE-03, DARK-02)
+- ✓ Gemba design system wired app-wide + shared component layer (button ranks, Input/Checkbox/Radio/Toggle, Chip, Icon wrapper, card/inset-ring recipe); home page redesigned — Validated in Phase 1
+- ✓ Dark token layer authored; every surface theme-aware via `next-themes`; theme-adaptive logos/brand mark — Validated in Phases 1–3
+- ✓ Security & reliability hardening: CSP/HSTS/X-Frame-Options/X-Content-Type-Options headers, upload/download rate limiting, download-counter race fixed, crypto/password/counter/metadata unit tests — Validated in Phase 4
+- ✓ Optional per-upload recipient email verification gate — Validated in Phase 5
+- ✓ Notify recipient by email (Mailgun) — Validated in Phase 6
+- ✓ Multiple files under a single download link + key — Validated in Phase 7
+- ✓ Native macOS sender app (SwiftUI + CryptoKit; SmoothUI-based redesign, folder sharing, DMG/installer) matching the web AES-GCM wire format — Validated in Phase 8
 
 ### Active
 
-<!-- Current scope. This milestone: redesign + hardening. -->
+<!-- Current scope. This milestone: v1.1 SmoothUI Re-shape (web UI). -->
 
-**Redesign (apply Gemba design system):**
-- [ ] Wire Gemba design tokens (`design-system/tokens/` + `styles.css`) globally into the Next.js app
-- [ ] Refactor shared UI components to the design system (button ranks, Input/Checkbox/Radio/Toggle, Chip, Icon wrapper, card/inset-ring recipe)
-- [ ] Redesign all pages to the system: home, upload, download
-- [ ] Replace ad-hoc icons with the Untitled UI `Icon` wrapper (`currentColor` stroke icons, no emoji as UI icons)
+**Re-shape the web UI onto SmoothUI (keep colours + type):**
+- [ ] Add the `motion` dependency and a small SmoothUI motion/shape utility layer (respecting `prefers-reduced-motion`)
+- [ ] Re-shape shared form controls onto SmoothUI: Input, Checkbox, Radio, Switch/Toggle, Label
+- [ ] Re-shape buttons onto SmoothUI (smooth/clip-corners geometry + press/hover motion) preserving button ranks
+- [ ] Re-shape surfaces onto SmoothUI: card, dialog, sheet/drawer, dropdown-menu, tabs, badge/chip, avatar, separator
+- [ ] Re-shape feedback/indicators onto SmoothUI: toasts (sonner), progress bar, skeleton/loading
+- [ ] Re-shape the file-dropzone (animated file upload) and file/list rows (animated list) onto SmoothUI
+- [ ] Add page/section entrance motion + scroll progress across home, upload, download
+- [ ] Re-shape app-shell/sidebar, mobile-tab-bar, and theme-toggle onto SmoothUI motion
+- [ ] Update `design-system/` docs: colour/type tokens unchanged; document the new shape + motion language
 
-**Dark mode:**
-- [ ] Define a dark-mode token layer (design system tokens are currently light-only `:root`)
-- [ ] Make every redesigned surface theme-aware (light/dark) via `next-themes`
-- [ ] Adapt logos/brand mark to dark mode (correct asset per theme)
-
-**Hardening (highest-priority gaps from codebase map):**
-- [ ] Automated tests: crypto round-trip, password validation, download-counter, metadata (target 80% on those units)
-- [ ] Security headers: CSP, HSTS, X-Frame-Options, X-Content-Type-Options
-- [ ] Rate limiting on upload/download endpoints (anti-abuse, password brute-force)
-- [ ] Fix download-counter race condition (concurrent requests over-decrement)
+**Invariants (must remain true after the re-shape):**
+- [ ] Colour palette and Public Sans type tokens unchanged; light/dark/system theming still correct everywhere
+- [ ] Client-side E2E encryption boundary intact (key never reaches the server)
+- [ ] Web, PWA, and Android TWA parity (theme + assets render correctly in all three)
 
 ### Out of Scope
 
@@ -81,7 +96,9 @@ Anyone can share a file securely — encrypted end-to-end, no account, no fricti
 | Milestone scope = redesign + hardening | User chose to bundle the flagged security/reliability gaps with the visual redesign. | — Pending |
 | Coarse phase granularity | Focused redesign; fewer broad phases (foundation → components → pages → dark mode/logos → hardening). | — Pending |
 | Author a dark token layer (not just toggle) | Design system tokens are light-only; dark mode needs real dark values mapped to semantic aliases. | — Pending |
-| Reuse existing shadcn/Radix component layer | Avoid a second divergent UI kit; lift design-system structure into current components. | — Pending |
+| Reuse existing shadcn/Radix component layer | Avoid a second divergent UI kit; lift design-system structure into current components. | ✓ Good |
+| Adopt SmoothUI by restyling existing components in place (v1.1) | SmoothUI ships as copy-paste source (Motion+GSAP+Tailwind), like shadcn — restyle Radix components in place rather than adding a parallel kit; keep Radix a11y behavior. | — Pending |
+| Keep colour + Public Sans tokens; change only shape + motion (v1.1) | User directive: keep the established Gemba palette/type; the SmoothUI change is geometry + animation only. | — Pending |
 
 ## Evolution
 
@@ -101,4 +118,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-11 — Phase 3 complete (download page redesigned + full-app light/dark/system theming verified; DARK-02 human-signed-off)*
+*Last updated: 2026-09-21 — started milestone v1.1 SmoothUI Re-shape (web UI onto SmoothUI geometry + motion; colours/type unchanged)*
