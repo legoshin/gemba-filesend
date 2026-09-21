@@ -888,7 +888,7 @@ export default function DownloadPage() {
               <Icon
                 name="Loading03"
                 size={32}
-                className="mx-auto animate-spin text-[var(--icon-primary)]"
+                className="mx-auto animate-spin text-[var(--icon-primary)] motion-reduce:animate-none"
               />
               <div>
                 <p className="gemba-body-strong">{progressLabel}</p>
