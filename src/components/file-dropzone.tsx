@@ -1,15 +1,69 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
+import { transitions, variants } from "@/lib/motion";
+import { useMotionPreset } from "@/lib/use-motion-preset";
+import { shape } from "@/lib/shape";
 
 interface FileDropzoneProps {
   files: File[];
   onFilesChange: (files: File[]) => void;
   maxSizeMb?: number;
+}
+
+// Stable module-level component identity: `motion.create()` returns a new
+// wrapped component object each call, so it must not be invoked during
+// render (react-hooks/static-components) — hoisting it here matches
+// chip.tsx's `MotionSlot` convention.
+const MotionLabel = motion.create("label");
+
+interface FileRowProps {
+  file: File;
+  index: number;
+  formattedSize: string;
+  onRemove: (index: number) => void;
+}
+
+// Extracted so `useMotionPreset` is called once per row instance rather than
+// inside `files.map(...)` — calling a hook inside a loop with a variable
+// iteration count violates the Rules of Hooks (RESEARCH Pitfall 4).
+function FileRow({ file, index, formattedSize, onRemove }: FileRowProps) {
+  const rowMotion = useMotionPreset(variants.stagger, transitions.snappy);
+
+  return (
+    <motion.div
+      layout
+      {...rowMotion}
+      className={cn(
+        "flex items-center gap-3 bg-[var(--surface-card)] p-3 shadow-[var(--ring-border)]",
+        shape.innerCard
+      )}
+    >
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-subdued)]">
+        <Icon name="File01" size={16} className="text-[var(--icon-subdued)]" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="gemba-body-strong truncate">{file.name}</p>
+        <p className="gemba-body-sm text-[var(--text-subdued)]">
+          {formattedSize}
+        </p>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="shrink-0"
+        aria-label={`Remove ${file.name}`}
+        onClick={() => onRemove(index)}
+      >
+        <Icon name="XClose" size={16} />
+      </Button>
+    </motion.div>
+  );
 }
 
 export function FileDropzone({
@@ -108,19 +162,29 @@ export function FileDropzone({
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
   };
 
+  const dropzoneMotion = useMotionPreset(
+    {
+      full: { animate: { scale: isDragging ? 1.02 : 1 } },
+      reduced: { animate: {} },
+    },
+    transitions.micro,
+  );
+
   return (
     <div className="space-y-4">
-      <label
+      <MotionLabel
         onDragEnter={handleDragIn}
         onDragLeave={handleDragOut}
         onDragOver={handleDrag}
         onDrop={handleDrop}
         className={cn(
-          "relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-[var(--radius-lg)] border-2 border-dashed p-8 text-center transition-colors",
+          "relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center border-2 border-dashed p-8 text-center transition-colors",
+          shape.card,
           isDragging
             ? "border-[var(--gemba-accent)] bg-[var(--gemba-accent-subdued)]"
             : "border-[var(--border-default)] hover:border-[var(--gemba-accent)]/50"
         )}
+        {...dropzoneMotion}
       >
         <input
           type="file"
@@ -143,35 +207,21 @@ export function FileDropzone({
         <p className="gemba-body-sm pointer-events-none mt-1 text-[var(--text-subdued)]">
           or click to browse &middot; Max {maxSizeMb >= 1024 ? `${maxSizeMb / 1024} GB` : `${maxSizeMb} MB`} per file
         </p>
-      </label>
+      </MotionLabel>
 
       {files.length > 0 && (
         <div className="space-y-2">
-          {files.map((file, index) => (
-            <div
-              key={`${file.name}-${index}`}
-              className="flex items-center gap-3 rounded-[var(--radius-md)] bg-[var(--surface-card)] p-3 shadow-[var(--ring-border)]"
-            >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-subdued)]">
-                <Icon name="File01" size={16} className="text-[var(--icon-subdued)]" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="gemba-body-strong truncate">{file.name}</p>
-                <p className="gemba-body-sm text-[var(--text-subdued)]">
-                  {formatSize(file.size)}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0"
-                aria-label={`Remove ${file.name}`}
-                onClick={() => removeFile(index)}
-              >
-                <Icon name="XClose" size={16} />
-              </Button>
-            </div>
-          ))}
+          <AnimatePresence initial={false}>
+            {files.map((file, index) => (
+              <FileRow
+                key={`${file.name}-${index}`}
+                file={file}
+                index={index}
+                formattedSize={formatSize(file.size)}
+                onRemove={removeFile}
+              />
+            ))}
+          </AnimatePresence>
         </div>
       )}
     </div>
