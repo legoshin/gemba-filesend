@@ -37,6 +37,10 @@ function Switch({
   )
   const isControlled = checked !== undefined
   const isChecked = isControlled ? checked : uncontrolledChecked
+  // Calls useReducedMotion() directly instead of going through
+  // useMotionPreset/resolveMotionPreset: the thumb's `animate.x` value
+  // varies by isChecked x size (a per-size pixel constant), not a
+  // {full, reduced} variant pair, so it can't be expressed as one.
   const shouldReduceMotion = useReducedMotion()
 
   return (
