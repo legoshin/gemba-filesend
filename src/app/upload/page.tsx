@@ -39,6 +39,8 @@ import {
 import { RecipientChipInput } from "@/components/upload/recipient-chip-input";
 import { transitions, variants } from "@/lib/motion";
 import { useMotionPreset } from "@/lib/use-motion-preset";
+import { PageEntrance, PageEntranceItem } from "@/components/page-entrance";
+import { ScrollProgress } from "@/components/scroll-progress";
 
 type UploadState = "idle" | "preparing" | "uploading" | "done";
 type ExpiryUnit = "hours" | "days" | "months";
@@ -538,7 +540,8 @@ export default function UploadPage() {
   const isBusy = uploadState === "preparing" || uploadState === "uploading";
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
+    <PageEntrance className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
+      <ScrollProgress />
       {!isEmbed && (
         <div className="mb-8 text-center">
           <h1 className="gemba-h2">Upload Files</h1>
@@ -549,6 +552,7 @@ export default function UploadPage() {
       )}
 
       {uploadState === "done" && result ? (
+        <PageEntranceItem>
         <Card>
           <CardHeader className="text-center">
             <div className="mx-auto mb-2 flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--gemba-success-subdued)]">
@@ -635,8 +639,10 @@ export default function UploadPage() {
             </div>
           </CardContent>
         </Card>
+        </PageEntranceItem>
       ) : (
         <div className="space-y-6">
+          <PageEntranceItem>
           <Card>
             <CardHeader>
               <CardTitle className="gemba-h4">Select Files</CardTitle>
@@ -649,7 +655,9 @@ export default function UploadPage() {
               <FileDropzone files={files} onFilesChange={setFiles} />
             </CardContent>
           </Card>
+          </PageEntranceItem>
 
+          <PageEntranceItem>
           <Card>
             <CardHeader>
               <CardTitle className="gemba-h4">Options</CardTitle>
@@ -792,6 +800,7 @@ export default function UploadPage() {
               </div>
             </CardContent>
           </Card>
+          </PageEntranceItem>
 
           {isBusy && (
             <Card>
@@ -817,6 +826,7 @@ export default function UploadPage() {
             </Card>
           )}
 
+          <PageEntranceItem>
           <Button
             size="default"
             className="w-full"
@@ -830,6 +840,7 @@ export default function UploadPage() {
                 ? "Uploading…"
                 : `Upload ${files.length > 0 ? `${files.length} file${files.length > 1 ? "s" : ""}` : ""}`}
           </Button>
+          </PageEntranceItem>
         </div>
       )}
 
@@ -873,6 +884,6 @@ export default function UploadPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageEntrance>
   );
 }
