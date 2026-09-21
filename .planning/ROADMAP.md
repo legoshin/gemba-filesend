@@ -206,7 +206,11 @@ Plans:
   3. With the OS/browser `prefers-reduced-motion` setting enabled, any motion driven by the utility layer degrades to instant or opacity-only transitions.
   4. `design-system/` documents the new SmoothUI shape + motion language (radii, borders, transition presets, reduced-motion behavior) and explicitly states colour/type tokens are unchanged.
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+- [ ] 09-01-PLAN.md — Install `motion`; build the shape + motion utility layer (transitions/variants + reduced-motion resolver + shape tokens), MotionConfig, and one real consumer (FND-01, FND-02, FND-03)
+- [ ] 09-02-PLAN.md — Document the shape + motion language in `design-system/MOTION.md` (colour/type explicitly unchanged) (DOC-01)
+
 **UI hint**: yes
 
 ### Phase 10: Component Re-shape
