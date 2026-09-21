@@ -613,8 +613,14 @@ export default function DownloadPage() {
         </p>
       </div>
 
+      {/*
+        Single, stable PageEntranceItem wrapping the whole state-card
+        region: it mounts once (with the page) and its CHILDREN swap as
+        `state` changes, so the load entrance plays once, not on every
+        state transition (see CR-01 in 11-REVIEW.md / MOTION.md).
+      */}
+      <PageEntranceItem>
       {state === "input" && isFetchingInfo && (
-        <PageEntranceItem>
           <Card>
             <CardHeader>
               <CardTitle className="gemba-h4">Fetching File Info</CardTitle>
@@ -627,11 +633,9 @@ export default function DownloadPage() {
               </div>
             </CardContent>
           </Card>
-        </PageEntranceItem>
       )}
 
       {state === "input" && !isFetchingInfo && (
-        <PageEntranceItem>
           <Card>
             <CardHeader>
               <CardTitle className="gemba-h4">Enter Share Link</CardTitle>
@@ -660,11 +664,9 @@ export default function DownloadPage() {
               </Button>
             </CardContent>
           </Card>
-        </PageEntranceItem>
       )}
 
       {state === "preview" && fileInfo && (
-        <PageEntranceItem>
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -877,11 +879,9 @@ export default function DownloadPage() {
             </Button>
           </div>
         </div>
-        </PageEntranceItem>
       )}
 
       {state === "downloading" && (
-        <PageEntranceItem>
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-4 text-center">
@@ -903,11 +903,9 @@ export default function DownloadPage() {
             </div>
           </CardContent>
         </Card>
-        </PageEntranceItem>
       )}
 
       {state === "done" && (
-        <PageEntranceItem>
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-6 text-center">
@@ -926,11 +924,9 @@ export default function DownloadPage() {
             </div>
           </CardContent>
         </Card>
-        </PageEntranceItem>
       )}
 
       {state === "invalid-link" && (
-        <PageEntranceItem>
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-4 text-center">
@@ -954,11 +950,9 @@ export default function DownloadPage() {
             </div>
           </CardContent>
         </Card>
-        </PageEntranceItem>
       )}
 
       {state === "file-not-found" && (
-        <PageEntranceItem>
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-4 text-center">
@@ -982,11 +976,9 @@ export default function DownloadPage() {
             </div>
           </CardContent>
         </Card>
-        </PageEntranceItem>
       )}
 
       {state === "expired" && (
-        <PageEntranceItem>
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-4 text-center">
@@ -1010,8 +1002,8 @@ export default function DownloadPage() {
             </div>
           </CardContent>
         </Card>
-        </PageEntranceItem>
       )}
+      </PageEntranceItem>
     </PageEntrance>
   );
 }
