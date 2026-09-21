@@ -26,6 +26,8 @@ type NativeMotionConflicts =
 // forwards its ref to the underlying DOM node, so wrapping it directly is
 // valid (no `asChild` indirection needed here, unlike Dialog/Sheet).
 const MotionContent = motion.create(DropdownMenuPrimitive.Content)
+// Same rationale as MotionContent, for the nested submenu panel.
+const MotionSubContent = motion.create(DropdownMenuPrimitive.SubContent)
 
 // Shares the wrapper-owned resolved `open` (plus the AnimatePresence
 // exit-complete callback) from `DropdownMenu` down to `DropdownMenuContent`
@@ -278,10 +280,58 @@ function DropdownMenuShortcut({
   )
 }
 
+// Same wrapper-owned resolved-open + context-sharing pattern as
+// `DropdownMenu` itself (RESEARCH Pattern 2), scoped to a single submenu so
+// `DropdownMenuSubContent` can run the same forceMount+AnimatePresence exit
+// animation as the top-level `DropdownMenuContent` instead of Radix's own
+// CSS-driven animate-in/out. `DropdownMenuSubTrigger` is a normal sibling
+// child here, never gated — same trigger-stays-mounted contract as the root.
+const DropdownMenuSubMotionContext = React.createContext<{
+  isOpen: boolean
+  onContentExitComplete: () => void
+}>({ isOpen: false, onContentExitComplete: () => {} })
+
 function DropdownMenuSub({
+  open,
+  onOpenChange,
+  children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Sub>) {
-  return <DropdownMenuPrimitive.Sub data-slot="dropdown-menu-sub" {...props} />
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  const isControlled = open !== undefined
+  const isOpen = isControlled ? open : internalOpen
+  const [showContent, setShowContent] = React.useState(false)
+  const prevOpenRef = React.useRef(false)
+  React.useEffect(() => {
+    if (isOpen && !prevOpenRef.current) setShowContent(true)
+    prevOpenRef.current = !!isOpen
+  }, [isOpen])
+
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      if (!isControlled) setInternalOpen(next)
+      onOpenChange?.(next)
+    },
+    [isControlled, onOpenChange]
+  )
+
+  const motionContext = React.useMemo(
+    () => ({ isOpen, onContentExitComplete: () => setShowContent(false) }),
+    [isOpen]
+  )
+
+  return (
+    <DropdownMenuPrimitive.Sub
+      data-slot="dropdown-menu-sub"
+      open={isOpen || showContent}
+      onOpenChange={handleOpenChange}
+      {...props}
+    >
+      <DropdownMenuSubMotionContext.Provider value={motionContext}>
+        {children}
+      </DropdownMenuSubMotionContext.Provider>
+    </DropdownMenuPrimitive.Sub>
+  )
 }
 
 function DropdownMenuSubTrigger({
@@ -311,16 +361,29 @@ function DropdownMenuSubTrigger({
 function DropdownMenuSubContent({
   className,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
+}: Omit<
+  React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>,
+  NativeMotionConflicts
+>) {
+  const { isOpen, onContentExitComplete } = React.useContext(
+    DropdownMenuSubMotionContext
+  )
+  const menuMotion = useMotionPreset(variants.menu, transitions.snappy)
   return (
-    <DropdownMenuPrimitive.SubContent
-      data-slot="dropdown-menu-sub-content"
-      className={cn(
-        "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-md border p-1 shadow-lg",
-        className
-      )}
-      {...props}
-    />
+    <AnimatePresence onExitComplete={onContentExitComplete}>
+      {isOpen ? (
+        <MotionSubContent
+          data-slot="dropdown-menu-sub-content"
+          forceMount
+          className={cn(
+            "bg-popover text-popover-foreground z-50 min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-md border p-1 shadow-lg",
+            className
+          )}
+          {...menuMotion}
+          {...props}
+        />
+      ) : null}
+    </AnimatePresence>
   )
 }
 
