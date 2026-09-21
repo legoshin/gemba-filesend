@@ -85,6 +85,17 @@ the whole group to an opacity-only fade. Home (`src/app/page.tsx`) wraps its
 hero and feature sections in this pair; Wave 2 reuses the same components on
 the upload/download pages.
 
+### Scroll progress
+
+`<ScrollProgress>` (`src/components/scroll-progress.tsx`, `"use client"`) is
+a shared thin top bar driven by `useScroll` + `useSpring(scrollYProgress,
+transitions.fill)` — the same damped spring already used for progress-bar
+fills, so the bar carries no new spring numbers. It is reduced-motion-aware:
+under `prefers-reduced-motion` it drops the spring and binds `scaleX`
+directly to the raw `scrollYProgress`, still tracking position without the
+spring's jitter. No props; mounted once per scrollable page (the long
+upload/download pages, not the short home page).
+
 ### Variant pairs (`variants.*`)
 
 Every variant is a `{ full, reduced }` pair — `full` is the real motion,
