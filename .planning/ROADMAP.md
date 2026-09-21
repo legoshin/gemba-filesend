@@ -151,7 +151,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 4. Security, Reliability & Test Hardening | 3/3 | Complete   | 2026-07-11 |
 | 5. Recipient Email Verification | 0/? | Planning | — |
 | 9. SmoothUI Foundation | 2/2 | In Progress|  |
-| 10. Component Re-shape | 0/? | Not started | - |
+| 10. Component Re-shape | 0/7 | Planned | - |
 | 11. Page Motion | 0/? | Not started | - |
 | 12. Verification & Parity | 0/? | Not started | - |
 
@@ -226,7 +226,21 @@ Plans:
   4. Feedback/indicator components (toasts, progress bar, skeleton/loading) render with SmoothUI geometry and enter/exit motion.
   5. The file-dropzone, file/list rows, the app-shell/sidebar, mobile-tab-bar, and theme-toggle all render with SmoothUI geometry and motion — the dropzone and file rows still support multi-file selection and show client-side encryption progress; the theme-toggle keeps its 3-way light/dark/system control.
 
-**Plans**: TBD
+**Plans**: 7 plans
+
+**Wave 1** (tracer + foundation additions)
+
+- [ ] 10-01-PLAN.md — Button tracer (BTN-01) proves the pattern + build green; add variants.focusPop + getSlideOffset foundation additions [Wave 1]
+
+**Wave 2** *(blocked on 10-01; all parallel — exclusive file ownership)*
+
+- [ ] 10-02-PLAN.md — Form controls: Input/focusPop, Checkbox/RadioGroup, Switch, Label (FORM-01..04) [Wave 2]
+- [ ] 10-03-PLAN.md — Feedback: Progress motion-fill + sonner CSS re-skin (FDBK-01/02) [Wave 2]
+- [ ] 10-04-PLAN.md — Low-portal surfaces: Card (+rounded-lg fix), Badge, Avatar, Separator (SURF-01/04) [Wave 2]
+- [ ] 10-05-PLAN.md — Portal surfaces: Dialog + Sheet + Dropdown-menu forceMount/AnimatePresence (SURF-02/03) [Wave 2]
+- [ ] 10-06-PLAN.md — Sliding indicators + shell: Tabs, app-shell/mobile-tab-bar nav, theme-toggle (SURF-03, SHELL-01/02) [Wave 2]
+- [ ] 10-07-PLAN.md — File/list + skeleton: file-dropzone, share/download rows, Skeleton (FILE-01/02, FDBK-03) [Wave 2]
+
 **UI hint**: yes
 
 ### Phase 11: Page Motion
