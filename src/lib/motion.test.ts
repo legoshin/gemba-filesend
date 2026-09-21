@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   getSlideOffset,
   resolveMotionPreset,
+  staggerContainer,
   transitions,
   variants,
 } from "@/lib/motion"
@@ -114,6 +115,13 @@ describe("variants inventory", () => {
     for (const key of TRANSFORM_KEYS) {
       expect(reducedWhileFocus).not.toHaveProperty(key)
     }
+  })
+})
+
+describe("staggerContainer", () => {
+  it("is a spring with a positive staggerChildren", () => {
+    expect(staggerContainer).toMatchObject({ type: "spring" })
+    expect(staggerContainer.staggerChildren).toBeGreaterThan(0)
   })
 })
 

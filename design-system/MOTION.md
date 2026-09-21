@@ -62,6 +62,29 @@ hook, client-only) — components never inline spring/number literals.
 keys are present, so declaring both is dead configuration; the settle time
 is governed entirely by the physics values.
 
+### `staggerContainer`
+
+`staggerContainer` (`src/lib/motion.ts`) is the container-level companion to
+`variants.stagger` — it spreads `transitions.snappy` and adds a subtle, fast
+`staggerChildren` (`0.08`s) plus a small `delayChildren` (`0.04`s). It is the
+single named home for page/section stagger timing; no page should carry a
+raw `staggerChildren` number.
+
+### Page/section entrance
+
+`<PageEntrance>`/`<PageEntranceItem>` (`src/components/page-entrance.tsx`,
+`"use client"`) is the reusable page/section entrance wrapper. `PageEntrance`
+is the stagger CONTAINER — it sets the `initial`/`animate` variant labels and
+switches its `animate.transition` between `staggerContainer` (full motion)
+and `{ duration: 0 }` (reduced motion, via `useReducedMotion`).
+`PageEntranceItem` is the stagger ITEM — it reuses `variants.stagger`
+(full/reduced) and deliberately omits its own `initial`/`animate` props so it
+inherits the container's labels, which is what lets Motion propagate the
+stagger timing to each child. Renders once on mount; reduced motion collapses
+the whole group to an opacity-only fade. Home (`src/app/page.tsx`) wraps its
+hero and feature sections in this pair; Wave 2 reuses the same components on
+the upload/download pages.
+
 ### Variant pairs (`variants.*`)
 
 Every variant is a `{ full, reduced }` pair — `full` is the real motion,

@@ -32,6 +32,21 @@ export const transitions = {
 } as const;
 
 /**
+ * Container-level transition for a page/section stagger group — the
+ * companion to `variants.stagger` (which covers each item's own
+ * entrance/exit). Spread onto a container's `animate.transition` so Motion
+ * propagates `staggerChildren`/`delayChildren` to every child that inherits
+ * the container's `initial`/`animate` labels. Single home for the page/
+ * section stagger timing — no page should carry a raw `staggerChildren`
+ * number of its own.
+ */
+export const staggerContainer = {
+  ...transitions.snappy,
+  staggerChildren: 0.08,
+  delayChildren: 0.04,
+} as const satisfies Transition;
+
+/**
  * Named scale factors reused across `variants` and one-off, state-driven
  * component motion that can't be expressed as a `{full, reduced}` variant
  * pair (e.g. file-dropzone's drag-lift, which conditions on `isDragging`
