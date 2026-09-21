@@ -44,8 +44,9 @@ the motif.
 
 ## Motion
 
-All motion is consumed by name from `src/lib/motion.ts` — components never
-inline spring/number literals.
+All motion is consumed by name from `src/lib/motion.ts` (transition/variant
+data, RSC-safe) and `src/lib/use-motion-preset.ts` (the `useMotionPreset`
+hook, client-only) — components never inline spring/number literals.
 
 ### Transition presets (`transitions.*`)
 
@@ -79,8 +80,8 @@ Every variant is a `{ full, reduced }` pair — `full` is the real motion,
 
 ### Resolving a preset
 
-- `resolveMotionPreset(preset, transition, shouldReduceMotion)` — pure function, no hook call inside, unit-testable without a React render.
-- `useMotionPreset(preset, transition)` — hook wrapper; calls `useReducedMotion()` internally and resolves against the live user preference.
+- `resolveMotionPreset(preset, transition, shouldReduceMotion)` (`src/lib/motion.ts`) — pure function, no hook call inside, unit-testable without a React render, import-safe from Server Components.
+- `useMotionPreset(preset, transition)` (`src/lib/use-motion-preset.ts`, `"use client"`) — hook wrapper; calls `useReducedMotion()` internally and resolves against the live user preference. Kept in its own client-only module so importing `transitions`/`variants`/`resolveMotionPreset` from `src/lib/motion.ts` never forces a client boundary.
 
 ## Reduced motion
 

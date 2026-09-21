@@ -6,7 +6,8 @@ import { motion } from "motion/react"
 import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/utils"
-import { transitions, variants, useMotionPreset } from "@/lib/motion"
+import { transitions, variants } from "@/lib/motion"
+import { useMotionPreset } from "@/lib/use-motion-preset"
 
 // Stable module-level component identity: `motion.create()` returns a new
 // wrapped component object each call, so it must not be invoked during

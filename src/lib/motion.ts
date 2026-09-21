@@ -1,7 +1,4 @@
-"use client";
-
 import type { Transition } from "motion/react";
-import { useReducedMotion } from "motion/react";
 
 /**
  * Named transition presets. Values consolidated from SmoothUI's own
@@ -167,9 +164,4 @@ export function resolveMotionPreset<F extends object, R extends object>(
     ...(shouldReduceMotion ? preset.reduced : preset.full),
     transition: shouldReduceMotion ? { duration: 0 } : transition,
   };
-}
-
-/** Resolve a variants pair + transition against the user's live motion preference. */
-export function useMotionPreset(preset: MotionPreset, transition: Transition) {
-  return resolveMotionPreset(preset, transition, useReducedMotion() ?? false);
 }
