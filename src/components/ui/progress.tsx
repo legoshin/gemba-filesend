@@ -28,7 +28,7 @@ type NativeRootProps = Omit<
   | "onAnimationIteration"
 >
 
-function Progress({ className, value, ...props }: NativeRootProps) {
+function Progress({ className, value, max, ...props }: NativeRootProps) {
   // Container reveal on mount only — the fill itself is driven by `value`
   // below, not by this preset.
   const reveal = useMotionPreset(variants.progress, transitions.snappy)
@@ -36,6 +36,8 @@ function Progress({ className, value, ...props }: NativeRootProps) {
   return (
     <MotionRoot
       data-slot="progress"
+      value={value}
+      max={max}
       className={cn(
         "bg-primary/20 relative h-2 w-full overflow-hidden rounded-full",
         className
