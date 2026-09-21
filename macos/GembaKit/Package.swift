@@ -11,7 +11,12 @@ let package = Package(
     ],
     targets: [
         .target(name: "GembaCrypto"),
-        .target(name: "GembaUpload", dependencies: ["GembaCrypto"]),
+        .target(
+            name: "GembaUpload",
+            dependencies: ["GembaCrypto"],
+            // The system zlib: CRC-32 and raw DEFLATE for the folder zip writer.
+            linkerSettings: [.linkedLibrary("z")]
+        ),
         .executableTarget(name: "gemba-send", dependencies: ["GembaUpload", "GembaCrypto"]),
         .testTarget(
             name: "GembaCryptoTests",

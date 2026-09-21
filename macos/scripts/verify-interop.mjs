@@ -10,7 +10,7 @@
  * A folder argument is compared by unzipping what was received and checking
  * every file in the tree, since a folder travels as a zip.
  */
-import { readFileSync, writeFileSync, statSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, statSync, mkdtempSync, readdirSync, rmSync, readlinkSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
@@ -21,7 +21,10 @@ function snapshot(root) {
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const full = join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
+      // Symlinks must arrive as symlinks with the same target — compare the
+      // link itself, never what it points at.
+      if (entry.isSymbolicLink()) out.set(relative(root, full), Buffer.from("symlink -> " + readlinkSync(full)));
+      else if (entry.isDirectory()) walk(full);
       else if (entry.isFile()) out.set(relative(root, full), readFileSync(full));
     }
   };
@@ -120,7 +123,7 @@ for (let index = 0; index < listed.length; index++) {
     const ok = layoutOK && missing.length === 0 && differ.length === 0 && entry.type === "application/zip";
     console.log(
       `  ${ok ? "✓" : "✗"} ${entry.name}: folder → zip (${entry.type}), ` +
-      `${plaintext.length} bytes, ${got.size}/${want.size} files restored` +
+      `${plaintext.length} bytes, ${got.size}/${want.size} files and links restored` +
       (missing.length ? `, MISSING ${missing.join(", ")}` : "") +
       (differ.length ? `, DIFFERENT ${differ.join(", ")}` : "")
     );

@@ -17,7 +17,7 @@ macos/
 │  ├─ Sources/GembaCrypto     AES-128-GCM packed format, base64url, share links
 │  ├─ Sources/GembaUpload     storage mode, blob client, folder zipping, finalize, notify
 │  ├─ Sources/gemba-send      CLI front end to the same core (used for e2e tests)
-│  └─ Tests/                  41 tests, including the web-generated crypto vectors
+│  └─ Tests/                  48 tests, including the web-generated crypto vectors
 ├─ GembaFilesend/             SwiftUI app target (+ AppIcon.icns)
 │  └─ SmoothUI/               the component kit — see "Design"
 ├─ ShareExtension/            Finder / Share-menu extension
@@ -61,22 +61,41 @@ diff in it always means something changed.
 
 ## Folders
 
-A folder travels as one `.zip`. Just before encrypting, the uploader compresses
-it with `NSFileCoordinator`'s `.forUploading` read — the mechanism behind
-Finder's own Compress, so no subprocess and nothing third-party, which is what
-lets it run inside the sandboxed Share Extension. The zip keeps the folder as its
-top level, and opens with Finder, Windows and `unzip`.
+A folder travels as one `.zip`, written by `ZipWriter` — a streaming writer on
+the system's zlib, with nothing third-party. The zip keeps the folder as its top
+level and opens with Finder, Windows and `unzip`.
 
-The temporary zip is only ever created inside the uploader's own working
-directory, and that directory is removed on every exit path. It is also deleted
-as soon as its encrypted part has uploaded, so a large share doesn't hold every
-zip on disk at once. Verified both ways: after a successful share and after one
-forced to fail mid-upload, no working directory remains — including inside the
-extension's sandbox container.
+It replaced `NSFileCoordinator`'s `.forUploading` (Finder's own Compress), which
+works outside the sandbox but, inside the sandboxed Share Extension, fails on
+ordinary symbolic links — `node_modules/.bin/jsesc`, `.build/release` — with
+"couldn't be opened because there is no such file". Developer folders are full
+of them. `ZipWriter`:
 
-Two folders with the same name each get their own slot, so they can't overwrite
-each other. The recipient sees `Photos.zip`; the sender sees `Photos · 12 files
-· sent as Photos.zip`. Size limits apply to the zip that is actually sent.
+- stores **symlinks as links** (as Finder and `ditto` do): never followed, so
+  it never reads outside the folder it was given and can't loop;
+- keeps empty folders and Unix permissions — executable scripts stay executable;
+- writes names as UTF-8 in NFC, so Windows and Linux see what macOS shows;
+- streams through DEFLATE at zlib's fast level, and stores already-compressed
+  formats (images, video, archives, Office files) instead of re-deflating them;
+- uses ZIP64 for files, offsets or entry counts past the classic limits;
+- refuses rather than silently leaving anything out.
+
+Measured on real developer folders, and checked by `unzip -t`, `ditto` and
+Python's `zipfile` against an independent `find` listing: a 740 MB folder of
+31,516 files zips in about 10 s; a 115 MB one in 3 s. To check any folder
+locally — nothing is uploaded, and the zip is deleted:
+
+```sh
+cd macos/GembaKit
+GEMBA_ZIP_TEST_FOLDER=~/dev/some-project swift test --filter testRealFolderIfProvided
+```
+
+The temporary zip is only ever created inside the uploader's working directory,
+which is removed on every exit path, and each zip is also deleted as soon as its
+part has uploaded. Compression progress fills the first fifth of the progress
+bar, so the bar only ever moves forward. Two folders with the same name get
+separate slots. The recipient sees `Photos.zip`; the sender sees `Photos · 12
+files · sent as Photos.zip`.
 
 ## The crypto contract
 
@@ -173,7 +192,7 @@ Motion, as SmoothUI does with `prefers-reduced-motion`.
 | Option switches | Animated Toggle |
 | Recipient chips | Animated Tags |
 | Buttons | Smooth Button |
-| Send button label, progress label | Text Morph |
+| Send button label, progress label | Text Morph (one `Text` with glyph interpolation — see below) |
 | Upload progress | Animated Progress Bar, Border Beam, Motion Loader |
 | Compose ⇄ result | Swap Panel |
 | Result: tick, title, link | Spring Scale In, Soft Blur In, Scramble Hover (as a reveal) |
@@ -185,6 +204,13 @@ Motion, as SmoothUI does with `prefers-reduced-motion`.
 | Appearance | Theme Toggle |
 | Extension: loading | Skeleton |
 | Every surface | Squircle (continuous corners) |
+
+One deliberate departure: SmoothUI's Text Morph animates each character as its
+own element. Built that way natively, a label longer than its space — a long
+filename plus "(4 of 8)" — was squeezed letter by letter instead of truncated,
+and read as garbled glyphs. The native version is a single `Text` using
+SwiftUI's glyph-interpolating transition: shared letters still glide between
+strings, and long labels truncate in the middle so the count stays visible.
 
 Not used, because nothing in a file sender needs them: the AI and orb
 components, the WebGL shader transitions and surfaces, media and gallery
@@ -284,10 +310,6 @@ built app has no quarantine flag, so it opens without any prompt.
 - **No notarized build has been produced.** No Developer ID certificate is
   installed, deliberately; `package-dmg.sh` is written and reviewed but unexecuted
   past the certificate check.
-- **The Share Extension's redesigned panel hasn't been seen rendered.** It is
-  built from the same verified components and has done real folder shares
-  end to end, but invoked from a script its panel never becomes a capturable
-  window. Worth one look from Finder.
 - **Receive / download in the app.** `FileEncryptor.decrypt` and
   `ShareLink(parsing:)` exist and are tested; the missing part is the UI and the
   verification-code flow.

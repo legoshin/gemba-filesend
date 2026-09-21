@@ -73,7 +73,7 @@ struct BorderBeam: View {
                 let t = context.date.timeIntervalSinceReferenceDate
                 let head = (t.truncatingRemainder(dividingBy: lap)) / lap
                 ZStack {
-                    beam(from: head - length, to: head, width: 7, blur: 7, opacity: 0.75)  // halo
+                    beam(from: head - length, to: head, width: 4, blur: 3, opacity: 0.6)   // halo
                     beam(from: head - length, to: head, width: 2, blur: 0, opacity: 1)     // core
                 }
             }

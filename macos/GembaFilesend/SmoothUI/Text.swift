@@ -20,52 +20,29 @@ struct NumberFlow: View {
 
 // MARK: - Text Morph
 
-/// SmoothUI `text-morph`: when the string changes, characters that stay put
-/// glide to their new place and new ones pop in — scale 0.72, 6pt below,
-/// staggered 16ms apart (capped at 260ms); leaving ones shrink out in 0.15s.
+/// SmoothUI `text-morph`: when the string changes, letters the old and new
+/// strings share glide into place and the rest dissolve in and out.
+///
+/// This is deliberately ONE `Text` with SwiftUI's glyph-interpolating content
+/// transition, not a row of per-character views. The first version laid every
+/// character out as its own view; when a label was longer than its space —
+/// "Encrypting quarterly-management-accounts-final-v3.pdf (2 of 3)…" in the
+/// Share Extension — SwiftUI squeezed each one-letter view instead of
+/// truncating the line, and the text turned into overlapping glyph fragments
+/// that looked like another script. A single Text truncates with "…" like any
+/// label, and `.interpolate` still morphs the shared glyphs between strings.
 struct TextMorph: View {
     let text: String
     var font: Font = .system(size: 14, weight: .semibold)
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Namespace private var glyphs
-
-    private struct Glyph: Identifiable, Hashable {
-        let id: String      // character + its occurrence count, so repeats stay distinct
-        let character: Character
-        let index: Int
-    }
-
-    private var glyphList: [Glyph] {
-        var seen: [Character: Int] = [:]
-        return text.enumerated().map { offset, character in
-            let n = seen[character, default: 0]
-            seen[character] = n + 1
-            return Glyph(id: "\(character)-\(n)", character: character, index: offset)
-        }
-    }
 
     var body: some View {
-        if reduceMotion {
-            Text(text).font(font)
-        } else {
-            HStack(spacing: 0) {
-                ForEach(glyphList) { glyph in
-                    Text(String(glyph.character))
-                        .font(font)
-                        .matchedGeometryEffect(id: glyph.id, in: glyphs)
-                        .transition(
-                            .asymmetric(
-                                insertion: .blurSlide(y: 6, scale: 0.72)
-                                    .animation(Motion.smooth.delay(min(Double(glyph.index) * 0.016, 0.26))),
-                                removal: .blurSlide(scale: 0.72).animation(Motion.exit)
-                            )
-                        )
-                }
-            }
-            .animation(Motion.smooth, value: text)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(text)
-        }
+        Text(text)
+            .font(font)
+            .lineLimit(1)
+            .truncationMode(.middle)   // keep "(3 of 8)…" visible; long names give way in the middle
+            .contentTransition(reduceMotion ? .identity : .interpolate)
+            .animation(reduceMotion ? nil : Motion.smooth, value: text)
     }
 }
 
@@ -117,6 +94,10 @@ struct SoftBlurIn: View {
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.9).delay(Double(index) * stagger), value: shown)
             }
         }
+        // Per-character layout must never be compressed: squeezed one-letter
+        // views overlap into unreadable fragments (the TextMorph bug). At its
+        // natural width it can only be clipped, and callers use short titles.
+        .fixedSize()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(text)
         .onAppear { shown = true }

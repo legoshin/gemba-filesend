@@ -98,7 +98,18 @@ public actor ShareUploader {
         // above deletes on every exit path, success or failure. So the temporary
         // archive cannot outlive the upload. Each gets its own subdirectory so
         // two folders that share a name ("Photos" from two places) don't collide.
-        let resolved = try resolve(items, into: workDir, onProgress: onProgress)
+        // Compressing takes the first fifth of the bar when there is a folder,
+        // and everything after is scaled into the rest — so the bar only ever
+        // moves forward across phases.
+        let compressShare = items.contains(where: \.isFolder) ? 0.2 : 0
+        let resolved = try resolve(items, into: workDir) { progress in
+            onProgress(UploadProgress(phase: progress.phase, fraction: progress.fraction * compressShare))
+        }
+        let outerProgress = onProgress
+        let onProgress: @Sendable (UploadProgress) -> Void = { progress in
+            outerProgress(UploadProgress(phase: progress.phase,
+                                         fraction: compressShare + progress.fraction * (1 - compressShare)))
+        }
         let totalBytes = max(1, resolved.reduce(0) { $0 + $1.size })
         var encryptShare = options.encrypt
         var blobUrls: [String] = []
@@ -261,8 +272,10 @@ public actor ShareUploader {
     func resolve(
         _ items: [ShareItem],
         into workDir: URL,
-        onProgress: @Sendable (UploadProgress) -> Void
+        onProgress: @escaping @Sendable (UploadProgress) -> Void
     ) throws -> [ResolvedItem] {
+        let folderBytes = max(1, items.filter(\.isFolder).reduce(0) { $0 + $1.size })
+        var doneFolderBytes = 0
         var resolved: [ResolvedItem] = []
         for (index, item) in items.enumerated() {
             guard item.isFolder else {
@@ -272,10 +285,16 @@ public actor ShareUploader {
                 ))
                 continue
             }
-            onProgress(UploadProgress(phase: .compressing(folder: item.displayName), fraction: 0))
+            let phase = UploadPhase.compressing(folder: item.displayName)
+            let before = Double(doneFolderBytes)
+            let weight = Double(max(item.size, 1))
+            onProgress(UploadProgress(phase: phase, fraction: before / Double(folderBytes)))
             let slot = workDir.appendingPathComponent("folder-\(index)", isDirectory: true)
             try FileManager.default.createDirectory(at: slot, withIntermediateDirectories: true)
-            let zip = try FolderArchiver.archive(folder: item.url, into: slot)
+            let zip = try FolderArchiver.archive(folder: item.url, into: slot) { p in
+                onProgress(UploadProgress(phase: phase, fraction: (before + weight * p) / Double(folderBytes)))
+            }
+            doneFolderBytes += max(item.size, 1)
             let size = (try? FileManager.default.attributesOfItem(atPath: zip.path)[.size] as? Int) ?? 0
             // The estimate that passed validation was the uncompressed size; the
             // real limit applies to what is actually sent.
