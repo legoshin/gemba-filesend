@@ -8,8 +8,6 @@
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
     <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -20,17 +18,30 @@
     <string>1.1.0</string>
     <key>CFBundleVersion</key>
     <string>2</string>
-    <!-- Ed25519 public key that app updates must be signed with (Updater.swift).
-         The private half is on the release machine only — scripts/update-key.swift. -->
+    <!-- Same key as the app's: the helper verifies every update itself rather
+         than trusting anything the sandboxed app downloaded. -->
     <key>GembaUpdatePublicKey</key>
     <string>SUa7Qpj9M+8hUyhswx+dT5P+Q19M8meuHfQ9ZxZ0Qa8=</string>
+    <!-- How the sandboxed app starts it (a URL survives the sandbox; command-line
+         arguments don't). Only "install" exists, and it installs nothing that
+         isn't a newer release signed with the key above. -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>uk.gemba.filesend.mac.Updater</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>gemba-filesend-updater</string>
+            </array>
+        </dict>
+    </array>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
+    <!-- No Dock icon or menu bar: it shows one small progress window and quits. -->
+    <key>LSUIElement</key>
+    <true/>
     <key>NSHumanReadableCopyright</key>
     <string>Gemba</string>
-    <key>NSSupportsAutomaticTermination</key>
-    <true/>
-    <key>NSSupportsSuddenTermination</key>
-    <true/>
 </dict>
 </plist>

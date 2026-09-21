@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .library(name: "GembaCrypto", targets: ["GembaCrypto"]),
         .library(name: "GembaUpload", targets: ["GembaUpload"]),
+        .library(name: "GembaUpdate", targets: ["GembaUpdate"]),
         .executable(name: "gemba-send", targets: ["gemba-send"]),
     ],
     targets: [
@@ -17,6 +18,8 @@ let package = Package(
             // The system zlib: CRC-32 and raw DEFLATE for the folder zip writer.
             linkerSettings: [.linkedLibrary("z")]
         ),
+        // Self-update: version.json, Ed25519-verified downloads, the swap.
+        .target(name: "GembaUpdate"),
         .executableTarget(name: "gemba-send", dependencies: ["GembaUpload", "GembaCrypto"]),
         .testTarget(
             name: "GembaCryptoTests",
@@ -24,5 +27,6 @@ let package = Package(
             resources: [.copy("vectors.json")]
         ),
         .testTarget(name: "GembaUploadTests", dependencies: ["GembaUpload"]),
+        .testTarget(name: "GembaUpdateTests", dependencies: ["GembaUpdate"]),
     ]
 )

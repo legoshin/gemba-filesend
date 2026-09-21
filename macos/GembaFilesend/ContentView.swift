@@ -29,6 +29,8 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 12) {
             header
 
+            UpdateBanner(updater: Updater.shared)
+
             ZStack {
                 if let result = model.result {
                     ResultView(result: result, model: model)
@@ -134,13 +136,13 @@ struct ContentView: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Gemba.textPrimary(scheme))
                     Spacer(minLength: 8)
-                    Text(model.settingsSummary)
+                    Text(model.settings.summary)
                         .font(.system(size: 12))
                         .foregroundStyle(Gemba.textSubdued(scheme))
                         .lineLimit(1)
                         .contentTransition(reduceMotion ? .identity : .interpolate)
-                        .animation(reduceMotion ? nil : Motion.smooth, value: model.settingsSummary)
-                    if model.notifyRecipients {
+                        .animation(reduceMotion ? nil : Motion.smooth, value: model.settings.summary)
+                    if model.settings.notifyRecipients {
                         Image(systemName: "envelope")
                             .font(.system(size: 10))
                             .foregroundStyle(Gemba.textSubdued(scheme))
@@ -148,7 +150,7 @@ struct ContentView: View {
                     }
                 }
             } content: {
-                SettingsPanel(model: model)
+                ShareSettingsForm(settings: model.settings) { model.toasts.show($0, kind: .error) }
             }
             .disabled(model.isUploading)
 
@@ -271,87 +273,6 @@ private struct FileRow: View {
             .smoothTooltip("Remove")
             .accessibilityLabel("Remove \(item.displayName)")
         }
-    }
-}
-
-// MARK: - Settings
-
-private struct SettingsPanel: View {
-    @Bindable var model: UploadModel
-    @Environment(\.colorScheme) private var scheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 5) {
-                    fieldLabel("Expires after")
-                    DurationPicker(amount: $model.expiryAmount, unit: $model.expiryUnit)
-                }
-                VStack(alignment: .leading, spacing: 5) {
-                    fieldLabel("Downloads")
-                    AnimatedNumberInput(label: "Downloads allowed", value: $model.downloadLimit,
-                                        range: 1...ShareOptions.maxDownloads)
-                }
-                Spacer(minLength: 0)
-            }
-
-            Divider().overlay(Gemba.border(scheme)).padding(.vertical, 2)
-
-            AnimatedToggle(label: "Require a password", isOn: $model.usePassword)
-            if model.usePassword {
-                AnimatedInput(label: "Password", text: $model.password, secure: true, systemImage: "key")
-                    .transition(.blurSlide(y: -6))
-            }
-
-            AnimatedToggle(label: "Only named recipients can download", isOn: $model.useRecipients)
-            AnimatedToggle(label: "Email them the link when it's ready", isOn: $model.notifyRecipients)
-
-            if model.useRecipients || model.notifyRecipients {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        AnimatedInput(label: "Recipient email", text: $model.recipientDraft,
-                                      systemImage: "envelope") { model.addRecipientFromDraft() }
-                        Button("Add") { model.addRecipientFromDraft() }
-                            .buttonStyle(SmoothButtonStyle(variant: .soft))
-                    }
-                    if !model.recipients.isEmpty {
-                        AnimatedTags(tags: $model.recipients)
-                    }
-                }
-                .transition(.blurSlide(y: -6))
-            }
-
-            Text(helpText)
-                .font(.system(size: 11))
-                .foregroundStyle(Gemba.textSubtle(scheme))
-                .fixedSize(horizontal: false, vertical: true)
-                .id(helpText)
-                .transition(.hintSwap)
-        }
-        .animation(reduceMotion ? nil : Motion.smooth, value: model.usePassword)
-        .animation(reduceMotion ? nil : Motion.smooth, value: model.useRecipients || model.notifyRecipients)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: helpText)
-    }
-
-    /// One line of help, explaining whatever is switched on right now.
-    private var helpText: String {
-        if model.notifyRecipients {
-            return "The emailed link contains the key, so it's as private as the recipient's inbox."
-        }
-        if model.usePassword {
-            return "The password is hashed on the server. It isn't in the link and doesn't decrypt anything."
-        }
-        if model.useRecipients {
-            return "Recipients get a one-time code by email before they can download."
-        }
-        return "Anyone with the link can download until it expires or runs out."
-    }
-
-    private func fieldLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(Gemba.textSubdued(scheme))
     }
 }
 

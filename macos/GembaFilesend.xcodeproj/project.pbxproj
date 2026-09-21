@@ -9,52 +9,78 @@
 /* Begin PBXBuildFile section */
 		000000000000000000000015 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 000000000000000000000014 /* Cocoa.framework */; };
 		00000000000000000000001E /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 000000000000000000000014 /* Cocoa.framework */; };
-		000000000000000000000022 /* GembaFilesendApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000021 /* GembaFilesendApp.swift */; };
-		000000000000000000000024 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000023 /* ContentView.swift */; };
-		000000000000000000000026 /* UploadModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000025 /* UploadModel.swift */; };
-		000000000000000000000028 /* GembaTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000027 /* GembaTheme.swift */; };
-		00000000000000000000002A /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000029 /* ShareViewController.swift */; };
-		00000000000000000000002B /* GembaTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000027 /* GembaTheme.swift */; };
-		00000000000000000000002E /* Buttons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000002D /* Buttons.swift */; };
-		00000000000000000000002F /* Buttons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000002D /* Buttons.swift */; };
-		000000000000000000000031 /* Containers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000030 /* Containers.swift */; };
-		000000000000000000000032 /* Containers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000030 /* Containers.swift */; };
-		000000000000000000000034 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000033 /* Feedback.swift */; };
-		000000000000000000000035 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000033 /* Feedback.swift */; };
-		000000000000000000000037 /* Inputs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000036 /* Inputs.swift */; };
-		000000000000000000000038 /* Inputs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000036 /* Inputs.swift */; };
-		00000000000000000000003A /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000039 /* Motion.swift */; };
-		00000000000000000000003B /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000039 /* Motion.swift */; };
-		00000000000000000000003D /* Text.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000003C /* Text.swift */; };
-		00000000000000000000003E /* Text.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000003C /* Text.swift */; };
-		000000000000000000000040 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000003F /* AppIcon.icns */; };
-		000000000000000000000051 /* GembaCrypto in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000045 /* GembaCrypto */; };
-		000000000000000000000052 /* GembaUpload in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000004B /* GembaUpload */; };
-		000000000000000000000053 /* GembaCrypto in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000048 /* GembaCrypto */; };
-		000000000000000000000054 /* GembaUpload in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000004E /* GembaUpload */; };
-		000000000000000000000056 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 00000000000000000000001A /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		000000000000000000000027 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 000000000000000000000014 /* Cocoa.framework */; };
+		00000000000000000000002C /* UpdateHelperApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000002B /* UpdateHelperApp.swift */; };
+		00000000000000000000002F /* GembaFilesendApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000002E /* GembaFilesendApp.swift */; };
+		000000000000000000000031 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000030 /* ContentView.swift */; };
+		000000000000000000000033 /* UploadModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000032 /* UploadModel.swift */; };
+		000000000000000000000035 /* Updater.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000034 /* Updater.swift */; };
+		000000000000000000000037 /* GembaTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000036 /* GembaTheme.swift */; };
+		000000000000000000000039 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000038 /* ShareViewController.swift */; };
+		00000000000000000000003A /* GembaTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000036 /* GembaTheme.swift */; };
+		00000000000000000000003D /* Buttons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000003C /* Buttons.swift */; };
+		00000000000000000000003E /* Buttons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000003C /* Buttons.swift */; };
+		000000000000000000000040 /* Containers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000003F /* Containers.swift */; };
+		000000000000000000000041 /* Containers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000003F /* Containers.swift */; };
+		000000000000000000000043 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000042 /* Feedback.swift */; };
+		000000000000000000000044 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000042 /* Feedback.swift */; };
+		000000000000000000000046 /* Inputs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000045 /* Inputs.swift */; };
+		000000000000000000000047 /* Inputs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000045 /* Inputs.swift */; };
+		000000000000000000000049 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000048 /* Motion.swift */; };
+		00000000000000000000004A /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000048 /* Motion.swift */; };
+		00000000000000000000004C /* Text.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000004B /* Text.swift */; };
+		00000000000000000000004D /* Text.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000004B /* Text.swift */; };
+		000000000000000000000050 /* ShareSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000004F /* ShareSettings.swift */; };
+		000000000000000000000051 /* ShareSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000004F /* ShareSettings.swift */; };
+		000000000000000000000053 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000052 /* AppIcon.icns */; };
+		000000000000000000000066 /* GembaCrypto in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000058 /* GembaCrypto */; };
+		000000000000000000000067 /* GembaUpload in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005E /* GembaUpload */; };
+		000000000000000000000068 /* GembaUpdate in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000064 /* GembaUpdate */; };
+		000000000000000000000069 /* GembaCrypto in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005B /* GembaCrypto */; };
+		00000000000000000000006A /* GembaUpload in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000061 /* GembaUpload */; };
+		00000000000000000000006B /* GembaUpdate in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000065 /* GembaUpdate */; };
+		00000000000000000000006D /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 00000000000000000000001A /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		000000000000000000000071 /* UpdateHelper.app in Embed Update Helper */ = {isa = PBXBuildFile; fileRef = 000000000000000000000023 /* UpdateHelper.app */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		000000000000000000000057 /* PBXContainerItemProxy */ = {
+		00000000000000000000006E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 000000000000000000000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 000000000000000000000016;
 			remoteInfo = ShareExtension;
 		};
+		000000000000000000000072 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 00000000000000000000001F;
+			remoteInfo = UpdateHelper;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		000000000000000000000055 /* Embed Foundation Extensions */ = {
+		00000000000000000000006C /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				000000000000000000000056 /* ShareExtension.appex in Embed Foundation Extensions */,
+				00000000000000000000006D /* ShareExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000070 /* Embed Update Helper */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
+			files = (
+				000000000000000000000071 /* UpdateHelper.app in Embed Update Helper */,
+			);
+			name = "Embed Update Helper";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -64,22 +90,27 @@
 		00000000000000000000000F /* GembaFilesend.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GembaFilesend.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		000000000000000000000014 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		00000000000000000000001A /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		000000000000000000000021 /* GembaFilesendApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GembaFilesendApp.swift; sourceTree = "<group>"; };
-		000000000000000000000023 /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		000000000000000000000025 /* UploadModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UploadModel.swift; sourceTree = "<group>"; };
-		000000000000000000000027 /* GembaTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GembaTheme.swift; sourceTree = "<group>"; };
-		000000000000000000000029 /* ShareViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
-		00000000000000000000002D /* Buttons.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Buttons.swift; sourceTree = "<group>"; };
-		000000000000000000000030 /* Containers.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Containers.swift; sourceTree = "<group>"; };
-		000000000000000000000033 /* Feedback.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
-		000000000000000000000036 /* Inputs.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Inputs.swift; sourceTree = "<group>"; };
-		000000000000000000000039 /* Motion.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
-		00000000000000000000003C /* Text.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Text.swift; sourceTree = "<group>"; };
-		00000000000000000000003F /* AppIcon.icns */ = {isa = PBXFileReference; includeInIndex = 1; path = AppIcon.icns; sourceTree = "<group>"; };
-		000000000000000000000041 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		000000000000000000000042 /* GembaFilesend.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = GembaFilesend.entitlements; sourceTree = "<group>"; };
-		000000000000000000000043 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		000000000000000000000044 /* ShareExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
+		000000000000000000000023 /* UpdateHelper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UpdateHelper.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		00000000000000000000002B /* UpdateHelperApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UpdateHelperApp.swift; sourceTree = "<group>"; };
+		00000000000000000000002D /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		00000000000000000000002E /* GembaFilesendApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GembaFilesendApp.swift; sourceTree = "<group>"; };
+		000000000000000000000030 /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		000000000000000000000032 /* UploadModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UploadModel.swift; sourceTree = "<group>"; };
+		000000000000000000000034 /* Updater.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Updater.swift; sourceTree = "<group>"; };
+		000000000000000000000036 /* GembaTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GembaTheme.swift; sourceTree = "<group>"; };
+		000000000000000000000038 /* ShareViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		00000000000000000000003C /* Buttons.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Buttons.swift; sourceTree = "<group>"; };
+		00000000000000000000003F /* Containers.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Containers.swift; sourceTree = "<group>"; };
+		000000000000000000000042 /* Feedback.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
+		000000000000000000000045 /* Inputs.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Inputs.swift; sourceTree = "<group>"; };
+		000000000000000000000048 /* Motion.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
+		00000000000000000000004B /* Text.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Text.swift; sourceTree = "<group>"; };
+		00000000000000000000004F /* ShareSettings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareSettings.swift; sourceTree = "<group>"; };
+		000000000000000000000052 /* AppIcon.icns */ = {isa = PBXFileReference; includeInIndex = 1; path = AppIcon.icns; sourceTree = "<group>"; };
+		000000000000000000000054 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		000000000000000000000055 /* GembaFilesend.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = GembaFilesend.entitlements; sourceTree = "<group>"; };
+		000000000000000000000056 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		000000000000000000000057 /* ShareExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,8 +119,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				000000000000000000000015 /* Cocoa.framework in Frameworks */,
-				000000000000000000000051 /* GembaCrypto in Frameworks */,
-				000000000000000000000052 /* GembaUpload in Frameworks */,
+				000000000000000000000066 /* GembaCrypto in Frameworks */,
+				000000000000000000000067 /* GembaUpload in Frameworks */,
+				000000000000000000000068 /* GembaUpdate in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -98,8 +130,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				00000000000000000000001E /* Cocoa.framework in Frameworks */,
-				000000000000000000000053 /* GembaCrypto in Frameworks */,
-				000000000000000000000054 /* GembaUpload in Frameworks */,
+				000000000000000000000069 /* GembaCrypto in Frameworks */,
+				00000000000000000000006A /* GembaUpload in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000025 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000027 /* Cocoa.framework in Frameworks */,
+				00000000000000000000006B /* GembaUpdate in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,8 +153,9 @@
 				000000000000000000000003 /* Products */,
 				000000000000000000000007 /* Frameworks */,
 				000000000000000000000008 /* Configs */,
-				00000000000000000000001F /* GembaFilesend */,
-				000000000000000000000020 /* ShareExtension */,
+				000000000000000000000028 /* GembaFilesend */,
+				000000000000000000000029 /* ShareExtension */,
+				00000000000000000000002A /* UpdateHelper */,
 			);
 			sourceTree = "<group>";
 		};
@@ -122,6 +164,7 @@
 			children = (
 				00000000000000000000000F /* GembaFilesend.app */,
 				00000000000000000000001A /* ShareExtension.appex */,
+				000000000000000000000023 /* UpdateHelper.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -151,45 +194,66 @@
 			name = "OS X";
 			sourceTree = "<group>";
 		};
-		00000000000000000000001F /* GembaFilesend */ = {
+		000000000000000000000028 /* GembaFilesend */ = {
 			isa = PBXGroup;
 			children = (
-				000000000000000000000021 /* GembaFilesendApp.swift */,
-				000000000000000000000023 /* ContentView.swift */,
-				000000000000000000000025 /* UploadModel.swift */,
-				000000000000000000000027 /* GembaTheme.swift */,
-				00000000000000000000002C /* SmoothUI */,
-				00000000000000000000003F /* AppIcon.icns */,
-				000000000000000000000041 /* Info.plist */,
-				000000000000000000000042 /* GembaFilesend.entitlements */,
+				00000000000000000000002E /* GembaFilesendApp.swift */,
+				000000000000000000000030 /* ContentView.swift */,
+				000000000000000000000032 /* UploadModel.swift */,
+				000000000000000000000034 /* Updater.swift */,
+				000000000000000000000036 /* GembaTheme.swift */,
+				00000000000000000000003B /* SmoothUI */,
+				00000000000000000000004E /* Shared */,
+				000000000000000000000052 /* AppIcon.icns */,
+				000000000000000000000054 /* Info.plist */,
+				000000000000000000000055 /* GembaFilesend.entitlements */,
 			);
 			name = GembaFilesend;
 			path = GembaFilesend;
 			sourceTree = "<group>";
 		};
-		000000000000000000000020 /* ShareExtension */ = {
+		000000000000000000000029 /* ShareExtension */ = {
 			isa = PBXGroup;
 			children = (
-				000000000000000000000029 /* ShareViewController.swift */,
-				000000000000000000000043 /* Info.plist */,
-				000000000000000000000044 /* ShareExtension.entitlements */,
+				000000000000000000000038 /* ShareViewController.swift */,
+				000000000000000000000056 /* Info.plist */,
+				000000000000000000000057 /* ShareExtension.entitlements */,
 			);
 			name = ShareExtension;
 			path = ShareExtension;
 			sourceTree = "<group>";
 		};
-		00000000000000000000002C /* SmoothUI */ = {
+		00000000000000000000002A /* UpdateHelper */ = {
 			isa = PBXGroup;
 			children = (
-				00000000000000000000002D /* Buttons.swift */,
-				000000000000000000000030 /* Containers.swift */,
-				000000000000000000000033 /* Feedback.swift */,
-				000000000000000000000036 /* Inputs.swift */,
-				000000000000000000000039 /* Motion.swift */,
-				00000000000000000000003C /* Text.swift */,
+				00000000000000000000002B /* UpdateHelperApp.swift */,
+				00000000000000000000002D /* Info.plist */,
+			);
+			name = UpdateHelper;
+			path = UpdateHelper;
+			sourceTree = "<group>";
+		};
+		00000000000000000000003B /* SmoothUI */ = {
+			isa = PBXGroup;
+			children = (
+				00000000000000000000003C /* Buttons.swift */,
+				00000000000000000000003F /* Containers.swift */,
+				000000000000000000000042 /* Feedback.swift */,
+				000000000000000000000045 /* Inputs.swift */,
+				000000000000000000000048 /* Motion.swift */,
+				00000000000000000000004B /* Text.swift */,
 			);
 			name = SmoothUI;
 			path = SmoothUI;
+			sourceTree = "<group>";
+		};
+		00000000000000000000004E /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				00000000000000000000004F /* ShareSettings.swift */,
+			);
+			name = Shared;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -202,17 +266,20 @@
 				000000000000000000000010 /* Sources */,
 				000000000000000000000011 /* Frameworks */,
 				000000000000000000000012 /* Resources */,
-				000000000000000000000055 /* Embed Foundation Extensions */,
+				00000000000000000000006C /* Embed Foundation Extensions */,
+				000000000000000000000070 /* Embed Update Helper */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				000000000000000000000058 /* PBXTargetDependency */,
+				00000000000000000000006F /* PBXTargetDependency */,
+				000000000000000000000073 /* PBXTargetDependency */,
 			);
 			name = GembaFilesend;
 			packageProductDependencies = (
-				000000000000000000000045 /* GembaCrypto */,
-				00000000000000000000004B /* GembaUpload */,
+				000000000000000000000058 /* GembaCrypto */,
+				00000000000000000000005E /* GembaUpload */,
+				000000000000000000000064 /* GembaUpdate */,
 			);
 			productName = GembaFilesend;
 			productReference = 00000000000000000000000F /* GembaFilesend.app */;
@@ -232,12 +299,32 @@
 			);
 			name = ShareExtension;
 			packageProductDependencies = (
-				000000000000000000000048 /* GembaCrypto */,
-				00000000000000000000004E /* GembaUpload */,
+				00000000000000000000005B /* GembaCrypto */,
+				000000000000000000000061 /* GembaUpload */,
 			);
 			productName = ShareExtension;
 			productReference = 00000000000000000000001A /* ShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
+		};
+		00000000000000000000001F /* UpdateHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000000000020 /* Build configuration list for PBXNativeTarget "UpdateHelper" */;
+			buildPhases = (
+				000000000000000000000024 /* Sources */,
+				000000000000000000000025 /* Frameworks */,
+				000000000000000000000026 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = UpdateHelper;
+			packageProductDependencies = (
+				000000000000000000000065 /* GembaUpdate */,
+			);
+			productName = UpdateHelper;
+			productReference = 000000000000000000000023 /* UpdateHelper.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -268,6 +355,7 @@
 			targets = (
 				00000000000000000000000B /* GembaFilesend */,
 				000000000000000000000016 /* ShareExtension */,
+				00000000000000000000001F /* UpdateHelper */,
 			);
 		};
 /* End PBXProject section */
@@ -277,11 +365,18 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				000000000000000000000040 /* AppIcon.icns in Resources */,
+				000000000000000000000053 /* AppIcon.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		00000000000000000000001D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000026 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -295,16 +390,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				000000000000000000000022 /* GembaFilesendApp.swift in Sources */,
-				000000000000000000000024 /* ContentView.swift in Sources */,
-				000000000000000000000026 /* UploadModel.swift in Sources */,
-				000000000000000000000028 /* GembaTheme.swift in Sources */,
-				00000000000000000000002E /* Buttons.swift in Sources */,
-				000000000000000000000031 /* Containers.swift in Sources */,
-				000000000000000000000034 /* Feedback.swift in Sources */,
-				000000000000000000000037 /* Inputs.swift in Sources */,
-				00000000000000000000003A /* Motion.swift in Sources */,
-				00000000000000000000003D /* Text.swift in Sources */,
+				00000000000000000000002F /* GembaFilesendApp.swift in Sources */,
+				000000000000000000000031 /* ContentView.swift in Sources */,
+				000000000000000000000033 /* UploadModel.swift in Sources */,
+				000000000000000000000035 /* Updater.swift in Sources */,
+				000000000000000000000037 /* GembaTheme.swift in Sources */,
+				00000000000000000000003D /* Buttons.swift in Sources */,
+				000000000000000000000040 /* Containers.swift in Sources */,
+				000000000000000000000043 /* Feedback.swift in Sources */,
+				000000000000000000000046 /* Inputs.swift in Sources */,
+				000000000000000000000049 /* Motion.swift in Sources */,
+				00000000000000000000004C /* Text.swift in Sources */,
+				000000000000000000000050 /* ShareSettings.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -312,25 +409,40 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				00000000000000000000002A /* ShareViewController.swift in Sources */,
-				00000000000000000000002B /* GembaTheme.swift in Sources */,
-				00000000000000000000002F /* Buttons.swift in Sources */,
-				000000000000000000000032 /* Containers.swift in Sources */,
-				000000000000000000000035 /* Feedback.swift in Sources */,
-				000000000000000000000038 /* Inputs.swift in Sources */,
-				00000000000000000000003B /* Motion.swift in Sources */,
-				00000000000000000000003E /* Text.swift in Sources */,
+				000000000000000000000039 /* ShareViewController.swift in Sources */,
+				00000000000000000000003A /* GembaTheme.swift in Sources */,
+				00000000000000000000003E /* Buttons.swift in Sources */,
+				000000000000000000000041 /* Containers.swift in Sources */,
+				000000000000000000000044 /* Feedback.swift in Sources */,
+				000000000000000000000047 /* Inputs.swift in Sources */,
+				00000000000000000000004A /* Motion.swift in Sources */,
+				00000000000000000000004D /* Text.swift in Sources */,
+				000000000000000000000051 /* ShareSettings.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000024 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				00000000000000000000002C /* UpdateHelperApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		000000000000000000000058 /* PBXTargetDependency */ = {
+		00000000000000000000006F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = ShareExtension;
 			target = 000000000000000000000016 /* ShareExtension */;
-			targetProxy = 000000000000000000000057 /* PBXContainerItemProxy */;
+			targetProxy = 00000000000000000000006E /* PBXContainerItemProxy */;
+		};
+		000000000000000000000073 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = UpdateHelper;
+			target = 00000000000000000000001F /* UpdateHelper */;
+			targetProxy = 000000000000000000000072 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -569,6 +681,56 @@
 			};
 			name = Debug;
 		};
+		000000000000000000000021 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = UpdateHelper/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.gemba.filesend.mac.Updater;
+				PRODUCT_NAME = "Gemba Filesend Updater";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		000000000000000000000022 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = UpdateHelper/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.gemba.filesend.mac.Updater;
+				PRODUCT_NAME = "Gemba Filesend Updater";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -599,6 +761,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		000000000000000000000020 /* Build configuration list for PBXNativeTarget "UpdateHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000021 /* Release */,
+				000000000000000000000022 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -609,25 +780,35 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		000000000000000000000045 /* GembaCrypto */ = {
+		000000000000000000000058 /* GembaCrypto */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 00000000000000000000000A /* XCLocalSwiftPackageReference "GembaKit" */;
 			productName = GembaCrypto;
 		};
-		000000000000000000000048 /* GembaCrypto */ = {
+		00000000000000000000005B /* GembaCrypto */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 00000000000000000000000A /* XCLocalSwiftPackageReference "GembaKit" */;
 			productName = GembaCrypto;
 		};
-		00000000000000000000004B /* GembaUpload */ = {
+		00000000000000000000005E /* GembaUpload */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 00000000000000000000000A /* XCLocalSwiftPackageReference "GembaKit" */;
 			productName = GembaUpload;
 		};
-		00000000000000000000004E /* GembaUpload */ = {
+		000000000000000000000061 /* GembaUpload */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 00000000000000000000000A /* XCLocalSwiftPackageReference "GembaKit" */;
 			productName = GembaUpload;
+		};
+		000000000000000000000064 /* GembaUpdate */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 00000000000000000000000A /* XCLocalSwiftPackageReference "GembaKit" */;
+			productName = GembaUpdate;
+		};
+		000000000000000000000065 /* GembaUpdate */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 00000000000000000000000A /* XCLocalSwiftPackageReference "GembaKit" */;
+			productName = GembaUpdate;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -11,17 +11,8 @@ final class UploadModel {
     // Selection — files and folders.
     var items: [ShareItem] = []
 
-    // Options. Expiry is amount + unit, the same shape (and the same three
-    // units) as the web upload page, so both clients offer the same choices.
-    var downloadLimit: Int = 1
-    var expiryAmount: Int = 1
-    var expiryUnit: ExpiryUnit = .days
-    var usePassword = false
-    var password = ""
-    var useRecipients = false
-    var recipients: [String] = []
-    var recipientDraft = ""
-    var notifyRecipients = false
+    // Options — the same model and form the Share Extension uses.
+    let settings = ShareSettings()
 
     // Run state
     var progress = UploadProgress(phase: .idle, fraction: 0)
@@ -54,30 +45,8 @@ final class UploadModel {
     var totalBytes: Int { items.reduce(0) { $0 + $1.size } }
     var folderCount: Int { items.filter(\.isFolder).count }
 
-    var expiryInterval: TimeInterval { Double(expiryAmount) * expiryUnit.seconds }
-
-    /// "1 day", "3 hours", "2 months".
-    var expiryDescription: String {
-        let unit = String(expiryUnit.rawValue.dropLast())
-        return expiryAmount == 1 ? "1 \(unit)" : "\(expiryAmount) \(expiryUnit.rawValue)"
-    }
-
-    /// The one-line form shown when the settings card is collapsed — collapsing
-    /// hides nothing, it only compresses.
-    var settingsSummary: String {
-        var parts = [expiryDescription, downloadLimit == 1 ? "1 download" : "\(downloadLimit) downloads"]
-        if usePassword { parts.append("password") }
-        if useRecipients || notifyRecipients {
-            parts.append(recipients.count == 1 ? "1 recipient" : "\(recipients.count) recipients")
-        }
-        return parts.joined(separator: " · ")
-    }
-
     var canUpload: Bool {
-        guard !isUploading, !items.isEmpty else { return false }
-        if usePassword && password.isEmpty { return false }
-        if (useRecipients || notifyRecipients) && recipients.isEmpty { return false }
-        return true
+        !isUploading && !items.isEmpty && settings.isComplete
     }
 
     /// Why the send button is disabled, in words — shown under it so a greyed
@@ -85,9 +54,7 @@ final class UploadModel {
     var blockedReason: String? {
         guard !isUploading else { return nil }
         if items.isEmpty { return nil }
-        if usePassword && password.isEmpty { return "Enter a password, or turn the password off." }
-        if (useRecipients || notifyRecipients) && recipients.isEmpty { return "Add at least one recipient." }
-        return nil
+        return settings.blockedReason
     }
 
     var memoryNotice: String? {
@@ -131,35 +98,12 @@ final class UploadModel {
         withSmoothAnimation { items.removeAll() }
     }
 
-    func addRecipientFromDraft() {
-        let candidate = recipientDraft.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !candidate.isEmpty else { return }
-        guard ShareOptions.looksLikeEmail(candidate) else {
-            toasts.show("\(candidate) doesn't look like an email address.", kind: .error)
-            return
-        }
-        guard recipients.count < ShareOptions.maxRecipients else {
-            toasts.show("At most \(ShareOptions.maxRecipients) recipients.", kind: .error)
-            return
-        }
-        if !recipients.contains(candidate) { withSmoothAnimation { recipients.append(candidate) } }
-        recipientDraft = ""
-    }
-
     func reset() {
         withSmoothAnimation {
             items = []
             result = nil
             progress = UploadProgress(phase: .idle, fraction: 0)
-            password = ""
-            usePassword = false
-            recipients = []
-            recipientDraft = ""
-            useRecipients = false
-            notifyRecipients = false
-            downloadLimit = 1
-            expiryAmount = 1
-            expiryUnit = .days
+            settings.reset()
         }
     }
 
@@ -168,14 +112,7 @@ final class UploadModel {
         withSmoothAnimation { isUploading = true }
         result = nil
 
-        let options = ShareOptions(
-            downloadLimit: downloadLimit,
-            expiresAt: Date().addingTimeInterval(expiryInterval),
-            password: usePassword ? password : nil,
-            verifiedRecipients: (useRecipients || notifyRecipients) ? recipients : [],
-            notifyRecipients: notifyRecipients,
-            encrypt: true
-        )
+        let options = settings.makeOptions()
         let items = self.items
         let uploader = self.uploader
 
@@ -198,7 +135,8 @@ final class UploadModel {
                         self.isUploading = false
                     }
                     if result.notified {
-                        self.toasts.show("Emailed to \(self.recipients.count == 1 ? self.recipients[0] : "\(self.recipients.count) recipients").", kind: .success)
+                        let recipients = options.verifiedRecipients
+                        self.toasts.show("Emailed to \(recipients.count == 1 ? recipients[0] : "\(recipients.count) recipients").", kind: .success)
                     }
                     if let notifyError = result.notifyError {
                         self.toasts.show("The link is ready, but emailing it failed: \(notifyError)", kind: .error)
@@ -273,14 +211,14 @@ final class UploadModel {
 
         switch state {
         case "settings", "full":
-            usePassword = true
-            password = "correct-horse"
-            useRecipients = true
-            notifyRecipients = state == "full"
-            recipients = ["alice@example.com", "bob@example.com", "carol@example.com", "dan@example.com"]
-            downloadLimit = 3
-            expiryAmount = 7
-            expiryUnit = .days
+            settings.usePassword = true
+            settings.password = "correct-horse"
+            settings.useRecipients = true
+            settings.notifyRecipients = state == "full"
+            settings.recipients = ["alice@example.com", "bob@example.com", "carol@example.com", "dan@example.com"]
+            settings.downloadLimit = 3
+            settings.expiryAmount = 7
+            settings.expiryUnit = .days
         case "uploading":
             isUploading = true
             progress = UploadProgress(phase: .uploading(file: "Brand Assets.zip", index: 0, of: items.count), fraction: 0.62)
@@ -302,15 +240,4 @@ final class UploadModel {
         return state
     }
 #endif
-}
-
-extension Int {
-    /// Human file sizes, formatted the way the web app formats them.
-    var formattedBytes: String {
-        let bytes = Double(self)
-        if bytes < 1024 { return "\(self) B" }
-        if bytes < 1024 * 1024 { return String(format: "%.1f KB", bytes / 1024) }
-        if bytes < 1024 * 1024 * 1024 { return String(format: "%.1f MB", bytes / (1024 * 1024)) }
-        return String(format: "%.2f GB", bytes / (1024 * 1024 * 1024))
-    }
 }

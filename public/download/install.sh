@@ -21,7 +21,7 @@ DOWNLOAD_URL="${GEMBA_DOWNLOAD_URL:-https://send.gemba.uk/download/GembaFilesend
 # Optional: pin the exact SHA-256 of that file. When pinned, anything else is
 # refused. When not pinned, the installer looks for "<DOWNLOAD_URL>.sha256"
 # beside the download and checks against that; if there is none it warns.
-EXPECTED_SHA256="${GEMBA_SHA256:-1d2f8438fccfd00afb02b4fe27816188972e0c0faa1bd43c7ef2d24fb72cc2bc}"
+EXPECTED_SHA256="${GEMBA_SHA256:-19249387201ba0ed34aaab3fde9b6416061640bf1c768528d36c7ff1dc4a7114}"
 # ──────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail

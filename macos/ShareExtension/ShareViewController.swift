@@ -18,12 +18,22 @@ final class ShareViewController: NSViewController {
         let hosting = NSHostingView(
             rootView: ShareExtensionView(
                 model: model,
+                onSize: { [weak self] size in self?.fit(size) },
                 onClose: { [weak self] in self?.finish() },
                 onCancel: { [weak self] in self?.cancel() }
             )
         )
-        hosting.frame = NSRect(x: 0, y: 0, width: 420, height: 320)
+        hosting.frame = NSRect(x: 0, y: 0, width: ShareExtensionView.width, height: 300)
         view = hosting
+        preferredContentSize = hosting.frame.size
+    }
+
+    /// The sheet follows the content: short while working, taller while the
+    /// settings are open — never a scroll view.
+    private func fit(_ size: CGSize) {
+        let rounded = CGSize(width: ceil(size.width), height: ceil(size.height))
+        guard rounded.height > 0, rounded != preferredContentSize else { return }
+        preferredContentSize = rounded
     }
 
     override func viewDidAppear() {
@@ -43,7 +53,7 @@ final class ShareViewController: NSViewController {
                 if let url = await loadFileURL(UncheckedSendable(provider)) { urls.append(url) }
             }
         }
-        await model.start(urls: urls)
+        model.load(urls: urls)
     }
 
     private nonisolated func loadFileURL(_ boxed: UncheckedSendable<NSItemProvider>) async -> URL? {
@@ -55,6 +65,7 @@ final class ShareViewController: NSViewController {
     }
 
     private func cancel() {
+        model.cancelUpload()
         extensionContext?.cancelRequest(withError: NSError(domain: "uk.gemba.filesend", code: NSUserCancelledError))
     }
 }
@@ -83,69 +94,129 @@ extension NSItemProvider {
     }
 }
 
-/// Deliberately few choices: the Share sheet is a quick path, so it uses the
-/// same defaults as the app's first run (24 hours, one download, encrypted) and
-/// leaves passwords and recipients to the main window.
+/// Sharing from Finder's context menu: the shared items, then the same share
+/// settings the app's window offers (expiry, download limit, password,
+/// recipients, email), then the upload. Expiry and download limit are
+/// remembered for next time; passwords and recipients never are.
 @MainActor
 @Observable
 final class ShareExtensionModel {
     enum State {
         case loading
+        case review
         case working(String, Double)
-        case done(ShareResult)
+        case done(ShareResult, summary: String)
         case failed(String)
     }
 
     var state: State = .loading
-    var copied = false
+    var items: [ShareItem] = []
+    let settings = ShareSettings(rememberKey: "shareExtension")
+    let toasts = ToastCenter()
 
     private let uploader = ShareUploader()
+    private var urls: [URL] = []
+    private var uploadTask: Task<Void, Never>?
 
-    func start(urls: [URL]) async {
+    var totalBytes: Int { items.reduce(0) { $0 + $1.size } }
+
+    var canSend: Bool {
+        guard case .review = state else { return false }
+        return !items.isEmpty && settings.isComplete
+    }
+
+    var sendLabel: String {
+        switch items.count {
+        case 1: return items[0].isFolder ? "Zip, encrypt and send" : "Encrypt and send"
+        default: return "Encrypt and send \(items.count) items"
+        }
+    }
+
+    func load(urls: [URL]) {
         guard !urls.isEmpty else {
             state = .failed("Nothing to send — no files were passed in.")
             return
         }
-        // The share grants this sandboxed extension access to exactly what was
-        // shared. For a folder that access has to cover everything inside it
-        // while it is zipped, so hold it explicitly for the whole upload rather
-        // than relying on the implicit grant lasting long enough.
+        guard urls.count <= ShareOptions.maxFiles else {
+            state = .failed("A share holds at most \(ShareOptions.maxFiles) items — \(urls.count) were selected.")
+            return
+        }
+        self.urls = urls
+        // Reading sizes (and counting a folder's files) needs the access the
+        // share granted; take it for this, and again for the upload.
         let scoped = urls.filter { $0.startAccessingSecurityScopedResource() }
         defer { scoped.forEach { $0.stopAccessingSecurityScopedResource() } }
+        items = urls.map { ShareItem(url: $0) }
+        state = .review
+    }
 
-        let items = urls.map { ShareItem(url: $0) }
-        state = .working(items.contains(where: \.isFolder) ? "Compressing…" : "Preparing…", 0)
-        do {
-            let result = try await uploader.upload(
-                items: items,
-                options: ShareOptions(),
-                onProgress: { [weak self] progress in
-                    Task { @MainActor in self?.state = .working(progress.phase.label, progress.fraction) }
-                }
-            )
-            state = .done(result)
-            copyLink(result.absoluteString)
-        } catch {
-            state = .failed(error.localizedDescription)
+    func send() {
+        guard canSend else {
+            if let reason = settings.blockedReason { toasts.show(reason, kind: .error) }
+            return
         }
+        let options = settings.makeOptions()
+        let summary = settings.summary
+        settings.remember()
+        let items = self.items
+        let urls = self.urls
+        let uploader = self.uploader
+        state = .working(items.contains(where: \.isFolder) ? "Compressing…" : "Preparing…", 0)
+
+        uploadTask = Task { [weak self] in
+            // The share grants this sandboxed extension access to exactly what
+            // was shared. For a folder that access has to cover everything
+            // inside it while it is zipped, so hold it for the whole upload.
+            let scoped = urls.filter { $0.startAccessingSecurityScopedResource() }
+            defer { scoped.forEach { $0.stopAccessingSecurityScopedResource() } }
+            do {
+                let result = try await uploader.upload(
+                    items: items,
+                    options: options,
+                    onProgress: { [weak self] progress in
+                        Task { @MainActor in
+                            guard let self, case .working = self.state else { return }
+                            self.state = .working(progress.phase.label, progress.fraction)
+                        }
+                    }
+                )
+                guard let self else { return }
+                self.state = .done(result, summary: summary)
+                self.copyLink(result.absoluteString)
+                if let notifyError = result.notifyError {
+                    self.toasts.show("The link is ready, but emailing it failed: \(notifyError)", kind: .error)
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                self?.state = .failed(error.localizedDescription)
+            }
+        }
+    }
+
+    func cancelUpload() {
+        uploadTask?.cancel()
+        uploadTask = nil
     }
 
     func copyLink(_ link: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(link, forType: .string)
-        copied = true
     }
 }
 
 struct ShareExtensionView: View {
+    static let width: CGFloat = 520
+
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Bindable var model: ShareExtensionModel
+    let onSize: (CGSize) -> Void
     let onClose: () -> Void
     let onCancel: () -> Void
 
     private var stateKey: Int {
-        switch model.state { case .loading: 0; case .working: 1; case .done: 2; case .failed: 3 }
+        switch model.state { case .loading: 0; case .review: 1; case .working: 2; case .done: 3; case .failed: 4 }
     }
 
     var body: some View {
@@ -173,7 +244,11 @@ struct ShareExtensionView: View {
                         SkeletonBar(width: 300, height: 8)
                         SkeletonBar(width: 180, height: 8)
                     }
+                    .frame(height: 150, alignment: .topLeading)
                     .transition(.swapPanel)
+
+                case .review:
+                    review.transition(.swapPanel)
 
                 case .working(let label, let fraction):
                     VStack(alignment: .leading, spacing: 12) {
@@ -195,7 +270,7 @@ struct ShareExtensionView: View {
                     .overlay { BorderBeam(radius: 14) }
                     .transition(.swapPanel)
 
-                case .done(let result):
+                case .done(let result, let summary):
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 8) {
                             SpringScaleIn(delay: 0.05) {
@@ -212,9 +287,10 @@ struct ShareExtensionView: View {
                             .padding(10)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(Squircle(radius: 9).fill(Gemba.surfaceSubdued(scheme)))
-                        Text(summary(result))
+                        Text(doneSummary(result, settings: summary))
                             .font(.system(size: 11))
                             .foregroundStyle(Gemba.textSubtle(scheme))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .transition(.swapPanel)
 
@@ -228,42 +304,131 @@ struct ShareExtensionView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Squircle(radius: 12).fill(Gemba.criticalSubdued(scheme)))
                     .transition(.swapPanel)
                 }
             }
             .animation(reduceMotion ? nil : Motion.smooth, value: stateKey)
 
-            Spacer(minLength: 0)
-
-            HStack(spacing: 8) {
-                Spacer()
-                switch model.state {
-                case .done(let result):
-                    ButtonCopy(text: result.absoluteString, label: "Copy again")
-                    Button("Done") { onClose() }
-                        .buttonStyle(SmoothButtonStyle(variant: .solid))
-                        .keyboardShortcut(.defaultAction)
-                case .failed:
-                    Button("Close") { onCancel() }
-                        .buttonStyle(SmoothButtonStyle(variant: .soft))
-                default:
-                    Button("Cancel") { onCancel() }
-                        .buttonStyle(SmoothButtonStyle(variant: .ghost))
-                        .keyboardShortcut(.cancelAction)
-                }
-            }
+            buttons
         }
-        .padding(22)
-        .frame(width: 420, height: 300)
+        .padding(20)
+        .frame(width: Self.width)
+        .fixedSize(horizontal: false, vertical: true)
         .background(Gemba.surfacePage(scheme))
+        .overlay { ToastStack(center: model.toasts) }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { onSize($0) }
     }
 
-    private func summary(_ result: ShareResult) -> String {
+    // MARK: Review — what's being sent, and how
+
+    private var review: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            itemsCard
+            ShareSettingsForm(settings: model.settings) { model.toasts.show($0, kind: .error) }
+                .padding(14)
+                .background(Squircle(radius: 14).fill(Gemba.surfaceCard(scheme)))
+                .overlay(Squircle(radius: 14).strokeBorder(Gemba.border(scheme), lineWidth: 1))
+            if let reason = model.settings.blockedReason {
+                Text(reason)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Gemba.textSubdued(scheme))
+                    .transition(.hintSwap)
+            }
+        }
+        .animation(reduceMotion ? nil : Motion.smooth, value: model.settings.blockedReason)
+    }
+
+    private var itemsCard: some View {
+        HStack(spacing: 10) {
+            Group {
+                if model.items.count == 1, model.items[0].isFolder {
+                    FolderReveal(size: 18)
+                } else {
+                    Image(systemName: model.items.count > 1 ? "doc.on.doc" : "doc")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Gemba.textSubtle(scheme))
+                }
+            }
+            .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(itemsTitle)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Gemba.textPrimary(scheme))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text(itemsDetail)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Gemba.textSubtle(scheme))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Spacer(minLength: 8)
+            Text(model.totalBytes.formattedBytes)
+                .font(.system(size: 11).monospacedDigit())
+                .foregroundStyle(Gemba.textSubdued(scheme))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Squircle(radius: 12).fill(Gemba.surfaceSubdued(scheme)))
+    }
+
+    private var itemsTitle: String {
+        model.items.count == 1 ? model.items[0].displayName : "\(model.items.count) items"
+    }
+
+    private var itemsDetail: String {
+        let folders = model.items.filter(\.isFolder)
+        if model.items.count == 1 {
+            guard let folder = folders.first else { return "One link, one key." }
+            return "\(folder.fileCount) \(folder.fileCount == 1 ? "file" : "files") · zipped as \(folder.name)"
+        }
+        let names = model.items.prefix(3).map(\.displayName).joined(separator: ", ")
+            + (model.items.count > 3 ? "…" : "")
+        return folders.isEmpty ? names : "\(names) · \(folders.count) zipped"
+    }
+
+    // MARK: Buttons
+
+    private var buttons: some View {
+        HStack(spacing: 8) {
+            Spacer()
+            switch model.state {
+            case .review:
+                Button("Cancel") { onCancel() }
+                    .buttonStyle(SmoothButtonStyle(variant: .ghost))
+                    .keyboardShortcut(.cancelAction)
+                Button { model.send() } label: {
+                    Text(model.sendLabel)
+                }
+                .buttonStyle(SmoothButtonStyle(variant: .solid))
+                .disabled(!model.canSend)
+                .keyboardShortcut(.return, modifiers: .command)
+            case .done(let result, _):
+                ButtonCopy(text: result.absoluteString, label: "Copy again")
+                Button("Done") { onClose() }
+                    .buttonStyle(SmoothButtonStyle(variant: .solid))
+                    .keyboardShortcut(.defaultAction)
+            case .failed:
+                Button("Close") { onCancel() }
+                    .buttonStyle(SmoothButtonStyle(variant: .soft))
+            default:
+                Button("Cancel") { onCancel() }
+                    .buttonStyle(SmoothButtonStyle(variant: .ghost))
+                    .keyboardShortcut(.cancelAction)
+            }
+        }
+    }
+
+    private func doneSummary(_ result: ShareResult, settings: String) -> String {
         let folders = result.files.filter(\.isFolder).count
         let what = result.files.count == 1
             ? (folders == 1 ? "1 folder, zipped" : "1 file")
             : "\(result.files.count) items" + (folders > 0 ? ", \(folders) zipped" : "")
-        return "\(what) · expires in 1 day · 1 download · encrypted"
+        var parts = [what, settings]
+        if result.notified { parts.append("emailed") }
+        parts.append(result.encrypted ? "encrypted" : "not encrypted")
+        return parts.joined(separator: " · ")
     }
 }

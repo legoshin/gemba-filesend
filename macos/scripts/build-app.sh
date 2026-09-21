@@ -83,19 +83,28 @@ project_files() {
     | sed 's/.*path = //; s/"//g' | sort -u
 }
 disk_files() {
-  (cd "$MACOS_DIR" && find GembaFilesend ShareExtension Configs -maxdepth 2 -type f \
+  (cd "$MACOS_DIR" && find GembaFilesend ShareExtension UpdateHelper Configs -maxdepth 2 -type f \
      \( -name '*.swift' -o -name '*.icns' -o -name '*.plist' \
         -o -name '*.entitlements' -o -name '*.xcconfig' \) 2>/dev/null \
      -exec basename {} \;) | sort -u
 }
 
+# The first ruby that has the xcodeproj gem — often the system one, when a
+# Homebrew or rbenv ruby earlier on PATH has its own, separate gems.
+RUBY=""
 have_generator() {
-  command -v ruby >/dev/null 2>&1 && ruby -e "require 'xcodeproj'" >/dev/null 2>&1
+  local candidate
+  for candidate in ruby /usr/bin/ruby; do
+    if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -e "require 'xcodeproj'" >/dev/null 2>&1; then
+      RUBY="$candidate"; return 0
+    fi
+  done
+  return 1
 }
 
 regenerate_or_explain() {
   if have_generator; then
-    ruby "$HERE/generate-project.rb" | sed 's/^/  /'
+    "$RUBY" "$HERE/generate-project.rb" | sed 's/^/  /'
     return 0
   fi
   return 1
@@ -160,6 +169,10 @@ echo "  /Applications/$APP_NAME.app"
 # and a duplicate Share Extension can shadow the real one.
 pluginkit -r "$BUILT/Contents/PlugIns/ShareExtension.appex" 2>/dev/null || true
 "$LSREGISTER" -u "$BUILT" 2>/dev/null || true
+# The updater helper is built both standalone and embedded; neither build copy
+# should stay registered (it handles the gemba-filesend-updater: URL).
+"$LSREGISTER" -u "$BUILT/Contents/Helpers/Gemba Filesend Updater.app" 2>/dev/null || true
+"$LSREGISTER" -u "$(dirname "$BUILT")/Gemba Filesend Updater.app" 2>/dev/null || true
 
 step "Registering the Share Extension"
 # All three steps matter. Without lsregister the system may keep serving the old

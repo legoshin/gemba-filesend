@@ -16,17 +16,21 @@ macos/
 ├─ GembaKit/                  Swift package — the whole non-UI core
 │  ├─ Sources/GembaCrypto     AES-128-GCM packed format, base64url, share links
 │  ├─ Sources/GembaUpload     storage mode, blob client, folder zipping, finalize, notify
+│  ├─ Sources/GembaUpdate     version.json, Ed25519-verified downloads, the app swap
 │  ├─ Sources/gemba-send      CLI front end to the same core (used for e2e tests)
-│  └─ Tests/                  48 tests, including the web-generated crypto vectors
+│  └─ Tests/                  60 tests, including the web-generated crypto vectors
 ├─ GembaFilesend/             SwiftUI app target (+ AppIcon.icns)
-│  └─ SmoothUI/               the component kit — see "Design"
+│  ├─ SmoothUI/               the component kit — see "Design"
+│  └─ Shared/                 share settings model + form, used by app and extension
 ├─ ShareExtension/            Finder / Share-menu extension
+├─ UpdateHelper/              Gemba Filesend Updater.app — installs updates (see "Updates")
 ├─ Configs/Signing.xcconfig   the one place signing is configured
 ├─ installer/                 install.sh (command-line installer) + DMG background
 ├─ GembaFilesend.xcodeproj    generated — see scripts/generate-project.rb
 └─ scripts/
    ├─ build-app.sh            test, build, install to /Applications, register
-   ├─ make-release.sh         universal build → DMG, zip, checksums, install.sh
+   ├─ make-release.sh         universal build → DMG, zip, checksums, install.sh, version.json
+   ├─ update-key.swift        the Ed25519 update-signing key: generate / public / sign
    ├─ package-dmg.sh          the Developer ID + notarization route (unused)
    ├─ generate-project.rb     regenerates the Xcode project from these sources
    ├─ gen-vectors.mjs         regenerates crypto vectors from the web WebCrypto path
@@ -242,9 +246,14 @@ Accepts up to 25 files and folders from Finder's Share menu, and does the whole
 job itself — zip folders, encrypt, upload, finalize, copy the link — rather than
 handing files to the main app through an App Group, which would need a real
 provisioning profile. It holds security-scoped access to what was shared for the
-whole upload, so a folder's contents stay readable while it is zipped. It uses
-the app's first-run defaults (1 day, one download, encrypted); passwords and
-recipients stay in the app.
+whole upload, so a folder's contents stay readable while it is zipped.
+
+Before anything is sent it shows what was shared and the same share settings as
+the app's window — expiry, download limit, password, named recipients, email the
+link — from one model and form (`GembaFilesend/Shared/ShareSettings.swift`)
+compiled into both targets. The sheet sizes to its content and never scrolls.
+The expiry and download limit used last are offered again; passwords and
+recipients are never stored.
 
 If the entry doesn't appear, the registry and Finder's menu are out of sync —
 `build-app.sh` and `install.sh` both handle it, and by hand it is:
@@ -256,21 +265,72 @@ pluginkit -e use -i uk.gemba.filesend.mac.ShareExtension
 killall Finder
 ```
 
+## Updates
+
+The app keeps itself current from `https://send.gemba.uk/download/version.json`
+(written by `make-release.sh`): on launch and daily, or from **Check for
+Updates…** in the app menu (with a **Check for Updates Automatically** toggle).
+
+The app and its Share Extension stay **sandboxed**, and a sandboxed app can
+neither replace its own bundle nor download an app that will open (what it
+writes is quarantined). So the work is split:
+
+- **The app only checks.** It reads version.json and, when a newer version
+  exists, shows "Version X is available — Restart to update". With automatic
+  updates on, quitting installs it too.
+- **`Gemba Filesend Updater.app`** (in `Contents/Helpers/`, not sandboxed — it
+  has no entitlements at all) does the rest. The app starts it through
+  LaunchServices with a `gemba-filesend-updater://install?…` URL (a sandboxed
+  caller's command-line arguments are dropped, a URL isn't), so it never
+  inherits the sandbox. It trusts nothing the app downloaded: it fetches
+  version.json and the zip itself, checks size, SHA-256 and the **Ed25519
+  signature** against the public key in its own Info.plist, unzips, checks the
+  bundle id, that the version is exactly the one announced and newer than the
+  installed one (no downgrades), and the code signature. Then it waits for the
+  app to quit and hands the swap to a short script, which moves the old bundle
+  aside, moves the new one in (restoring the old one on failure), re-registers
+  the Share Extension and — for "Restart to update" — opens the new version.
+  One swap at a time (a lock), and a second helper started meanwhile just
+  leaves. If the folder isn't writable by the user, macOS asks for an admin
+  password. Every step is logged to `~/Library/Logs/Gemba Filesend Updater.log`.
+
+**The signing key** is `~/.config/gemba-filesend/update-signing.key` (outside the
+repo, mode 600; `GEMBA_UPDATE_KEY` overrides the path). Its public half is
+`GembaUpdatePublicKey` in both Info.plists. **Back it up**: installed apps trust
+only this key — lose it and the next version must be installed by hand; leak it
+and someone else could sign an update. `swift scripts/update-key.swift public`
+prints the public key; `generate` refuses to replace an existing key.
+
+Tested end to end on this Mac with a real release build served locally: the
+sandboxed app found the update; the helper downloaded, verified and swapped it,
+with and without relaunch, including a click-then-quit race; the app stayed
+sandboxed and its Share Extension registered. A zip with one byte changed is
+refused, and so is one whose checksum was changed to match (bad signature).
+
+Copies at 1.0 have no updater: they need one manual install of 1.1.0 or later.
+
 ## Distribution
 
 ```sh
 cd macos
-./scripts/make-release.sh --url https://downloads.example.com/filesend
+./scripts/make-release.sh --version 1.2.0 --notes "What changed" --publish
 ```
 
-Produces `macos/dist/`: a styled drag-to-Applications **DMG**, a **zip**, both
-under versioned and stable names, a `.sha256` beside each, and **`install.sh`**
-with your URL and the zip's SHA-256 written into it. Upload the whole folder
-together; people then install with
+`--version` sets the version in all three Info.plists and bumps the build
+number (commit them with the release). Produces `macos/dist/`: a styled
+drag-to-Applications **DMG**, a **zip**, both under versioned and stable names,
+a `.sha256` beside each, **`install.sh`** with the download URL and the zip's
+SHA-256 written into it, and the signed **`version.json`**. `--publish` copies
+the stable-named files and version.json into the site's `public/download/`, and
+refuses a build that isn't newer than the one already there. Commit and deploy
+the site; then
 
 ```sh
-curl -fsSL https://downloads.example.com/filesend/install.sh | bash
+curl -fsSL https://send.gemba.uk/download/install.sh | bash
 ```
+
+installs it, and every installed copy updates itself. `--url` points everything
+at another host instead of `https://send.gemba.uk/download`.
 
 The build is **universal** (Apple silicon and Intel) and ad-hoc signed.
 

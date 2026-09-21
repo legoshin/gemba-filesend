@@ -21,6 +21,12 @@
 #   curl -fsSL https://send.gemba.uk/download/install.sh | bash
 # installs this build.
 #
+# --version 1.2.0 sets the app's version (both Info.plists) and bumps the build
+# number, so installed copies see the release as an update. Every release is
+# also described by version.json, signed with the update key (see
+# scripts/update-key.swift), which is what the app's auto-updater reads;
+# --notes "…" adds a line of release notes to it.
+#
 # Other options: --skip-tests, --plain-dmg (skip the Finder window styling,
 # which needs permission to control Finder the first time), --no-url (leave
 # install.sh's URL unset).
@@ -37,6 +43,8 @@ BUILD="$MACOS_DIR/.build-release"
 APP_NAME="Gemba Filesend"
 BASE_URL="https://send.gemba.uk/download"
 PUBLISH=0
+NEW_VERSION=""
+NOTES=""
 RUN_TESTS=1
 STYLE_DMG=1
 
@@ -45,9 +53,11 @@ while [ $# -gt 0 ]; do
     --url) shift; BASE_URL="${1:-}"; [ -n "$BASE_URL" ] || { echo "--url needs a value" >&2; exit 2; } ;;
     --no-url) BASE_URL="" ;;
     --publish) PUBLISH=1 ;;
+    --version) shift; NEW_VERSION="${1:-}"; [[ "$NEW_VERSION" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]] || { echo "--version needs a number like 1.2.0" >&2; exit 2; } ;;
+    --notes) shift; NOTES="${1:-}" ;;
     --skip-tests) RUN_TESTS=0 ;;
     --plain-dmg) STYLE_DMG=0 ;;
-    -h|--help) sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
   shift
@@ -60,6 +70,35 @@ fail() { printf '\033[31merror: %s\033[0m\n' "$1" >&2; exit 1; }
 LOG="$MACOS_DIR/.build-logs/release.log"
 mkdir -p "$(dirname "$LOG")"
 
+# The update key signs version.json's download. Publishing without it would
+# ship a release no installed app can verify, so check before building.
+UPDATE_KEY="${GEMBA_UPDATE_KEY:-$HOME/.config/gemba-filesend/update-signing.key}"
+if [ "$PUBLISH" = 1 ] && [ ! -f "$UPDATE_KEY" ]; then
+  fail "no update signing key at $UPDATE_KEY — restore it from your backup (or, for the very first release, run: swift scripts/update-key.swift generate)"
+fi
+
+# ------------------------------------------------------------------ version
+set_plist_string() {  # file key value — edits the text, keeping the file's layout
+  python3 - "$1" "$2" "$3" <<'PY'
+import re, sys
+path, key, value = sys.argv[1:]
+text = open(path).read()
+new, n = re.subn(r"(<key>%s</key>\s*<string>)[^<]*(</string>)" % re.escape(key), lambda m: m.group(1) + value + m.group(2), text)
+if n != 1: sys.exit("%s: %s not found" % (path, key))
+open(path, "w").write(new)
+PY
+}
+if [ -n "$NEW_VERSION" ]; then
+  step "Version $NEW_VERSION"
+  OLD_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$MACOS_DIR/GembaFilesend/Info.plist")"
+  NEW_BUILD=$((OLD_BUILD + 1))
+  for plist in "$MACOS_DIR/GembaFilesend/Info.plist" "$MACOS_DIR/ShareExtension/Info.plist" "$MACOS_DIR/UpdateHelper/Info.plist"; do
+    set_plist_string "$plist" CFBundleShortVersionString "$NEW_VERSION"
+    set_plist_string "$plist" CFBundleVersion "$NEW_BUILD"
+  done
+  echo "  $NEW_VERSION (build $NEW_BUILD) — commit the three Info.plists with the release"
+fi
+
 # ------------------------------------------------------------------- tests
 if [ "$RUN_TESTS" -eq 1 ]; then
   step "Testing GembaKit"
@@ -70,9 +109,12 @@ fi
 
 # ------------------------------------------------------------------- build
 step "Building a universal Release (arm64 + x86_64)"
-if command -v ruby >/dev/null && ruby -e "require 'xcodeproj'" 2>/dev/null; then
-  ruby "$HERE/generate-project.rb" >/dev/null
-fi
+for ruby in ruby /usr/bin/ruby; do
+  if command -v "$ruby" >/dev/null && "$ruby" -e "require 'xcodeproj'" 2>/dev/null; then
+    "$ruby" "$HERE/generate-project.rb" >/dev/null
+    break
+  fi
+done
 xcodebuild -project "$MACOS_DIR/GembaFilesend.xcodeproj" -scheme GembaFilesend \
   -configuration Release -derivedDataPath "$BUILD" \
   ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO build > "$LOG" 2>&1 \
@@ -90,6 +132,10 @@ VERSION="$(defaults read "$APP/Contents/Info" CFBundleShortVersionString)"
 LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 pluginkit -r "$APP/Contents/PlugIns/ShareExtension.appex" 2>/dev/null || true
 "$LSREGISTER" -u "$APP" 2>/dev/null || true
+# The updater helper is built both standalone and embedded; neither build copy
+# should stay registered (it handles the gemba-filesend-updater: URL).
+"$LSREGISTER" -u "$APP/Contents/Helpers/Gemba Filesend Updater.app" 2>/dev/null || true
+"$LSREGISTER" -u "$(dirname "$APP")/Gemba Filesend Updater.app" 2>/dev/null || true
 # Unregistering the build copy can drop the installed app's extension too (same
 # bundle id), so put an installed copy back and keep it switched on.
 INSTALLED="/Applications/$APP_NAME.app"
@@ -211,6 +257,31 @@ DMG_SHA="$(awk '{print $1}' "$DIST/GembaFilesend.dmg.sha256")"
 echo "  zip  $ZIP_SHA"
 echo "  dmg  $DMG_SHA"
 
+# ------------------------------------------------------------ version.json
+step "Update manifest"
+BUILD_NUMBER="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Contents/Info.plist")"
+if [ -f "$UPDATE_KEY" ]; then
+  SIGNATURE="$(GEMBA_UPDATE_KEY="$UPDATE_KEY" swift "$HERE/update-key.swift" sign "$DIST/GembaFilesend.zip")" \
+    || fail "couldn't sign the zip"
+  GEMBA_NOTES="$NOTES" python3 - "$DIST/version.json" <<PY
+import json, sys, os, datetime
+json.dump({
+    "version": "$VERSION",
+    "build": int("$BUILD_NUMBER"),
+    "url": "${BASE_URL:-https://send.gemba.uk/download}/GembaFilesend.zip?build=$BUILD_NUMBER",
+    "size": os.path.getsize("$DIST/GembaFilesend.zip"),
+    "sha256": "$ZIP_SHA",
+    "signature": "$SIGNATURE",
+    "minimumSystemVersion": "14.0",
+    "notes": os.environ.get("GEMBA_NOTES") or None,
+    "published": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+}, open(sys.argv[1], "w"), indent=2)
+PY
+  echo "  $VERSION (build $BUILD_NUMBER), signed"
+else
+  echo "  skipped — no update signing key at $UPDATE_KEY"
+fi
+
 # ------------------------------------------------------------- installer
 step "Command-line installer"
 cp "$MACOS_DIR/installer/install.sh" "$DIST/install.sh"
@@ -234,7 +305,14 @@ if [ "$PUBLISH" = 1 ]; then
   PUBLIC="$(cd "$MACOS_DIR/.." && pwd)/public/download"
   step "Publishing to $PUBLIC"
   mkdir -p "$PUBLIC"
-  for f in GembaFilesend.dmg GembaFilesend.dmg.sha256 GembaFilesend.zip GembaFilesend.zip.sha256 install.sh; do
+  # Installed apps only update to a higher build; republishing the same one
+  # would change the download under them without them ever noticing.
+  if [ -f "$PUBLIC/version.json" ]; then
+    LIVE_BUILD="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["build"])' "$PUBLIC/version.json")"
+    [ "$BUILD_NUMBER" -gt "$LIVE_BUILD" ] \
+      || fail "build $BUILD_NUMBER isn't newer than the published build $LIVE_BUILD — pass --version to make a new release"
+  fi
+  for f in GembaFilesend.dmg GembaFilesend.dmg.sha256 GembaFilesend.zip GembaFilesend.zip.sha256 install.sh version.json; do
     cp "$DIST/$f" "$PUBLIC/$f"
     echo "  $f"
   done

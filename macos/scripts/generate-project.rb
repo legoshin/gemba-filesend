@@ -116,11 +116,32 @@ extension.build_configurations.each do |config|
   )
 end
 
+# ------------------------------------------------------- update helper target
+# Gemba Filesend Updater.app, embedded at Contents/Helpers. The app is sandboxed
+# and can only check for updates; this helper, which is not sandboxed (it has
+# no entitlements file at all), downloads, verifies and installs them. It is
+# started through LaunchServices so it never inherits the app's sandbox.
+helper = project.new_target(:application, "UpdateHelper", :osx, DEPLOYMENT_TARGET)
+helper.build_configurations.each do |config|
+  config.build_settings.merge!(BASE_SETTINGS)
+  config.build_settings["CODE_SIGN_INJECT_BASE_ENTITLEMENTS"] = config.name == "Debug" ? "YES" : "NO"
+  config.build_settings.merge!(
+    "PRODUCT_NAME" => "Gemba Filesend Updater",
+    "PRODUCT_BUNDLE_IDENTIFIER" => "#{APP_BUNDLE_ID}.Updater",
+    "INFOPLIST_FILE" => "UpdateHelper/Info.plist",
+    "LD_RUNPATH_SEARCH_PATHS" => ["$(inherited)", "@executable_path/../Frameworks"],
+    "SKIP_INSTALL" => "YES",
+  )
+end
+
 # ------------------------------------------------------------------- sources
 app_group = project.new_group("GembaFilesend", "GembaFilesend")
 extension_group = project.new_group("ShareExtension", "ShareExtension")
+helper_group = project.new_group("UpdateHelper", "UpdateHelper")
+helper.add_file_references([helper_group.new_reference("UpdateHelperApp.swift")])
+helper_group.new_reference("Info.plist")
 
-APP_SOURCES = ["GembaFilesendApp.swift", "ContentView.swift", "UploadModel.swift", "GembaTheme.swift"].freeze
+APP_SOURCES = ["GembaFilesendApp.swift", "ContentView.swift", "UploadModel.swift", "Updater.swift", "GembaTheme.swift"].freeze
 # The theme is compiled into both targets: the extension draws the same
 # components, and a package target for four colours would be ceremony.
 EXTENSION_SOURCES = ["ShareViewController.swift"].freeze
@@ -136,6 +157,15 @@ extension.add_file_references([theme_ref])
 smooth_group = app_group.new_group("SmoothUI", "SmoothUI")
 Dir.glob(File.join(ROOT, "GembaFilesend", "SmoothUI", "*.swift")).sort.each do |path|
   ref = smooth_group.new_reference(File.basename(path))
+  app.add_file_references([ref])
+  extension.add_file_references([ref])
+end
+
+# Shared/ holds app code both targets need — the share-settings model and form,
+# so the Share Extension offers the same settings as the window.
+shared_group = app_group.new_group("Shared", "Shared")
+Dir.glob(File.join(ROOT, "GembaFilesend", "Shared", "*.swift")).sort.each do |path|
+  ref = shared_group.new_reference(File.basename(path))
   app.add_file_references([ref])
   extension.add_file_references([ref])
 end
@@ -165,10 +195,15 @@ end
     ) rescue nil
   end
 end
+# Self-update: the app checks, the helper installs. The Share Extension never
+# updates anything.
+[app, helper].each do |target|
+  target.package_product_dependencies << package_product(project, package_ref, "GembaUpdate")
+end
 
 # Link the package products properly: xcodeproj needs the build file to carry
 # the product ref, which `add_file_reference` above cannot do on its own.
-[app, extension].each do |target|
+[app, extension, helper].each do |target|
   phase = target.frameworks_build_phase
   phase.files.each { |f| phase.remove_build_file(f) if f.file_ref.nil? && f.product_ref.nil? }
   target.package_product_dependencies.each do |dependency|
@@ -186,6 +221,14 @@ embed_phase.dst_path = ""
 embed_build_file = embed_phase.add_file_reference(extension.product_reference)
 embed_build_file.settings = { "ATTRIBUTES" => ["RemoveHeadersOnCopy"] }
 app.add_dependency(extension)
+
+# ------------------------------------------ embed the updater helper in the app
+helper_phase = app.new_copy_files_build_phase("Embed Update Helper")
+helper_phase.symbol_dst_subfolder_spec = :wrapper
+helper_phase.dst_path = "Contents/Helpers"
+helper_build_file = helper_phase.add_file_reference(helper.product_reference)
+helper_build_file.settings = { "ATTRIBUTES" => ["CodeSignOnCopy", "RemoveHeadersOnCopy"] }
+app.add_dependency(helper)
 
 project.save
 puts "wrote #{PROJECT_PATH}"
