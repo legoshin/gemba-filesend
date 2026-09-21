@@ -3,6 +3,7 @@ import Script from "next/script";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppShell } from "@/components/app-shell";
 import { EmbedProvider } from "@/components/embed-provider";
+import { AppMotionConfig } from "@/components/motion-config";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -73,10 +74,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <EmbedProvider>
-            <AppShell>{children}</AppShell>
-          </EmbedProvider>
-          <Toaster />
+          <AppMotionConfig>
+            <EmbedProvider>
+              <AppShell>{children}</AppShell>
+            </EmbedProvider>
+            <Toaster />
+          </AppMotionConfig>
         </ThemeProvider>
         {/*
           Service worker registration. The SW caches the static app shell so
