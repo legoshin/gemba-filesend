@@ -5,16 +5,16 @@ current_phase: 9
 current_phase_name: SmoothUI Foundation
 current_plan: 2
 status: planning
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-09-21T10:39:23.398Z"
+stopped_at: Completed 10-01-PLAN.md (tracer wave)
+last_updated: "2026-09-21T11:40:36.432Z"
 last_activity: 2026-09-21
 last_activity_desc: Plan 09-01 executed (motion dependency, shape/motion preset layer, chip.tsx proof, reduced-motion tests)
-state_head: a53de21ef49e9567008f1519810c8d61aa15fe5b
+state_head: f2e118fca466adfde2fbcba824e795b45303fcc2
 progress:
   total_phases: 11
   completed_phases: 4
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 9
+  completed_plans: 3
 milestone_name: SmoothUI Re-shape
 ---
 
@@ -81,6 +81,7 @@ Last activity: 2026-09-21 — Plan 09-01 executed (motion dependency, shape/moti
 | Phase 07 P01 | 10m | 3 tasks | 9 files |
 | Phase 09 P01 | 25min | 3 tasks | 9 files |
 | Phase 09 P02 | 10min | 1 tasks | 2 files |
+| Phase 10 P01 | 15min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -124,6 +125,7 @@ Recent decisions affecting current work:
 - [Phase 9]: Installed motion citing 09-CONTEXT.md security_approval as authorization (no further blocking checkpoint)
 - [Phase 9]: chip.tsx asChild path uses motion.create(Slot.Root) so both render paths are equally animatable
 - [Phase 9]: Placed MOTION.md pointer inside existing VISUAL FOUNDATIONS bullet list per plan's one-line pointer scope guard; tabulated all preset tables from as-built src/lib/motion.ts/shape.ts exports, confirming no drift from RESEARCH.md sketch
+- [Phase 9]: Button reshape followed chip.tsx verbatim as template; getSlideOffset implemented as plain function (not a variant pair) since Sheet composes its return value with its own transition
 
 ### Pending Todos
 
@@ -153,6 +155,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-21T10:39:23.384Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-09-21T11:40:36.413Z
+Stopped at: Completed 10-01-PLAN.md (tracer wave)
 Resume file: None

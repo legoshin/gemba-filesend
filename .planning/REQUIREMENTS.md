@@ -24,7 +24,7 @@ Re-shape the entire **web** UI (root `src/` Next.js app) onto the **SmoothUI** c
 
 ### Buttons
 
-- [ ] **BTN-01**: Buttons are re-shaped to SmoothUI geometry (e.g. smooth / clip-corners) with SmoothUI press/hover motion, preserving all existing button ranks/variants and sizes.
+- [x] **BTN-01**: Buttons are re-shaped to SmoothUI geometry (e.g. smooth / clip-corners) with SmoothUI press/hover motion, preserving all existing button ranks/variants and sizes.
 
 ### Surfaces
 
@@ -85,7 +85,7 @@ Re-shape the entire **web** UI (root `src/` Next.js app) onto the **SmoothUI** c
 | FORM-02 | Phase 10 | Pending |
 | FORM-03 | Phase 10 | Pending |
 | FORM-04 | Phase 10 | Pending |
-| BTN-01 | Phase 10 | Pending |
+| BTN-01 | Phase 10 | Complete |
 | SURF-01 | Phase 10 | Pending |
 | SURF-02 | Phase 10 | Pending |
 | SURF-03 | Phase 10 | Pending |
