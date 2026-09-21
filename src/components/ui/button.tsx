@@ -39,11 +39,11 @@ const buttonVariants = cva(
           "h-10 px-6 gap-2 rounded-[var(--radius-xl)] [&_svg:not([class*='size-'])]:size-5",
         xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-8 px-4 gap-2 rounded-[var(--radius-xl)]",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+        lg: "h-10 rounded-[var(--radius-xl)] px-6 has-[>svg]:px-4",
         icon: "size-10 rounded-[var(--radius-sm)] [&_svg:not([class*='size-'])]:size-5",
         "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-8 rounded-[var(--radius-sm)]",
-        "icon-lg": "size-10 rounded-md",
+        "icon-lg": "size-10 rounded-[var(--radius-xl)]",
       },
     },
     defaultVariants: {
