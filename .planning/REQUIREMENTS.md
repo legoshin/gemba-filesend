@@ -95,8 +95,8 @@ Re-shape the entire **web** UI (root `src/` Next.js app) onto the **SmoothUI** c
 | FDBK-03 | Phase 10 | Complete |
 | FILE-01 | Phase 10 | Complete |
 | FILE-02 | Phase 10 | Complete |
-| MOT-01 | Phase 11 | Pending |
-| MOT-02 | Phase 11 | Pending |
+| MOT-01 | Phase 11 | Complete |
+| MOT-02 | Phase 11 | Complete |
 | SHELL-01 | Phase 10 | Complete |
 | SHELL-02 | Phase 10 | Complete |
 | DOC-01 | Phase 9 | Complete |

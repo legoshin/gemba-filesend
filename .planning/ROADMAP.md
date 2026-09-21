@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Security, Reliability & Test Hardening** - Security headers, rate limiting, fix the download-counter race, add unit test coverage (completed 2026-07-11)
 - [x] **Phase 9: SmoothUI Foundation** - Install `motion` + build the shared shape/motion utility layer, reduced-motion handling, and document the new shape + motion language (completed 2026-09-21)
 - [x] **Phase 10: Component Re-shape** - Re-shape every shared + app-specific component (forms, buttons, surfaces, feedback, file/list, shell) onto SmoothUI geometry and motion (completed 2026-09-21)
-- [ ] **Phase 11: Page Motion** - Add SmoothUI entrance motion and a scroll-progress indicator across home, upload, and download
+- [x] **Phase 11: Page Motion** - Add SmoothUI entrance motion and a scroll-progress indicator across home, upload, and download (completed 2026-09-21)
 - [ ] **Phase 12: Verification & Parity** - Confirm colours/type/theming, the encryption boundary, and web/PWA/TWA parity are unweakened by the re-shape (human sign-off)
 
 ## Phase Details
