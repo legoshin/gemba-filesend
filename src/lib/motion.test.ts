@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { resolveMotionPreset, transitions, variants } from "@/lib/motion"
+import {
+  getSlideOffset,
+  resolveMotionPreset,
+  transitions,
+  variants,
+} from "@/lib/motion"
 
 const TRANSFORM_KEYS = ["x", "y", "scale", "rotate"] as const
 
@@ -92,5 +97,31 @@ describe("variants inventory", () => {
       expect(tapWhileTap).not.toHaveProperty(key)
       expect(hoverWhileHover).not.toHaveProperty(key)
     }
+  })
+
+  it("exports focusPop with a full whileFocus scale and an empty reduced whileFocus", () => {
+    expect(variants).toHaveProperty("focusPop")
+    expect(variants.focusPop.full).toEqual({ whileFocus: { scale: 1.01 } })
+    expect(variants.focusPop.reduced).toEqual({ whileFocus: {} })
+  })
+
+  it("focusPop reduced whileFocus carries no transform keys", () => {
+    const reducedWhileFocus = variants.focusPop.reduced.whileFocus as Record<
+      string,
+      unknown
+    >
+
+    for (const key of TRANSFORM_KEYS) {
+      expect(reducedWhileFocus).not.toHaveProperty(key)
+    }
+  })
+})
+
+describe("getSlideOffset", () => {
+  it("returns the exact off-screen {x,y} transform for each of the 4 sheet sides", () => {
+    expect(getSlideOffset("top")).toEqual({ x: 0, y: "-100%" })
+    expect(getSlideOffset("bottom")).toEqual({ x: 0, y: "100%" })
+    expect(getSlideOffset("left")).toEqual({ x: "-100%", y: 0 })
+    expect(getSlideOffset("right")).toEqual({ x: "100%", y: 0 })
   })
 })
