@@ -2,8 +2,30 @@
 
 import * as React from "react"
 import { Avatar as AvatarPrimitive } from "radix-ui"
+import { motion } from "motion/react"
 
 import { cn } from "@/lib/utils"
+import { transitions, variants } from "@/lib/motion"
+import { useMotionPreset } from "@/lib/use-motion-preset"
+
+// Stable module-level component identity: `motion.create()` returns a new
+// wrapped component object each call, so it must not be invoked during
+// render (react-hooks/static-components) — hoisting it here keeps the
+// wrapped image's identity stable across re-renders.
+const MotionAvatarImage = motion.create(AvatarPrimitive.Image)
+
+// Motion's drag/animation event props have signatures incompatible with the
+// native DOM handlers of the same name; omit them from the native image
+// props since AvatarImage does not use drag/animation lifecycle callbacks.
+type NativeAvatarImageProps = Omit<
+  React.ComponentProps<typeof AvatarPrimitive.Image>,
+  | "onDrag"
+  | "onDragStart"
+  | "onDragEnd"
+  | "onAnimationStart"
+  | "onAnimationEnd"
+  | "onAnimationIteration"
+>
 
 function Avatar({
   className,
@@ -27,12 +49,23 @@ function Avatar({
 
 function AvatarImage({
   className,
+  onLoadingStatusChange,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+}: NativeAvatarImageProps) {
+  const [loaded, setLoaded] = React.useState(false)
+  const motionProps = useMotionPreset(variants.fadeSlideUp, transitions.snappy)
+
   return (
-    <AvatarPrimitive.Image
+    <MotionAvatarImage
       data-slot="avatar-image"
       className={cn("aspect-square size-full", className)}
+      initial={motionProps.initial}
+      animate={loaded ? motionProps.animate : motionProps.initial}
+      transition={motionProps.transition}
+      onLoadingStatusChange={(status) => {
+        if (status === "loaded") setLoaded(true)
+        onLoadingStatusChange?.(status)
+      }}
       {...props}
     />
   )
