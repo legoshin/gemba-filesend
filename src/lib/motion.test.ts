@@ -49,13 +49,11 @@ describe("transitions inventory", () => {
       stiffness: 100,
       damping: 10,
       mass: 0.75,
-      duration: 0.25,
     })
     expect(transitions.micro).toEqual({
       type: "spring",
       stiffness: 400,
       damping: 24,
-      duration: 0.2,
     })
     expect(transitions.backdrop).toEqual({
       duration: 0.2,

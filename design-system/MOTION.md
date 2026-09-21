@@ -52,9 +52,14 @@ inline spring/number literals.
 | Name | Config | Typical usage |
 |---|---|---|
 | `snappy` | `{ type: "spring", bounce: 0.1, duration: 0.25 }` | Toggle thumb, toast enter/exit, dialog panel, list item stagger, button loading-spinner — the most common "snappy" UI spring |
-| `fill` | `{ type: "spring", stiffness: 100, damping: 10, mass: 0.75, duration: 0.25 }` | Progress bar fill — heavier, more damped, no bounce |
-| `micro` | `{ type: "spring", stiffness: 400, damping: 24, duration: 0.2 }` | Micro hover/press motion (few px of travel) — clip-corner triangles |
+| `fill` | `{ type: "spring", stiffness: 100, damping: 10, mass: 0.75 }` | Progress bar fill — heavier, more damped, no bounce |
+| `micro` | `{ type: "spring", stiffness: 400, damping: 24 }` | Micro hover/press motion (few px of travel) — clip-corner triangles |
 | `backdrop` | `{ duration: 0.2, ease: "easeOut" }` | Backdrop fade (dialog/sheet scrim) — plain tween, no spring |
+
+`fill` and `micro` are physics-only springs (`stiffness`/`damping`/`mass`, no
+`duration`) — Motion's spring resolver ignores `duration` whenever physics
+keys are present, so declaring both is dead configuration; the settle time
+is governed entirely by the physics values.
 
 ### Variant pairs (`variants.*`)
 

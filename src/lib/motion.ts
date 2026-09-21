@@ -13,20 +13,22 @@ export const transitions = {
   // Toggle thumb, toast enter/exit, dialog panel, list item stagger,
   // button loading-spinner — the most common "snappy" UI spring.
   snappy: { type: "spring", bounce: 0.1, duration: 0.25 } as const satisfies Transition,
-  // Progress bar fill — heavier, more damped, no bounce.
+  // Progress bar fill — heavier, more damped, no bounce. Physics-only: no
+  // `duration` field — motion-dom ignores `duration` whenever stiffness/
+  // damping/mass are present, so a declared duration here would be dead
+  // configuration (see 09-REVIEW.md WR-01).
   fill: {
     type: "spring",
     stiffness: 100,
     damping: 10,
     mass: 0.75,
-    duration: 0.25,
   } as const satisfies Transition,
   // Micro hover/press motion (few px of travel) — clip-corner triangles.
+  // Physics-only, see `fill` comment above.
   micro: {
     type: "spring",
     stiffness: 400,
     damping: 24,
-    duration: 0.2,
   } as const satisfies Transition,
   // Backdrop fade (dialog/sheet scrim) — plain tween, no spring.
   backdrop: { duration: 0.2, ease: "easeOut" } as const satisfies Transition,
