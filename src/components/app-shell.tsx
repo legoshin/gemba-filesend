@@ -59,7 +59,8 @@ export function AppShell({ children }: AppShellProps) {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 ${
+                  aria-current={active ? "page" : undefined}
+                  className={`relative flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 outline-none focus-visible:shadow-[var(--ring-focus)] ${
                     active
                       ? "gemba-body-strong text-[var(--text-primary)]"
                       : "gemba-body text-[var(--text-primary)] hover:bg-[var(--surface-subdued)]"
