@@ -90,26 +90,73 @@ public struct ShareOptions: Sendable {
     }
 }
 
-/// One file queued for a share.
+/// One file — or one folder — queued for a share.
+///
+/// A folder travels as a single `.zip`: the uploader compresses it into its own
+/// temporary directory just before encrypting, and deletes it afterwards. So a
+/// folder item's `name` is already the name the recipient will see
+/// (`Photos.zip`), while `displayName` is what the sender picked (`Photos`).
 public struct ShareItem: Sendable, Identifiable, Equatable {
     public let id: UUID
     public let url: URL
+    /// The name the recipient receives. For a folder, `<folder>.zip`.
     public let name: String
+    /// The name to show the sender.
+    public let displayName: String
+    /// Bytes. For a folder, the total of the files inside — the zip is usually
+    /// smaller, and its real size is only known once it has been made.
     public let size: Int
     public let contentType: String
+    public let isFolder: Bool
+    /// Number of files inside, for a folder. Zero for a file.
+    public let fileCount: Int
 
     public init(url: URL) {
         self.id = UUID()
         self.url = url
-        self.name = url.lastPathComponent
-        let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
-        self.size = (attrs?[.size] as? Int) ?? 0
-        self.contentType = ShareItem.mimeType(for: url)
+        var isDirectory: ObjCBool = false
+        let exists = FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory)
+        // A package (.app, .pages, .bundle) is a directory on disk, and zipping
+        // it is exactly right — sending its insides one by one would not be.
+        self.isFolder = exists && isDirectory.boolValue
+        self.displayName = url.lastPathComponent
+        if isFolder {
+            self.name = FolderArchiver.archiveName(for: url)
+            let (bytes, count) = ShareItem.folderContents(url)
+            self.size = bytes
+            self.fileCount = count
+            self.contentType = "application/zip"
+        } else {
+            self.name = url.lastPathComponent
+            let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
+            self.size = (attrs?[.size] as? Int) ?? 0
+            self.fileCount = 0
+            self.contentType = ShareItem.mimeType(for: url)
+        }
     }
 
     static func mimeType(for url: URL) -> String {
         if let type = UTTypeMIME(url) { return type }
         return "application/octet-stream"
+    }
+
+    static func folderContents(_ folder: URL) -> (bytes: Int, files: Int) {
+        guard let enumerator = FileManager.default.enumerator(
+            at: folder,
+            includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey],
+            options: [],
+            errorHandler: { _, _ in true }
+        ) else { return (0, 0) }
+        var bytes = 0
+        var files = 0
+        for case let child as URL in enumerator {
+            let values = try? child.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+            if values?.isRegularFile == true {
+                bytes += values?.fileSize ?? 0
+                files += 1
+            }
+        }
+        return (bytes, files)
     }
 }
 

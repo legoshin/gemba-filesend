@@ -6,6 +6,7 @@ import GembaCrypto
 public enum UploadPhase: Sendable, Equatable {
     case idle
     case preparing
+    case compressing(folder: String)
     case encrypting(file: String, index: Int, of: Int)
     case uploading(file: String, index: Int, of: Int)
     case finalizing
@@ -16,6 +17,7 @@ public enum UploadPhase: Sendable, Equatable {
         switch self {
         case .idle: return ""
         case .preparing: return "Preparing…"
+        case .compressing(let folder): return "Compressing \(folder)…"
         case .encrypting(let name, let i, let n):
             return n > 1 ? "Encrypting \(name) (\(i + 1) of \(n))…" : "Encrypting \(name)…"
         case .uploading(let name, let i, let n):
@@ -92,7 +94,12 @@ public actor ShareUploader {
         try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: workDir) }
 
-        let totalBytes = max(1, items.reduce(0) { $0 + $1.size })
+        // Folders become one .zip each, made inside `workDir` — which the defer
+        // above deletes on every exit path, success or failure. So the temporary
+        // archive cannot outlive the upload. Each gets its own subdirectory so
+        // two folders that share a name ("Photos" from two places) don't collide.
+        let resolved = try resolve(items, into: workDir, onProgress: onProgress)
+        let totalBytes = max(1, resolved.reduce(0) { $0 + $1.size })
         var encryptShare = options.encrypt
         var blobUrls: [String] = []
 
@@ -103,7 +110,7 @@ public actor ShareUploader {
             blobUrls = Array(repeating: "", count: items.count)
             var completedBytes = 0
 
-            for (index, item) in items.enumerated() {
+            for (index, item) in resolved.enumerated() {
                 let part = workDir.appendingPathComponent("\(index).part")
                 // Captured as constants: the progress closures run concurrently,
                 // so they cannot read the loop's running byte counter.
@@ -120,7 +127,7 @@ public actor ShareUploader {
                     ))
                     do {
                         if encryptShare {
-                            try FileEncryptor.encrypt(source: item.url, destination: part, key: key) { p in
+                            try FileEncryptor.encrypt(source: item.source, destination: part, key: key) { p in
                                 // Encryption is charged half of a file's share of the bar,
                                 // upload the other half — so the bar never stalls or rewinds.
                                 onProgress(UploadProgress(
@@ -129,7 +136,7 @@ public actor ShareUploader {
                                 ))
                             }
                         } else {
-                            try FileEncryptor.copyPlaintext(source: item.url, destination: part)
+                            try FileEncryptor.copyPlaintext(source: item.source, destination: part)
                         }
                         prepared = true
                     } catch {
@@ -185,6 +192,9 @@ public actor ShareUploader {
                 }
 
                 try? FileManager.default.removeItem(at: part)
+                // The folder's zip has done its job once its encrypted part is up;
+                // free the disk now rather than at the end of a long share.
+                if item.isTemporary { try? FileManager.default.removeItem(at: item.source) }
                 completedBytes += max(item.size, 1)
             }
             break
@@ -193,7 +203,7 @@ public actor ShareUploader {
         onProgress(UploadProgress(phase: .finalizing, fraction: 1))
         try await api.finalize(
             id: id,
-            files: items.enumerated().map { index, item in
+            files: resolved.enumerated().map { index, item in
                 FilesendAPI.FinalizeFile(
                     name: item.name,
                     type: item.contentType,
@@ -236,5 +246,45 @@ public actor ShareUploader {
             notified: notified,
             notifyError: notifyError
         )
+    }
+
+    /// A file as it will actually be uploaded: the original, or a folder's
+    /// temporary zip.
+    struct ResolvedItem: Sendable {
+        let source: URL
+        let name: String
+        let size: Int
+        let contentType: String
+        let isTemporary: Bool
+    }
+
+    func resolve(
+        _ items: [ShareItem],
+        into workDir: URL,
+        onProgress: @Sendable (UploadProgress) -> Void
+    ) throws -> [ResolvedItem] {
+        var resolved: [ResolvedItem] = []
+        for (index, item) in items.enumerated() {
+            guard item.isFolder else {
+                resolved.append(ResolvedItem(
+                    source: item.url, name: item.name, size: item.size,
+                    contentType: item.contentType, isTemporary: false
+                ))
+                continue
+            }
+            onProgress(UploadProgress(phase: .compressing(folder: item.displayName), fraction: 0))
+            let slot = workDir.appendingPathComponent("folder-\(index)", isDirectory: true)
+            try FileManager.default.createDirectory(at: slot, withIntermediateDirectories: true)
+            let zip = try FolderArchiver.archive(folder: item.url, into: slot)
+            let size = (try? FileManager.default.attributesOfItem(atPath: zip.path)[.size] as? Int) ?? 0
+            // The estimate that passed validation was the uncompressed size; the
+            // real limit applies to what is actually sent.
+            guard size <= ShareOptions.maxBytesPerFile else { throw UploadError.fileTooLarge }
+            resolved.append(ResolvedItem(
+                source: zip, name: item.name, size: size,
+                contentType: "application/zip", isTemporary: true
+            ))
+        }
+        return resolved
     }
 }

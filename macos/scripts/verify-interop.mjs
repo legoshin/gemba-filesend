@@ -5,9 +5,29 @@
  *
  * Proves the claim that matters: a link made on the Mac opens in the browser.
  *
- *   node macos/scripts/verify-interop.mjs "<share link>" <original file> [<original file>…]
+ *   node macos/scripts/verify-interop.mjs "<share link>" <original file or folder> […]
+ *
+ * A folder argument is compared by unzipping what was received and checking
+ * every file in the tree, since a folder travels as a zip.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, statSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { join, relative } from "node:path";
+import { tmpdir } from "node:os";
+
+/** Every regular file under `root`, keyed by relative path, valued by bytes. */
+function snapshot(root) {
+  const out = new Map();
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile()) out.set(relative(root, full), readFileSync(full));
+    }
+  };
+  walk(root);
+  return out;
+}
 
 const [link, ...originals] = process.argv.slice(2);
 if (!link || originals.length === 0) {
@@ -55,7 +75,9 @@ const key = await importKeyBase64(keyB64);
 let failures = 0;
 
 for (let index = 0; index < listed.length; index++) {
-  const expected = readFileSync(originals[index]);
+  const original = originals[index];
+  const isFolder = statSync(original).isDirectory();
+  const expected = isFolder ? null : readFileSync(original);
   const entry = listed[index];
 
   const readRes = await fetch(`${origin}/api/files/${id}?index=${index}`);
@@ -81,8 +103,33 @@ for (let index = 0; index < listed.length; index++) {
   }
 
   const plaintext = Buffer.from(await decryptPacked(packed, key));
+  const layoutOK = packed.byteLength === plaintext.length + 12 + 16;
+
+  if (isFolder) {
+    // A folder arrives as a zip. Unzip it the way a recipient's Mac would and
+    // compare every file in the tree against the folder that was sent.
+    const scratch = mkdtempSync(join(tmpdir(), "gemba-verify-"));
+    const zipPath = join(scratch, entry.name);
+    writeFileSync(zipPath, plaintext);
+    execFileSync("/usr/bin/ditto", ["-x", "-k", zipPath, join(scratch, "x")]);
+    const restoredRoot = join(scratch, "x", original.replace(/\/+$/, "").split("/").pop());
+    const want = snapshot(original);
+    const got = snapshot(restoredRoot);
+    const missing = [...want.keys()].filter((k) => !got.has(k));
+    const differ = [...want.keys()].filter((k) => got.has(k) && Buffer.compare(got.get(k), want.get(k)) !== 0);
+    const ok = layoutOK && missing.length === 0 && differ.length === 0 && entry.type === "application/zip";
+    console.log(
+      `  ${ok ? "✓" : "✗"} ${entry.name}: folder → zip (${entry.type}), ` +
+      `${plaintext.length} bytes, ${got.size}/${want.size} files restored` +
+      (missing.length ? `, MISSING ${missing.join(", ")}` : "") +
+      (differ.length ? `, DIFFERENT ${differ.join(", ")}` : "")
+    );
+    rmSync(scratch, { recursive: true, force: true });
+    if (!ok) failures++;
+    continue;
+  }
+
   const matches = Buffer.compare(plaintext, expected) === 0;
-  const layoutOK = packed.byteLength === expected.length + 12 + 16;
   console.log(
     `  ${matches && layoutOK ? "✓" : "✗"} ${entry.name}: ` +
     `${packed.byteLength} packed bytes -> ${plaintext.length} plaintext, ` +
