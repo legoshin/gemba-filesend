@@ -29,6 +29,10 @@ enum Gemba {
         s == .dark ? Color.white.opacity(0.24) : ink800
     }
 
+    /// `--button-emphasized-bg`: #E8EAED light, #2A2C31 dark. Used where a raised
+    /// surface has to separate from `surfaceSubdued` (the selected tab pill).
+    /// Light mode uses the white card instead, which reads better on #F3F5F6.
+    static func buttonEmphasizedBG(_ s: ColorScheme) -> Color { s == .dark ? Color(hex: 0x2A2C31) : .white }
     static func buttonPrimaryBG(_ s: ColorScheme) -> Color { s == .dark ? Color(hex: 0xF4F5F7) : ink800 }
     static func buttonPrimaryFG(_ s: ColorScheme) -> Color { s == .dark ? Color(hex: 0x0A0B0D) : .white }
 
@@ -68,68 +72,5 @@ extension Color {
     }
 }
 
-/// The primary button, matching the web's filled ink-800 pill.
-struct GembaPrimaryButtonStyle: ButtonStyle {
-    @Environment(\.colorScheme) private var scheme
-    @Environment(\.isEnabled) private var isEnabled
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 14, weight: .semibold))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: Gemba.Radius.sm)
-                    .fill(Gemba.buttonPrimaryBG(scheme).opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1) : 0.18))
-            )
-            // A disabled primary button must read as unavailable, not merely
-            // dimmer than usual — in dark mode the fill is near-white, so the
-            // label needs to fade with it.
-            .foregroundStyle(Gemba.buttonPrimaryFG(scheme).opacity(isEnabled ? 1 : 0.45))
-            .contentShape(Rectangle())
-    }
-}
-
-/// The quiet secondary button used for Copy / Reveal / Clear.
-struct GembaSecondaryButtonStyle: ButtonStyle {
-    @Environment(\.colorScheme) private var scheme
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 13, weight: .medium))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(
-                RoundedRectangle(cornerRadius: Gemba.Radius.sm)
-                    .fill(Gemba.surfaceSubdued(scheme).opacity(configuration.isPressed ? 0.7 : 1))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Gemba.Radius.sm)
-                    .stroke(Gemba.border(scheme), lineWidth: 1)
-            )
-            .foregroundStyle(Gemba.textPrimary(scheme))
-            .contentShape(Rectangle())
-    }
-}
-
-/// A card surface — white (or #16171A) on the page background, hairline border,
-/// the soft cool-grey shadow from `--shadow-card`.
-struct GembaCard<Content: View>: View {
-    @Environment(\.colorScheme) private var scheme
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        content
-            .padding(Gemba.Space.x5)
-            .background(
-                RoundedRectangle(cornerRadius: Gemba.Radius.lg)
-                    .fill(Gemba.surfaceCard(scheme))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Gemba.Radius.lg)
-                    .stroke(Gemba.border(scheme), lineWidth: 1)
-            )
-            .shadow(color: Color(red: 95/255, green: 105/255, blue: 133/255).opacity(scheme == .dark ? 0 : 0.06),
-                    radius: 8, x: 0, y: 4)
-    }
-}
+// Buttons, cards and every other component live in SmoothUI/ — this file is
+// only the Gemba palette and spacing they draw with.

@@ -24,11 +24,19 @@
     <dict>
         <key>NSExtensionAttributes</key>
         <dict>
+            <!-- Files AND folders, up to the server's 25-item cap. Finder hands
+                 both over as file URLs; a folder is zipped before upload. -->
             <key>NSExtensionActivationRule</key>
-            <dict>
-                <key>NSExtensionActivationSupportsFileWithMaxCount</key>
-                <integer>25</integer>
-            </dict>
+            <string>SUBQUERY (
+                extensionItems, $extensionItem,
+                SUBQUERY (
+                    $extensionItem.attachments, $attachment,
+                    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.file-url"
+                ).@count &gt;= 1 AND SUBQUERY (
+                    $extensionItem.attachments, $attachment,
+                    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.file-url"
+                ).@count &lt;= 25
+            ).@count &gt;= 1</string>
         </dict>
         <key>NSExtensionPointIdentifier</key>
         <string>com.apple.share-services</string>

@@ -130,6 +130,16 @@ EXTENSION_SOURCES.each { |name| extension.add_file_references([extension_group.n
 theme_ref = app_group.files.find { |f| f.path == "GembaTheme.swift" }
 extension.add_file_references([theme_ref])
 
+# The SmoothUI kit is compiled into both targets, so the Share Extension draws
+# with exactly the same components and motion as the app. Sorted, so the
+# generated project stays byte-for-byte reproducible.
+smooth_group = app_group.new_group("SmoothUI", "SmoothUI")
+Dir.glob(File.join(ROOT, "GembaFilesend", "SmoothUI", "*.swift")).sort.each do |path|
+  ref = smooth_group.new_reference(File.basename(path))
+  app.add_file_references([ref])
+  extension.add_file_references([ref])
+end
+
 icon_path = File.join(ROOT, "GembaFilesend", "AppIcon.icns")
 if File.exist?(icon_path)
   icon_ref = app_group.new_reference("AppIcon.icns")

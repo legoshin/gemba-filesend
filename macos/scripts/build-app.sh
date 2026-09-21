@@ -66,7 +66,7 @@ if [ "$RUN_TESTS" -eq 1 ]; then
     report_failure
     fail "tests failed — the crypto contract with the web app is what these check, so this is not a build to install"
   fi
-  grep -E "Executed [0-9]+ tests" "$LOG" | tail -1 | sed 's/^/  /'
+  echo "  $(grep -cE "Test Case .* passed" "$LOG") tests passed"
 fi
 
 # ------------------------------------------------------------------ project
@@ -83,7 +83,7 @@ project_files() {
     | sed 's/.*path = //; s/"//g' | sort -u
 }
 disk_files() {
-  (cd "$MACOS_DIR" && find GembaFilesend ShareExtension Configs -maxdepth 1 -type f \
+  (cd "$MACOS_DIR" && find GembaFilesend ShareExtension Configs -maxdepth 2 -type f \
      \( -name '*.swift' -o -name '*.icns' -o -name '*.plist' \
         -o -name '*.entitlements' -o -name '*.xcconfig' \) 2>/dev/null \
      -exec basename {} \;) | sort -u
@@ -156,6 +156,10 @@ pkill -f "/Applications/$APP_NAME.app/Contents/MacOS" 2>/dev/null || true
 rm -rf "/Applications/$APP_NAME.app"
 cp -R "$BUILT" /Applications/
 echo "  /Applications/$APP_NAME.app"
+# The build copy would otherwise stay registered alongside the installed one,
+# and a duplicate Share Extension can shadow the real one.
+pluginkit -r "$BUILT/Contents/PlugIns/ShareExtension.appex" 2>/dev/null || true
+"$LSREGISTER" -u "$BUILT" 2>/dev/null || true
 
 step "Registering the Share Extension"
 # All three steps matter. Without lsregister the system may keep serving the old

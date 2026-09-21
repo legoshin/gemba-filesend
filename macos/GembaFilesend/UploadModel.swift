@@ -1,41 +1,21 @@
 import Foundation
 import SwiftUI
+import AppKit
 import GembaCrypto
 import GembaUpload
-
-/// Expiry presets, matching the units the web upload page offers.
-enum ExpiryPreset: String, CaseIterable, Identifiable {
-    case oneHour = "1 hour"
-    case sixHours = "6 hours"
-    case oneDay = "24 hours"
-    case threeDays = "3 days"
-    case sevenDays = "7 days"
-    case thirtyDays = "30 days"
-
-    var id: String { rawValue }
-
-    var interval: TimeInterval {
-        switch self {
-        case .oneHour: return 3600
-        case .sixHours: return 6 * 3600
-        case .oneDay: return 24 * 3600
-        case .threeDays: return 3 * 24 * 3600
-        case .sevenDays: return 7 * 24 * 3600
-        case .thirtyDays: return 30 * 24 * 3600
-        }
-    }
-}
 
 /// Everything the window shows, and the one place an upload is driven from.
 @MainActor
 @Observable
 final class UploadModel {
-    // Selection
+    // Selection — files and folders.
     var items: [ShareItem] = []
 
-    // Options
+    // Options. Expiry is amount + unit, the same shape (and the same three
+    // units) as the web upload page, so both clients offer the same choices.
     var downloadLimit: Int = 1
-    var expiry: ExpiryPreset = .oneDay
+    var expiryAmount: Int = 1
+    var expiryUnit: ExpiryUnit = .days
     var usePassword = false
     var password = ""
     var useRecipients = false
@@ -47,8 +27,10 @@ final class UploadModel {
     var progress = UploadProgress(phase: .idle, fraction: 0)
     var isUploading = false
     var result: ShareResult?
-    var errorMessage: String?
-    var copied = false
+
+    /// Every transient message — errors, warnings, confirmations — goes here and
+    /// appears as a toast, so nothing pushes the layout around.
+    let toasts = ToastCenter()
 
     /// Set when encryption fails mid-run; the view shows the same three-way
     /// choice the web app shows and resumes the upload with the answer.
@@ -70,18 +52,24 @@ final class UploadModel {
     }
 
     var totalBytes: Int { items.reduce(0) { $0 + $1.size } }
+    var folderCount: Int { items.filter(\.isFolder).count }
 
-    /// The one-line form shown when the settings card is collapsed — the point
-    /// of collapsing is that nothing is hidden, only compressed.
+    var expiryInterval: TimeInterval { Double(expiryAmount) * expiryUnit.seconds }
+
+    /// "1 day", "3 hours", "2 months".
+    var expiryDescription: String {
+        let unit = String(expiryUnit.rawValue.dropLast())
+        return expiryAmount == 1 ? "1 \(unit)" : "\(expiryAmount) \(expiryUnit.rawValue)"
+    }
+
+    /// The one-line form shown when the settings card is collapsed — collapsing
+    /// hides nothing, it only compresses.
     var settingsSummary: String {
-        var parts = [expiry.rawValue, downloadLimit == 1 ? "1 download" : "\(downloadLimit) downloads"]
+        var parts = [expiryDescription, downloadLimit == 1 ? "1 download" : "\(downloadLimit) downloads"]
         if usePassword { parts.append("password") }
         if useRecipients || notifyRecipients {
-            let count = recipients.count
-            parts.append(count == 1 ? "1 recipient" : "\(count) recipients")
+            parts.append(recipients.count == 1 ? "1 recipient" : "\(recipients.count) recipients")
         }
-        // "emailed" is carried by the envelope badge next to this line instead —
-        // the summary has one line and every word competes for it.
         return parts.joined(separator: " · ")
     }
 
@@ -92,76 +80,97 @@ final class UploadModel {
         return true
     }
 
-    /// Shown before the run when a file is big enough that one-shot encryption
-    /// will be noticeable.
+    /// Why the send button is disabled, in words — shown under it so a greyed
+    /// button never leaves anyone guessing.
+    var blockedReason: String? {
+        guard !isUploading else { return nil }
+        if items.isEmpty { return nil }
+        if usePassword && password.isEmpty { return "Enter a password, or turn the password off." }
+        if (useRecipients || notifyRecipients) && recipients.isEmpty { return "Add at least one recipient." }
+        return nil
+    }
+
     var memoryNotice: String? {
         guard let largest = items.map(\.size).max() else { return nil }
         return FileEncryptor.memoryWarning(forBytes: largest)
     }
 
+    var sendLabel: String {
+        // The progress card carries the detail; the button just says it's busy.
+        if isUploading { return "Sending…" }
+        switch items.count {
+        case 0: return "Add something to send"
+        case 1: return items[0].isFolder ? "Zip, encrypt and send" : "Encrypt and send"
+        default: return "Encrypt and send \(items.count) items"
+        }
+    }
+
     func add(urls: [URL]) {
-        errorMessage = nil
         for url in urls {
-            var isDirectory: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) else { continue }
-            if isDirectory.boolValue {
-                errorMessage = "Folders can't be sent directly — zip \(url.lastPathComponent) first."
-                continue
-            }
+            // Folders are welcome: the uploader zips each one into a temporary
+            // file just before sending and deletes it afterwards.
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
             guard !items.contains(where: { $0.url == url }) else { continue }
             guard items.count < ShareOptions.maxFiles else {
-                errorMessage = "A share holds at most \(ShareOptions.maxFiles) files."
+                toasts.show("A share holds at most \(ShareOptions.maxFiles) items.", kind: .error)
                 return
             }
-            items.append(ShareItem(url: url))
+            let item = ShareItem(url: url)
+            if item.isFolder && item.fileCount == 0 {
+                toasts.show("\(item.displayName) is empty — added anyway, it will arrive as an empty zip.", kind: .info)
+            }
+            withSmoothAnimation { items.append(item) }
         }
     }
 
     func remove(_ item: ShareItem) {
-        items.removeAll { $0.id == item.id }
+        withSmoothAnimation { items.removeAll { $0.id == item.id } }
+    }
+
+    func clearItems() {
+        withSmoothAnimation { items.removeAll() }
     }
 
     func addRecipientFromDraft() {
         let candidate = recipientDraft.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !candidate.isEmpty else { return }
         guard ShareOptions.looksLikeEmail(candidate) else {
-            errorMessage = "\(candidate) doesn't look like an email address."
+            toasts.show("\(candidate) doesn't look like an email address.", kind: .error)
             return
         }
         guard recipients.count < ShareOptions.maxRecipients else {
-            errorMessage = "At most \(ShareOptions.maxRecipients) recipients."
+            toasts.show("At most \(ShareOptions.maxRecipients) recipients.", kind: .error)
             return
         }
-        if !recipients.contains(candidate) { recipients.append(candidate) }
+        if !recipients.contains(candidate) { withSmoothAnimation { recipients.append(candidate) } }
         recipientDraft = ""
-        errorMessage = nil
     }
 
     func reset() {
-        items = []
-        result = nil
-        errorMessage = nil
-        progress = UploadProgress(phase: .idle, fraction: 0)
-        password = ""
-        usePassword = false
-        recipients = []
-        recipientDraft = ""
-        useRecipients = false
-        notifyRecipients = false
-        downloadLimit = 1
-        copied = false
+        withSmoothAnimation {
+            items = []
+            result = nil
+            progress = UploadProgress(phase: .idle, fraction: 0)
+            password = ""
+            usePassword = false
+            recipients = []
+            recipientDraft = ""
+            useRecipients = false
+            notifyRecipients = false
+            downloadLimit = 1
+            expiryAmount = 1
+            expiryUnit = .days
+        }
     }
 
     func startUpload() {
         guard canUpload else { return }
-        isUploading = true
-        errorMessage = nil
+        withSmoothAnimation { isUploading = true }
         result = nil
-        copied = false
 
         let options = ShareOptions(
             downloadLimit: downloadLimit,
-            expiresAt: Date().addingTimeInterval(expiry.interval),
+            expiresAt: Date().addingTimeInterval(expiryInterval),
             password: usePassword ? password : nil,
             verifiedRecipients: (useRecipients || notifyRecipients) ? recipients : [],
             notifyRecipients: notifyRecipients,
@@ -183,17 +192,26 @@ final class UploadModel {
                     }
                 )
                 await MainActor.run {
-                    self?.result = result
-                    self?.isUploading = false
+                    guard let self else { return }
+                    withSmoothAnimation {
+                        self.result = result
+                        self.isUploading = false
+                    }
+                    if result.notified {
+                        self.toasts.show("Emailed to \(self.recipients.count == 1 ? self.recipients[0] : "\(self.recipients.count) recipients").", kind: .success)
+                    }
                     if let notifyError = result.notifyError {
-                        self?.errorMessage = "The link is ready, but emailing it failed: \(notifyError)"
+                        self.toasts.show("The link is ready, but emailing it failed: \(notifyError)", kind: .error)
                     }
                 }
             } catch {
                 await MainActor.run {
-                    self?.isUploading = false
-                    self?.progress = UploadProgress(phase: .idle, fraction: 0)
-                    self?.errorMessage = error.localizedDescription
+                    guard let self else { return }
+                    withSmoothAnimation {
+                        self.isUploading = false
+                        self.progress = UploadProgress(phase: .idle, fraction: 0)
+                    }
+                    self.toasts.show(error.localizedDescription, kind: .error)
                 }
             }
         }
@@ -202,19 +220,16 @@ final class UploadModel {
     /// Mirrors the web app's dialog: never downgrade to plaintext silently.
     private func askAboutEncryptionFailure(name: String, error: Error) async -> EncryptionFallback {
         await withCheckedContinuation { continuation in
-            let prompt = EncryptionFailurePrompt(
-                fileName: name,
-                message: error.localizedDescription
-            ) { choice in
+            let prompt = EncryptionFailurePrompt(fileName: name, message: error.localizedDescription) { choice in
                 continuation.resume(returning: choice)
             }
-            self.encryptionFailure = prompt
+            withSmoothAnimation { self.encryptionFailure = prompt }
         }
     }
 
     func answerEncryptionFailure(_ choice: EncryptionFallback) {
         let prompt = encryptionFailure
-        encryptionFailure = nil
+        withSmoothAnimation { encryptionFailure = nil }
         prompt?.respond(choice)
     }
 
@@ -224,31 +239,36 @@ final class UploadModel {
     ///
     ///     Gemba\ Filesend.app/Contents/MacOS/Gemba\ Filesend --demo settings
     ///
-    /// Values: `files`, `settings`, `full`, `result`. DEBUG only — it never
-    /// exists in a Release build, and it touches nothing but this model.
+    /// Values: `files`, `settings`, `full`, `uploading`, `result`, `modal`.
+    /// DEBUG only — it never exists in a Release build.
     func applyDemoStateIfRequested() -> String? {
         let arguments = CommandLine.arguments
         guard let index = arguments.firstIndex(of: "--demo"), index + 1 < arguments.count else { return nil }
         let state = arguments[index + 1]
 
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("gemba-demo", isDirectory: true)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("gemba-demo", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let fixtures: [(String, Int)] = [
             ("Q3-board-pack.pdf", 4_812_000),
             ("customer-export.csv", 918_000),
-            ("brand-assets.zip", 26_400_000),
             ("meeting-notes.md", 12_400),
             ("logo-final-v3.png", 384_000),
             ("contract-signed.pdf", 1_240_000),
         ]
-        let wanted = state == "files" ? 3 : fixtures.count
-        for (name, size) in fixtures.prefix(wanted) {
+        let folder = directory.appendingPathComponent("Brand Assets", isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder.appendingPathComponent("logos"), withIntermediateDirectories: true)
+        for (name, size) in [("logos/mark.svg", 42_000), ("logos/wordmark.svg", 51_000), ("guidelines.pdf", 8_300_000)] {
+            let url = folder.appendingPathComponent(name)
+            if !FileManager.default.fileExists(atPath: url.path) { try? Data(count: size).write(to: url) }
+        }
+        for (name, size) in fixtures {
             let url = directory.appendingPathComponent(name)
-            if !FileManager.default.fileExists(atPath: url.path) {
-                try? Data(count: size).write(to: url)
-            }
-            items.append(ShareItem(url: url))
+            if !FileManager.default.fileExists(atPath: url.path) { try? Data(count: size).write(to: url) }
+        }
+
+        items.append(ShareItem(url: folder))
+        for (name, _) in fixtures.prefix(state == "files" ? 2 : fixtures.count) {
+            items.append(ShareItem(url: directory.appendingPathComponent(name)))
         }
 
         switch state {
@@ -259,33 +279,29 @@ final class UploadModel {
             notifyRecipients = state == "full"
             recipients = ["alice@example.com", "bob@example.com", "carol@example.com", "dan@example.com"]
             downloadLimit = 3
-            expiry = .sevenDays
+            expiryAmount = 7
+            expiryUnit = .days
+        case "uploading":
+            isUploading = true
+            progress = UploadProgress(phase: .uploading(file: "Brand Assets.zip", index: 0, of: items.count), fraction: 0.62)
         case "result":
             result = ShareResult(
                 link: ShareLink(id: ShareID(), key: ShareKey(), passwordProtected: true,
                                 origin: FilesendEndpoint.production.origin),
-                encrypted: true,
-                files: items,
-                notified: false,
-                notifyError: nil
-            )
+                encrypted: true, files: items, notified: false, notifyError: nil)
+        case "modal":
+            encryptionFailure = EncryptionFailurePrompt(
+                fileName: "Q3-board-pack.pdf",
+                message: "Encryption failed: could not read Q3-board-pack.pdf") { _ in }
         default:
             break
+        }
+        if state == "files" {
+            toasts.show("Brand Assets will be zipped before it's encrypted.", kind: .info, seconds: 60)
         }
         return state
     }
 #endif
-
-    func copyLink() {
-        guard let result else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(result.absoluteString, forType: .string)
-        copied = true
-        Task {
-            try? await Task.sleep(for: .seconds(2))
-            await MainActor.run { self.copied = false }
-        }
-    }
 }
 
 extension Int {
@@ -298,5 +314,3 @@ extension Int {
         return String(format: "%.2f GB", bytes / (1024 * 1024 * 1024))
     }
 }
-
-import AppKit

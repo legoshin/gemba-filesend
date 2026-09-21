@@ -1,402 +1,275 @@
 import SwiftUI
-import UniformTypeIdentifiers
 import AppKit
 import GembaUpload
 
-/// The single window.
+/// The single window, built from the SmoothUI kit (see SmoothUI/).
 ///
-/// Layout rule: **the window never scrolls.** Everything that can grow is either
-/// collapsible or bounded, and the window itself sizes to its content
-/// (`.windowResizability(.contentSize)` in the App), so opening a section makes
-/// the window taller rather than producing a scrollbar. At most one section is
-/// open at a time — opening one closes the other — which keeps the tallest
-/// possible state comfortably under any screen height.
+/// Layout rule, unchanged from before the redesign: **the window never
+/// scrolls.** It sizes to its content, at most one accordion is open, and the
+/// two lists that can grow (files, recipients) are bounded. Transient messages
+/// are toasts and the one blocking question is a modal — both overlays, so
+/// neither changes the window's height.
 struct ContentView: View {
-    @Environment(\.colorScheme) private var scheme
     @State private var model = UploadModel()
     @State private var expanded: Panel?
-    @State private var isTargeted = false
+    @AppStorage("themeChoice") private var themeRaw = ThemeChoice.system.rawValue
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     enum Panel { case files, settings }
 
-    /// Only one panel open at a time: binding a panel to `true` closes the other.
     private func binding(for panel: Panel) -> Binding<Bool> {
         Binding(
             get: { expanded == panel },
-            set: { isOpen in
-                withAnimation(.snappy(duration: 0.22)) { expanded = isOpen ? panel : nil }
-            }
+            set: { expanded = $0 ? panel : nil }
         )
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Gemba.Space.x5) {
+        VStack(alignment: .leading, spacing: 12) {
             header
 
-            if let result = model.result {
-                ResultCard(result: result, model: model)
-            } else {
-                DropArea(model: model, isTargeted: $isTargeted, compact: !model.items.isEmpty) {
-                    withAnimation(.snappy(duration: 0.22)) { expanded = .files }
+            ZStack {
+                if let result = model.result {
+                    ResultView(result: result, model: model)
+                        .transition(.swapPanel)
+                } else {
+                    compose.transition(.swapPanel)
                 }
-
-                if !model.items.isEmpty {
-                    DisclosureCard(
-                        title: model.items.count == 1 ? "1 file" : "\(model.items.count) files",
-                        summary: model.totalBytes.formattedBytes,
-                        isExpanded: binding(for: .files)
-                    ) {
-                        FileList(model: model)
-                    }
-                }
-
-                DisclosureCard(
-                    title: "Share settings",
-                    summary: model.settingsSummary,
-                    badge: model.notifyRecipients ? "envelope" : nil,
-                    isExpanded: binding(for: .settings)
-                ) {
-                    SettingsPanel(model: model)
-                }
-
-                if model.isUploading { ProgressCard(model: model) }
-                uploadButton
             }
-
-            if let error = model.errorMessage { errorBanner(error) }
-            footer
+            .animation(reduceMotion ? nil : Motion.smooth, value: model.result != nil)
         }
-        .padding(Gemba.Space.x6)
-        .frame(width: 520, alignment: .leading)
+        .padding(20)
+        .frame(width: 520, alignment: .top)
         .background(Gemba.surfacePage(scheme))
-        .onChange(of: model.items.count) { previous, current in
-            // First file lands: show what was added — but only if nothing else is
-            // open. Dropping a file while editing settings must not yank the
-            // panel out from under the person.
-            if previous == 0 && current > 0 && expanded == nil {
-                withAnimation(.snappy(duration: 0.22)) { expanded = .files }
-            } else if current == 0 && expanded == .files {
-                withAnimation(.snappy(duration: 0.22)) { expanded = nil }
+        .overlay { ToastStack(center: model.toasts) }
+        .overlay {
+            SmoothModal(isPresented: Binding(
+                get: { model.encryptionFailure != nil },
+                set: { if !$0 { model.answerEncryptionFailure(.cancel) } }
+            )) {
+                if let prompt = model.encryptionFailure { EncryptionFallback(prompt: prompt, model: model) }
             }
         }
-        .onChange(of: model.isUploading) { _, isUploading in
-            // Collapse while working: the progress bar should not have to compete
-            // with an open settings panel for the window's height.
-            if isUploading { withAnimation(.snappy(duration: 0.22)) { expanded = nil } }
+        .preferredColorScheme((ThemeChoice(rawValue: themeRaw) ?? .system).colorScheme)
+        .onChange(of: model.items.count) { previous, current in
+            // First item lands: show it — but never yank an open settings panel.
+            if previous == 0 && current > 0 && expanded == nil {
+                withAnimation(reduceMotion ? nil : Motion.accordion) { expanded = .files }
+            } else if current == 0 && expanded == .files {
+                withAnimation(reduceMotion ? nil : Motion.accordion) { expanded = nil }
+            }
         }
-        .sheet(item: Binding(
-            get: { model.encryptionFailure },
-            set: { if $0 == nil { model.encryptionFailure = nil } }
-        )) { prompt in
-            EncryptionFallbackSheet(prompt: prompt, model: model)
+        .onChange(of: model.isUploading) { _, uploading in
+            // Collapse while working so progress never competes for height.
+            if uploading { withAnimation(reduceMotion ? nil : Motion.accordion) { expanded = nil } }
         }
         .onAppear {
             #if DEBUG
+            // `--theme light|dark|system`, for checking every state in both looks.
+            if let i = CommandLine.arguments.firstIndex(of: "--theme"), i + 1 < CommandLine.arguments.count,
+               let theme = ThemeChoice(rawValue: CommandLine.arguments[i + 1]) {
+                themeRaw = theme.rawValue
+            }
             if let state = model.applyDemoStateIfRequested() {
-                expanded = (state == "settings" || state == "full") ? .settings : .files
+                expanded = (state == "settings" || state == "full") ? .settings
+                    : (state == "uploading" || state == "result" ? nil : .files)
             }
             #endif
         }
     }
 
+    // MARK: Header
+
     private var header: some View {
-        HStack(spacing: Gemba.Space.x4) {
-            RoundedRectangle(cornerRadius: Gemba.Radius.sm)
-                .fill(Gemba.yellow)
-                .frame(width: 28, height: 28)
-                .overlay(
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Gemba.ink900)
-                )
+        HStack(spacing: 12) {
+            SpringScaleIn {
+                Squircle(radius: 9)
+                    .fill(Gemba.yellow)
+                    .frame(width: 32, height: 32)
+                    .overlay(Image(systemName: "lock.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Gemba.ink900))
+            }
             VStack(alignment: .leading, spacing: 2) {
-                Text("Gemba Filesend")
-                    .font(.system(size: 17, weight: .semibold))
+                ShimmerSweep(text: "Gemba Filesend", font: .system(size: 17, weight: .semibold))
                     .foregroundStyle(Gemba.textPrimary(scheme))
-                Text("Encrypted on this Mac. One link, key never sent.")
-                    .font(.system(size: 12))
+                ShimmerSweep(text: "Encrypted on this Mac. One link — the key never leaves it.",
+                             font: .system(size: 12), delay: 0.08)
                     .foregroundStyle(Gemba.textSubdued(scheme))
             }
             Spacer(minLength: 0)
+            ThemeToggle()
         }
     }
 
-    private var uploadButton: some View {
-        VStack(alignment: .leading, spacing: Gemba.Space.x3) {
-            if let notice = model.memoryNotice, !model.isUploading {
-                Text(notice)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Gemba.warning(scheme))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Button(model.isUploading ? model.progress.phase.label : sendLabel) {
-                model.startUpload()
-            }
-            .buttonStyle(GembaPrimaryButtonStyle())
-            .disabled(!model.canUpload)
-            .keyboardShortcut(.return, modifiers: .command)
-        }
-    }
+    // MARK: Compose
 
-    private var sendLabel: String {
-        switch model.items.count {
-        case 0: return "Add files to send"
-        case 1: return "Encrypt and send"
-        default: return "Encrypt and send \(model.items.count) files"
-        }
-    }
+    private var compose: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            AnimatedFileUpload(compact: !model.items.isEmpty) { urls in model.add(urls: urls) }
+                .disabled(model.isUploading)
 
-    private func errorBanner(_ message: String) -> some View {
-        HStack(alignment: .top, spacing: Gemba.Space.x3) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(Gemba.critical(scheme))
-            Text(message)
-                .font(.system(size: 12))
-                .foregroundStyle(Gemba.textPrimary(scheme))
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-        .padding(Gemba.Space.x4)
-        .background(RoundedRectangle(cornerRadius: Gemba.Radius.md).fill(Gemba.criticalSubdued(scheme)))
-    }
-
-    private var footer: some View {
-        Text("Files are encrypted before they leave this Mac. The key lives only in the link, after the #, and is never sent to the server.")
-            .font(.system(size: 11))
-            .foregroundStyle(Gemba.textSubtle(scheme))
-            .fixedSize(horizontal: false, vertical: true)
-    }
-}
-
-// MARK: - Collapsible card
-
-/// A card that shows a one-line summary when closed and its content when open.
-/// This is what keeps the window short: the information stays visible as a
-/// summary, so collapsing costs nothing.
-private struct DisclosureCard<Content: View>: View {
-    @Environment(\.colorScheme) private var scheme
-    let title: String
-    let summary: String
-    /// An optional SF Symbol shown after the summary — a state worth seeing at a
-    /// glance that would otherwise cost words the one line cannot spare.
-    var badge: String? = nil
-    @Binding var isExpanded: Bool
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        GembaCard {
-            VStack(alignment: .leading, spacing: isExpanded ? Gemba.Space.x5 : 0) {
-                Button {
-                    isExpanded.toggle()
-                } label: {
-                    HStack(spacing: Gemba.Space.x3) {
-                        Text(title)
+            if !model.items.isEmpty {
+                SmoothAccordion(isExpanded: binding(for: .files)) {
+                    HStack(spacing: 8) {
+                        Text("Files")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(Gemba.textPrimary(scheme))
-                        Spacer(minLength: Gemba.Space.x3)
-                        Text(summary)
+                        NotificationBadge(count: model.items.count)
+                        Spacer(minLength: 8)
+                        NumberFlow(value: Double(model.totalBytes)) { Int($0).formattedBytes }
                             .font(.system(size: 12))
                             .foregroundStyle(Gemba.textSubdued(scheme))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                        if let badge {
-                            Image(systemName: badge)
-                                .font(.system(size: 10))
-                                .foregroundStyle(Gemba.textSubdued(scheme))
-                        }
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Gemba.textSubtle(scheme))
-                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     }
-                    .contentShape(Rectangle())
+                } content: {
+                    FileList(model: model)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("\(title), \(summary)")
-                .accessibilityHint(isExpanded ? "Collapse" : "Expand")
-
-                if isExpanded { content }
+                .transition(.blurSlide(y: 8))
             }
-        }
-    }
-}
 
-// MARK: - Drop area
-
-/// Full-height when there is nothing to send, a single row once there is —
-/// the empty state is the only time a big target earns its space.
-private struct DropArea: View {
-    @Environment(\.colorScheme) private var scheme
-    @Bindable var model: UploadModel
-    @Binding var isTargeted: Bool
-    let compact: Bool
-    let onFilesAdded: () -> Void
-
-    var body: some View {
-        Group {
-            if compact { compactRow } else { emptyState }
-        }
-        .background(
-            RoundedRectangle(cornerRadius: Gemba.Radius.lg)
-                .fill(isTargeted ? Gemba.accentSubdued(scheme) : Gemba.surfaceCard(scheme))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Gemba.Radius.lg)
-                .strokeBorder(
-                    isTargeted ? Gemba.accent(scheme) : Gemba.border(scheme),
-                    style: StrokeStyle(lineWidth: isTargeted ? 2 : 1, dash: compact ? [] : [6, 4])
-                )
-        )
-        .onDrop(of: [.fileURL], isTargeted: $isTargeted) { providers in
-            Task { await handleDrop(providers) }
-            return true
-        }
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: Gemba.Space.x3) {
-            Image(systemName: "arrow.up.doc")
-                .font(.system(size: 26, weight: .light))
-                .foregroundStyle(Gemba.textSubdued(scheme))
-            Text("Drop files here")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(Gemba.textPrimary(scheme))
-            Text("or")
-                .font(.system(size: 11))
-                .foregroundStyle(Gemba.textSubtle(scheme))
-            Button("Choose files…") { chooseFiles() }
-                .buttonStyle(GembaSecondaryButtonStyle())
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Gemba.Space.x7)
-    }
-
-    private var compactRow: some View {
-        HStack(spacing: Gemba.Space.x3) {
-            Image(systemName: "plus")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Gemba.textSubdued(scheme))
-            Text("Drop more files, or")
-                .font(.system(size: 12))
-                .foregroundStyle(Gemba.textSubdued(scheme))
-            Button("choose…") { chooseFiles() }
-                .buttonStyle(.plain)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Gemba.accent(scheme))
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, Gemba.Space.x5)
-        .padding(.vertical, Gemba.Space.x4)
-    }
-
-    private func handleDrop(_ providers: [NSItemProvider]) async {
-        let boxed = providers.map { DropBox($0) }
-        var urls: [URL] = []
-        for box in boxed {
-            if let url = await loadFileURL(box) { urls.append(url) }
-        }
-        let resolved = urls
-        await MainActor.run {
-            model.add(urls: resolved)
-            onFilesAdded()
-        }
-    }
-
-    private nonisolated func loadFileURL(_ box: DropBox) async -> URL? {
-        await box.provider.loadFileURL()
-    }
-
-    private func chooseFiles() {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = true
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-        panel.message = "Choose up to \(ShareOptions.maxFiles) files to send"
-        if panel.runModal() == .OK {
-            model.add(urls: panel.urls)
-            onFilesAdded()
-        }
-    }
-}
-
-/// Carries an NSItemProvider across a single actor hop, where the surrounding
-/// code guarantees only one place touches it.
-struct DropBox: @unchecked Sendable {
-    let provider: NSItemProvider
-    init(_ provider: NSItemProvider) { self.provider = provider }
-}
-
-extension NSItemProvider {
-    /// `loadItem` for a file URL, as an async call.
-    func loadFileURL() async -> URL? {
-        await withCheckedContinuation { continuation in
-            _ = loadObject(ofClass: URL.self) { url, _ in
-                continuation.resume(returning: url)
+            SmoothAccordion(isExpanded: binding(for: .settings)) {
+                HStack(spacing: 8) {
+                    Text("Share settings")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Gemba.textPrimary(scheme))
+                    Spacer(minLength: 8)
+                    Text(model.settingsSummary)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Gemba.textSubdued(scheme))
+                        .lineLimit(1)
+                        .contentTransition(reduceMotion ? .identity : .interpolate)
+                        .animation(reduceMotion ? nil : Motion.smooth, value: model.settingsSummary)
+                    if model.notifyRecipients {
+                        Image(systemName: "envelope")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Gemba.textSubdued(scheme))
+                            .transition(.blurSlide(scale: 0.5))
+                    }
+                }
+            } content: {
+                SettingsPanel(model: model)
             }
+            .disabled(model.isUploading)
+
+            if model.isUploading {
+                ProgressCard(model: model).transition(.blurSlide(y: 8))
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Button { model.startUpload() } label: {
+                    TextMorph(text: model.sendLabel)
+                }
+                .buttonStyle(SmoothButtonStyle(variant: .solid, fullWidth: true))
+                .disabled(!model.canUpload)
+                .keyboardShortcut(.return, modifiers: .command)
+
+                if let reason = model.blockedReason ?? (model.isUploading ? nil : model.memoryNotice) {
+                    Text(reason)
+                        .font(.system(size: 11))
+                        .foregroundStyle(model.blockedReason != nil ? Gemba.textSubdued(scheme) : Gemba.warning(scheme))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .transition(.hintSwap)
+                }
+            }
+            .animation(reduceMotion ? nil : Motion.smooth, value: model.blockedReason)
         }
+        .animation(reduceMotion ? nil : Motion.smooth, value: model.items.isEmpty)
+        .animation(reduceMotion ? nil : Motion.smooth, value: model.isUploading)
     }
 }
 
 // MARK: - File list
 
-/// The one genuinely unbounded thing in the window — a share holds up to 25
-/// files. Five rows fit without scrolling; beyond that the list itself scrolls
-/// inside a fixed height. That keeps the scroll inside an obvious list rather
-/// than on the window, which is the thing to avoid.
+/// Five rows show without scrolling; past that (a share holds up to 25) the
+/// list scrolls inside its own fixed height — the only scrolling anywhere, and
+/// it is inside an obvious list rather than on the window.
 private struct FileList: View {
-    @Environment(\.colorScheme) private var scheme
     @Bindable var model: UploadModel
-
-    private let rowHeight: CGFloat = 26
-    private let maxVisibleRows = 5
+    @Environment(\.colorScheme) private var scheme
+    private let rowHeight: CGFloat = 38
+    private let maxVisible = 5
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Gemba.Space.x3) {
+        VStack(alignment: .leading, spacing: 10) {
             ScrollView(.vertical) {
                 VStack(spacing: 0) {
                     ForEach(model.items) { item in
-                        HStack(spacing: Gemba.Space.x3) {
-                            Image(systemName: "doc")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Gemba.textSubtle(scheme))
-                            Text(item.name)
-                                .font(.system(size: 12))
-                                .foregroundStyle(Gemba.textPrimary(scheme))
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                            Spacer(minLength: Gemba.Space.x3)
-                            Text(item.size.formattedBytes)
-                                .font(.system(size: 11).monospacedDigit())
-                                .foregroundStyle(Gemba.textSubdued(scheme))
-                            Button {
-                                withAnimation(.snappy(duration: 0.18)) { model.remove(item) }
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 9, weight: .semibold))
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(Gemba.textSubtle(scheme))
-                            .help("Remove \(item.name)")
-                        }
-                        .frame(height: rowHeight)
+                        FileRow(item: item) { model.remove(item) }
+                            .frame(height: rowHeight)
+                            .transition(.fileRow)
                     }
                 }
             }
-            .frame(height: min(CGFloat(model.items.count), CGFloat(maxVisibleRows)) * rowHeight)
-            .scrollDisabled(model.items.count <= maxVisibleRows)
+            .frame(height: CGFloat(min(model.items.count, maxVisible)) * rowHeight)
+            .scrollDisabled(model.items.count <= maxVisible)
+            .scrollIndicators(model.items.count > maxVisible ? .automatic : .hidden)
 
             HStack {
-                if model.items.count > 1 {
-                    Text("All \(model.items.count) files share one link and one key.")
-                        .font(.system(size: 11))
+                Text(model.items.count > 1
+                     ? "All \(model.items.count) items share one link and one key."
+                     : (model.items.first?.isFolder == true ? "Zipped just before sending; the zip is deleted after." : "One link, one key."))
+                    .font(.system(size: 11))
+                    .foregroundStyle(Gemba.textSubtle(scheme))
+                Spacer(minLength: 0)
+                Button("Clear") { model.clearItems() }
+                    .buttonStyle(SmoothButtonStyle(variant: .ghost))
+            }
+        }
+    }
+}
+
+private struct FileRow: View {
+    let item: ShareItem
+    let onRemove: () -> Void
+    @State private var hoveringRemove = false
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Group {
+                if item.isFolder {
+                    FolderReveal(size: 16)
+                } else {
+                    Image(systemName: "doc")
+                        .font(.system(size: 13))
                         .foregroundStyle(Gemba.textSubtle(scheme))
                 }
-                Spacer(minLength: 0)
-                Button("Clear") { withAnimation(.snappy(duration: 0.18)) { model.items.removeAll() } }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Gemba.accent(scheme))
             }
+            .frame(width: 22)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(item.displayName)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Gemba.textPrimary(scheme))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if item.isFolder {
+                    Text("\(item.fileCount) \(item.fileCount == 1 ? "file" : "files") · sent as \(item.name)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Gemba.textSubtle(scheme))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+            Spacer(minLength: 8)
+            Text(item.size.formattedBytes)
+                .font(.system(size: 11).monospacedDigit())
+                .foregroundStyle(Gemba.textSubdued(scheme))
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .frame(width: 20, height: 20)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(hoveringRemove ? Gemba.critical(scheme) : Gemba.textSubtle(scheme))
+            .scaleEffect(hoveringRemove && !reduceMotion ? 1.1 : 1)
+            .animation(reduceMotion ? nil : Motion.smooth, value: hoveringRemove)
+            .onHover { hoveringRemove = $0 }
+            .smoothTooltip("Remove")
+            .accessibilityLabel("Remove \(item.displayName)")
         }
     }
 }
@@ -404,80 +277,75 @@ private struct FileList: View {
 // MARK: - Settings
 
 private struct SettingsPanel: View {
-    @Environment(\.colorScheme) private var scheme
     @Bindable var model: UploadModel
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Gemba.Space.x5) {
-            HStack(alignment: .top, spacing: Gemba.Space.x6) {
-                VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 5) {
                     fieldLabel("Expires after")
-                    Picker("", selection: $model.expiry) {
-                        ForEach(ExpiryPreset.allCases) { Text($0.rawValue).tag($0) }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .frame(width: 130)
+                    DurationPicker(amount: $model.expiryAmount, unit: $model.expiryUnit)
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    fieldLabel("Downloads allowed")
-                    Stepper(value: $model.downloadLimit, in: 1...ShareOptions.maxDownloads) {
-                        Text("\(model.downloadLimit)")
-                            .font(.system(size: 13).monospacedDigit())
-                            .foregroundStyle(Gemba.textPrimary(scheme))
-                            .frame(minWidth: 24, alignment: .leading)
-                    }
+                VStack(alignment: .leading, spacing: 5) {
+                    fieldLabel("Downloads")
+                    AnimatedNumberInput(label: "Downloads allowed", value: $model.downloadLimit,
+                                        range: 1...ShareOptions.maxDownloads)
                 }
                 Spacer(minLength: 0)
             }
 
-            Divider().overlay(Gemba.border(scheme))
+            Divider().overlay(Gemba.border(scheme)).padding(.vertical, 2)
 
-            // Password: the field sits on the toggle's row rather than below it,
-            // so turning it on costs one field's width, not another row.
-            HStack(spacing: Gemba.Space.x4) {
-                Toggle("Require a password", isOn: $model.usePassword.animation(.snappy(duration: 0.2)))
-                    .font(.system(size: 13))
-                    .foregroundStyle(Gemba.textPrimary(scheme))
-                    .fixedSize()
-                if model.usePassword {
-                    SecureField("Password", text: $model.password)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: .infinity)
-                }
+            AnimatedToggle(label: "Require a password", isOn: $model.usePassword)
+            if model.usePassword {
+                AnimatedInput(label: "Password", text: $model.password, secure: true, systemImage: "key")
+                    .transition(.blurSlide(y: -6))
             }
 
-            Toggle("Only named recipients can download", isOn: $model.useRecipients.animation(.snappy(duration: 0.2)))
-                .font(.system(size: 13))
-                .foregroundStyle(Gemba.textPrimary(scheme))
-            Toggle("Email them the link when it's ready", isOn: $model.notifyRecipients.animation(.snappy(duration: 0.2)))
-                .font(.system(size: 13))
-                .foregroundStyle(Gemba.textPrimary(scheme))
+            AnimatedToggle(label: "Only named recipients can download", isOn: $model.useRecipients)
+            AnimatedToggle(label: "Email them the link when it's ready", isOn: $model.notifyRecipients)
 
             if model.useRecipients || model.notifyRecipients {
-                RecipientEditor(model: model)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        AnimatedInput(label: "Recipient email", text: $model.recipientDraft,
+                                      systemImage: "envelope") { model.addRecipientFromDraft() }
+                        Button("Add") { model.addRecipientFromDraft() }
+                            .buttonStyle(SmoothButtonStyle(variant: .soft))
+                    }
+                    if !model.recipients.isEmpty {
+                        AnimatedTags(tags: $model.recipients)
+                    }
+                }
+                .transition(.blurSlide(y: -6))
             }
 
             Text(helpText)
                 .font(.system(size: 11))
                 .foregroundStyle(Gemba.textSubtle(scheme))
                 .fixedSize(horizontal: false, vertical: true)
+                .id(helpText)
+                .transition(.hintSwap)
         }
+        .animation(reduceMotion ? nil : Motion.smooth, value: model.usePassword)
+        .animation(reduceMotion ? nil : Motion.smooth, value: model.useRecipients || model.notifyRecipients)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: helpText)
     }
 
-    /// One line of help rather than one per option — the panel stays short and
-    /// the text explains whatever is currently switched on.
+    /// One line of help, explaining whatever is switched on right now.
     private var helpText: String {
         if model.notifyRecipients {
-            return "The emailed link contains the key, so sending it by email is as private as the recipient's inbox."
+            return "The emailed link contains the key, so it's as private as the recipient's inbox."
         }
         if model.usePassword {
-            return "The password is hashed and salted on the server. It is not part of the link and does not decrypt the files."
+            return "The password is hashed on the server. It isn't in the link and doesn't decrypt anything."
         }
         if model.useRecipients {
             return "Recipients get a one-time code by email before they can download."
         }
-        return "Anyone with the link can download until it expires or runs out of downloads."
+        return "Anyone with the link can download until it expires or runs out."
     }
 
     private func fieldLabel(_ text: String) -> some View {
@@ -487,185 +355,156 @@ private struct SettingsPanel: View {
     }
 }
 
-private struct RecipientEditor: View {
-    @Environment(\.colorScheme) private var scheme
-    @Bindable var model: UploadModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Gemba.Space.x3) {
-            HStack {
-                TextField("name@company.com", text: $model.recipientDraft)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit { withAnimation(.snappy(duration: 0.18)) { model.addRecipientFromDraft() } }
-                Button("Add") { withAnimation(.snappy(duration: 0.18)) { model.addRecipientFromDraft() } }
-                    .buttonStyle(GembaSecondaryButtonStyle())
-            }
-            if !model.recipients.isEmpty {
-                // Bounded: ten recipients is the server's cap, three per row, so
-                // this never grows past four rows.
-                FlowRow(items: model.recipients) { email in
-                    HStack(spacing: 4) {
-                        Text(email).font(.system(size: 11)).lineLimit(1)
-                        Button {
-                            withAnimation(.snappy(duration: 0.18)) {
-                                model.recipients.removeAll { $0 == email }
-                            }
-                        } label: {
-                            Image(systemName: "xmark").font(.system(size: 8, weight: .bold))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(Gemba.surfaceSubdued(scheme)))
-                    .overlay(Capsule().stroke(Gemba.border(scheme), lineWidth: 1))
-                    .foregroundStyle(Gemba.textPrimary(scheme))
-                }
-            }
-        }
-    }
-}
-
-/// A minimal wrapping row — chips reflow instead of clipping.
-private struct FlowRow<Item: Hashable, Content: View>: View {
-    let items: [Item]
-    @ViewBuilder let content: (Item) -> Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(chunked().enumerated()), id: \.offset) { _, row in
-                HStack(spacing: 6) {
-                    ForEach(row, id: \.self) { content($0) }
-                    Spacer(minLength: 0)
-                }
-            }
-        }
-    }
-
-    private func chunked() -> [[Item]] {
-        stride(from: 0, to: items.count, by: 3).map {
-            Array(items[$0..<min($0 + 3, items.count)])
-        }
-    }
-}
-
 // MARK: - Progress
 
 private struct ProgressCard: View {
-    @Environment(\.colorScheme) private var scheme
     @Bindable var model: UploadModel
+    @Environment(\.colorScheme) private var scheme
+
+    private var isMovingBytes: Bool {
+        if case .uploading = model.progress.phase { return true }
+        return false
+    }
 
     var body: some View {
-        GembaCard {
-            VStack(alignment: .leading, spacing: Gemba.Space.x3) {
-                HStack {
-                    Text(model.progress.phase.label)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Gemba.textPrimary(scheme))
-                        .lineLimit(1)
-                    Spacer(minLength: Gemba.Space.x3)
-                    Text("\(Int((model.progress.fraction * 100).rounded()))%")
-                        .font(.system(size: 12).monospacedDigit())
-                        .foregroundStyle(Gemba.textSubdued(scheme))
-                }
-                ProgressView(value: min(max(model.progress.fraction, 0), 1))
-                    .progressViewStyle(.linear)
-                    .tint(Gemba.accent(scheme))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                MotionLoader(size: 13)
+                TextMorph(text: model.progress.phase.label, font: .system(size: 12, weight: .medium))
+                    .foregroundStyle(Gemba.textPrimary(scheme))
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                NumberFlow(value: (model.progress.fraction * 100).rounded()) { "\(Int($0))%" }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Gemba.textSubdued(scheme))
             }
+            SmoothProgressBar(value: model.progress.fraction)
         }
+        .padding(16)
+        .background(Squircle(radius: 16).fill(Gemba.surfaceCard(scheme)))
+        .overlay(Squircle(radius: 16).strokeBorder(Gemba.border(scheme), lineWidth: 1))
+        // The beam runs only while bytes are actually travelling.
+        .overlay { if isMovingBytes { BorderBeam(radius: 16) } }
     }
 }
 
 // MARK: - Result
 
-private struct ResultCard: View {
-    @Environment(\.colorScheme) private var scheme
+private struct ResultView: View {
     let result: ShareResult
     @Bindable var model: UploadModel
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        GembaCard {
-            VStack(alignment: .leading, spacing: Gemba.Space.x5) {
-                HStack(spacing: Gemba.Space.x3) {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
+                SpringScaleIn(delay: 0.1) {
                     Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20))
                         .foregroundStyle(Gemba.success(scheme))
-                    Text(result.files.count > 1
-                         ? "\(result.files.count) files ready on one link"
-                         : "Ready to share")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Gemba.textPrimary(scheme))
                 }
-
-                Text(result.absoluteString)
-                    .font(.system(size: 11, design: .monospaced))
-                    .textSelection(.enabled)
+                SoftBlurIn(text: result.files.count > 1 ? "\(result.files.count) items, one link" : "Ready to share",
+                           font: .system(size: 16, weight: .semibold))
                     .foregroundStyle(Gemba.textPrimary(scheme))
-                    .padding(Gemba.Space.x4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: Gemba.Radius.sm).fill(Gemba.surfaceSubdued(scheme)))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack(spacing: Gemba.Space.x3) {
-                    Button(model.copied ? "Copied" : "Copy link") { model.copyLink() }
-                        .buttonStyle(GembaSecondaryButtonStyle())
-                    Button("Open in browser") { NSWorkspace.shared.open(result.link.url) }
-                        .buttonStyle(GembaSecondaryButtonStyle())
-                    Spacer(minLength: 0)
-                    Button("Send more") { model.reset() }
-                        .buttonStyle(GembaSecondaryButtonStyle())
-                }
-
-                if result.notified {
-                    Label("Emailed to \(model.recipients.joined(separator: ", "))", systemImage: "envelope")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Gemba.textSubdued(scheme))
-                        .lineLimit(2)
-                }
-
-                Text(result.encrypted
-                     ? "Anyone with this exact link can open the files — the part after # is the key."
-                     : "This share was uploaded without encryption, by your choice. Anyone with the link can read it.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(result.encrypted ? Gemba.textSubtle(scheme) : Gemba.warning(scheme))
-                    .fixedSize(horizontal: false, vertical: true)
             }
+
+            ScrambleText(text: result.absoluteString)
+                .foregroundStyle(Gemba.textPrimary(scheme))
+                .textSelection(.enabled)
+                .lineLimit(3)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Squircle(radius: 10).fill(Gemba.surfaceSubdued(scheme)))
+
+            HStack(spacing: 8) {
+                ButtonCopy(text: result.absoluteString)
+                Button {
+                    NSWorkspace.shared.open(result.link.url)
+                } label: {
+                    Label("Open", systemImage: "safari")
+                }
+                .buttonStyle(SmoothButtonStyle(variant: .soft))
+                Spacer(minLength: 0)
+                Button("Send more") { model.reset() }
+                    .buttonStyle(SmoothButtonStyle(variant: .ghost))
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(result.files.prefix(4).enumerated()), id: \.element.id) { index, file in
+                    HStack(spacing: 8) {
+                        Image(systemName: file.isFolder ? "doc.zipper" : "doc")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Gemba.textSubtle(scheme))
+                            .frame(width: 16)
+                        Text(file.name)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Gemba.textPrimary(scheme))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer(minLength: 8)
+                        Text(file.size.formattedBytes)
+                            .font(.system(size: 11).monospacedDigit())
+                            .foregroundStyle(Gemba.textSubdued(scheme))
+                    }
+                    .staggeredAppear(index)
+                }
+                if result.files.count > 4 {
+                    Text("and \(result.files.count - 4) more")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Gemba.textSubtle(scheme))
+                        .staggeredAppear(4)
+                }
+            }
+
+            Text(result.encrypted
+                 ? "Anyone with this exact link can open these — the part after # is the key."
+                 : "Sent without encryption, by your choice. Anyone with the link can read it.")
+                .font(.system(size: 11))
+                .foregroundStyle(result.encrypted ? Gemba.textSubtle(scheme) : Gemba.warning(scheme))
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(20)
+        .background(Squircle(radius: 16).fill(Gemba.surfaceCard(scheme)))
+        .overlay(Squircle(radius: 16).strokeBorder(Gemba.border(scheme), lineWidth: 1))
     }
 }
 
 // MARK: - Encryption fallback
 
-private struct EncryptionFallbackSheet: View {
-    @Environment(\.colorScheme) private var scheme
+private struct EncryptionFallback: View {
     let prompt: UploadModel.EncryptionFailurePrompt
     @Bindable var model: UploadModel
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Gemba.Space.x5) {
-            Text("Couldn't encrypt \(prompt.fileName)")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Gemba.textPrimary(scheme))
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.lock.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Gemba.warning(scheme))
+                Text("Couldn't encrypt \(prompt.fileName)")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Gemba.textPrimary(scheme))
+            }
             Text(prompt.message)
                 .font(.system(size: 12))
                 .foregroundStyle(Gemba.textSubdued(scheme))
                 .fixedSize(horizontal: false, vertical: true)
-            Text("You can try again, or send this share without encryption — anyone with the link would then be able to read it, since there is no key.")
+            Text("Try again, or send the whole share without encryption — anyone with the link could then read it, because there is no key.")
                 .font(.system(size: 12))
                 .foregroundStyle(Gemba.textSubdued(scheme))
                 .fixedSize(horizontal: false, vertical: true)
-            HStack {
+            HStack(spacing: 8) {
                 Button("Cancel") { model.answerEncryptionFailure(.cancel) }
-                    .buttonStyle(GembaSecondaryButtonStyle())
-                Spacer()
+                    .buttonStyle(SmoothButtonStyle(variant: .ghost))
+                    .keyboardShortcut(.cancelAction)
+                Spacer(minLength: 0)
                 Button("Send unencrypted") { model.answerEncryptionFailure(.uploadUnencrypted) }
-                    .buttonStyle(GembaSecondaryButtonStyle())
+                    .buttonStyle(SmoothButtonStyle(variant: .outline))
                 Button("Try again") { model.answerEncryptionFailure(.retry) }
-                    .buttonStyle(GembaPrimaryButtonStyle())
-                    .frame(width: 110)
+                    .buttonStyle(SmoothButtonStyle(variant: .solid))
+                    .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(Gemba.Space.x6)
-        .frame(width: 440)
-        .background(Gemba.surfaceCard(scheme))
     }
 }
