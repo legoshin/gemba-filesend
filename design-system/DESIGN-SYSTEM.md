@@ -37,6 +37,7 @@ How Gemba writes.
 - **Hover/press:** subtle — nav items gain a `#F3F5F6` fill and bolden when active. (The source is static; keep interaction restrained — a slight darken or fill, no bounce.)
 - **Imagery:** cool, professional photography (people at laptops) and premium 3D renders (metal/blue cards, silver coins) for marketing. B2B and understated.
 - **Layout:** app is a fixed 240px white sidebar + top bar + scrolling content on `#F9FAFB`; marketing is a centered ~1200px column with generous vertical rhythm.
+- **Shape + motion:** see `design-system/MOTION.md` for the SmoothUI shape (radii/ring presets, clip-corner constants) and motion (transition/variant presets, reduced-motion behaviour) language added in Phase 9 — colour and type tokens above are unchanged by it.
 
 ## ICONOGRAPHY
 - **Icon set:** the **Untitled UI** line-icon library — **1,167 glyphs** materialized into `components/icons/icon-data.js` and rendered via the `<Icon name size />` wrapper. Consistent 24px artboard, ~1.5–2px stroke, rounded joins, single-colour (`currentColor`).
