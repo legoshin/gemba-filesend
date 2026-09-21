@@ -18,22 +18,13 @@ final class ShareViewController: NSViewController {
         let hosting = NSHostingView(
             rootView: ShareExtensionView(
                 model: model,
-                onSize: { [weak self] size in self?.fit(size) },
                 onClose: { [weak self] in self?.finish() },
                 onCancel: { [weak self] in self?.cancel() }
             )
         )
-        hosting.frame = NSRect(x: 0, y: 0, width: ShareExtensionView.width, height: 300)
+        hosting.frame = NSRect(x: 0, y: 0, width: ShareExtensionView.width, height: ShareExtensionView.height)
         view = hosting
         preferredContentSize = hosting.frame.size
-    }
-
-    /// The sheet follows the content: short while working, taller while the
-    /// settings are open — never a scroll view.
-    private func fit(_ size: CGSize) {
-        let rounded = CGSize(width: ceil(size.width), height: ceil(size.height))
-        guard rounded.height > 0, rounded != preferredContentSize else { return }
-        preferredContentSize = rounded
     }
 
     override func viewDidAppear() {
@@ -207,11 +198,17 @@ final class ShareExtensionModel {
 
 struct ShareExtensionView: View {
     static let width: CGFloat = 520
+    /// The Share sheet takes its size once, when it opens, and doesn't follow
+    /// later changes (verified: resizing it afterwards leaves the content
+    /// clipped or detached). So the sheet has one fixed size, tall enough for
+    /// the settings as they open — and if more options are expanded than
+    /// fit, the settings scroll inside their card while the header, with the
+    /// Send button, stays put.
+    static let height: CGFloat = 460
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Bindable var model: ShareExtensionModel
-    let onSize: (CGSize) -> Void
     let onClose: () -> Void
     let onCancel: () -> Void
 
@@ -232,7 +229,12 @@ struct ShareExtensionView: View {
                 }
                 ShimmerSweep(text: "Gemba Filesend", font: .system(size: 14, weight: .semibold))
                     .foregroundStyle(Gemba.textPrimary(scheme))
-                Spacer()
+                Spacer(minLength: 12)
+                // The actions live in the header, not under the form: the
+                // Share sheet's host draws its own bar over the top of this
+                // view and doesn't always grow the sheet to the full content
+                // height, so the bottom is the one place that can be cut off.
+                buttons
             }
 
             ZStack(alignment: .topLeading) {
@@ -310,15 +312,11 @@ struct ShareExtensionView: View {
                 }
             }
             .animation(reduceMotion ? nil : Motion.smooth, value: stateKey)
-
-            buttons
         }
         .padding(20)
-        .frame(width: Self.width)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(width: Self.width, height: Self.height, alignment: .top)
         .background(Gemba.surfacePage(scheme))
         .overlay { ToastStack(center: model.toasts) }
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { onSize($0) }
     }
 
     // MARK: Review — what's being sent, and how
@@ -326,10 +324,17 @@ struct ShareExtensionView: View {
     private var review: some View {
         VStack(alignment: .leading, spacing: 12) {
             itemsCard
-            ShareSettingsForm(settings: model.settings) { model.toasts.show($0, kind: .error) }
-                .padding(14)
-                .background(Squircle(radius: 14).fill(Gemba.surfaceCard(scheme)))
-                .overlay(Squircle(radius: 14).strokeBorder(Gemba.border(scheme), lineWidth: 1))
+            // The card is as tall as the form while it fits; past that it
+            // takes the remaining height and scrolls inside.
+            ViewThatFits(in: .vertical) {
+                settingsForm
+                ScrollView(.vertical) { settingsForm }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .scrollIndicators(.visible)
+            }
+            .background(Squircle(radius: 14).fill(Gemba.surfaceCard(scheme)))
+            .overlay(Squircle(radius: 14).strokeBorder(Gemba.border(scheme), lineWidth: 1))
+            .clipShape(Squircle(radius: 14))
             if let reason = model.settings.blockedReason {
                 Text(reason)
                     .font(.system(size: 11))
@@ -338,6 +343,11 @@ struct ShareExtensionView: View {
             }
         }
         .animation(reduceMotion ? nil : Motion.smooth, value: model.settings.blockedReason)
+    }
+
+    private var settingsForm: some View {
+        ShareSettingsForm(settings: model.settings) { model.toasts.show($0, kind: .error) }
+            .padding(14)
     }
 
     private var itemsCard: some View {
@@ -393,15 +403,15 @@ struct ShareExtensionView: View {
 
     private var buttons: some View {
         HStack(spacing: 8) {
-            Spacer()
             switch model.state {
             case .review:
                 Button("Cancel") { onCancel() }
                     .buttonStyle(SmoothButtonStyle(variant: .ghost))
                     .keyboardShortcut(.cancelAction)
                 Button { model.send() } label: {
-                    Text(model.sendLabel)
+                    Label("Send", systemImage: "paperplane.fill")
                 }
+                .help(model.sendLabel)
                 .buttonStyle(SmoothButtonStyle(variant: .solid))
                 .disabled(!model.canSend)
                 .keyboardShortcut(.return, modifiers: .command)

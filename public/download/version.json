@@ -1,11 +1,11 @@
 {
-  "version": "1.1.0",
-  "build": 2,
-  "url": "https://send.gemba.uk/download/GembaFilesend.zip?build=2",
-  "size": 2499390,
-  "sha256": "19249387201ba0ed34aaab3fde9b6416061640bf1c768528d36c7ff1dc4a7114",
-  "signature": "5cr+edvNO/CSg/KUss0RhZ+T0sYK8eowPzP1WXSuI4jaT+AoO+hIfcgywngEgdxN2jHiIkYo74mwTw3wT/2LAg==",
+  "version": "1.1.1",
+  "build": 3,
+  "url": "https://send.gemba.uk/download/GembaFilesend.zip?build=3",
+  "size": 2508244,
+  "sha256": "20c3877336f568239fc523c5779503b7553b8e8b1968982851e8d4382a2773d8",
+  "signature": "vNb6zolvzKym+x2wbEb1C4TWFT66+D4upYoM/L27a6E8Aj/Bv8kp/W0lE7tpFxhDzNvURqYviru8dYOaXhnvBg==",
   "minimumSystemVersion": "14.0",
-  "notes": "Share settings from Finder's Share menu; automatic updates.",
-  "published": "2026-09-21T11:46:42Z"
+  "notes": "Share settings from Finder's Share menu, with the Send button always visible; automatic updates.",
+  "published": "2026-09-21T12:43:49Z"
 }

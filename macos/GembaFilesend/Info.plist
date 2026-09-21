@@ -17,9 +17,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.1.0</string>
+    <string>1.1.1</string>
     <key>CFBundleVersion</key>
-    <string>2</string>
+    <string>3</string>
     <!-- Ed25519 public key that app updates must be signed with (Updater.swift).
          The private half is on the release machine only — scripts/update-key.swift. -->
     <key>GembaUpdatePublicKey</key>
