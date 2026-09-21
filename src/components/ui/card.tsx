@@ -1,15 +1,38 @@
+"use client"
+
 import * as React from "react"
+import { motion } from "motion/react"
 
 import { cn } from "@/lib/utils"
+import { transitions, variants } from "@/lib/motion"
+import { shape } from "@/lib/shape"
+import { useMotionPreset } from "@/lib/use-motion-preset"
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+// Motion's drag/animation event props have signatures incompatible with the
+// native DOM handlers of the same name; omit them from the native div props
+// since Card does not use drag/animation lifecycle callbacks itself.
+type NativeDivProps = Omit<
+  React.ComponentProps<"div">,
+  | "onDrag"
+  | "onDragStart"
+  | "onDragEnd"
+  | "onAnimationStart"
+  | "onAnimationEnd"
+  | "onAnimationIteration"
+>
+
+function Card({ className, ...props }: NativeDivProps) {
+  const motionProps = useMotionPreset(variants.fadeSlideUp, transitions.snappy)
+
   return (
-    <div
+    <motion.div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-lg py-6 shadow-[var(--ring-border),var(--shadow-card)]",
+        "bg-card text-card-foreground flex flex-col gap-6 py-6 shadow-[var(--ring-border),var(--shadow-card)]",
+        shape.card,
         className
       )}
+      {...motionProps}
       {...props}
     />
   )

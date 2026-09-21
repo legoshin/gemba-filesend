@@ -1,10 +1,35 @@
+"use client"
+
 import * as React from "react"
+import { motion } from "motion/react"
 
 import { cn } from "@/lib/utils"
+import { transitions, variants } from "@/lib/motion"
+import { useMotionPreset } from "@/lib/use-motion-preset"
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+// Stable module-level component identity — see chip.tsx for why
+// `motion.create()` must never be called inside a render function.
+const MotionInput = motion.create("input")
+
+// Motion's drag/animation event props have signatures incompatible with the
+// native DOM handlers of the same name (same conflict chip.tsx already
+// resolves for its span props); Input never uses drag/animation lifecycle
+// callbacks itself.
+type NativeInputProps = Omit<
+  React.ComponentProps<"input">,
+  | "onDrag"
+  | "onDragStart"
+  | "onDragEnd"
+  | "onAnimationStart"
+  | "onAnimationEnd"
+  | "onAnimationIteration"
+>
+
+function Input({ className, type, ...props }: NativeInputProps) {
+  const focus = useMotionPreset(variants.focusPop, transitions.micro)
+
   return (
-    <input
+    <MotionInput
       type={type}
       data-slot="input"
       className={cn(
@@ -13,6 +38,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         "aria-invalid:shadow-[inset_0_0_0_1px_var(--gemba-critical)]",
         className
       )}
+      {...focus}
       {...props}
     />
   )

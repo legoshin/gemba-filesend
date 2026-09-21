@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "motion/react";
 import { Icon } from "@/components/icon";
+import { transitions } from "@/lib/motion";
 
 const tabs = [
   { href: "/", label: "Home", icon: "Home01" },
@@ -26,12 +28,21 @@ export function MobileTabBar() {
             href={tab.href}
             aria-label={tab.label}
             aria-current={active ? "page" : undefined}
-            className={`flex flex-1 flex-col items-center justify-center gap-1 ${
+            className={`relative flex flex-1 flex-col items-center justify-center gap-1 ${
               active ? "text-[var(--text-primary)]" : "text-[var(--text-subdued)]"
             }`}
           >
-            <Icon name={tab.icon} size={20} />
-            <span className={`gemba-body-sm ${active ? "font-bold" : ""}`}>{tab.label}</span>
+            {active && (
+              <motion.span
+                layoutId="mobile-nav-active"
+                className="absolute inset-x-2 inset-y-1 rounded-[var(--radius-sm)] bg-[var(--surface-subdued)]"
+                transition={transitions.snappy}
+              />
+            )}
+            <span className="relative z-10 flex flex-col items-center gap-1">
+              <Icon name={tab.icon} size={20} />
+              <span className={`gemba-body-sm ${active ? "font-bold" : ""}`}>{tab.label}</span>
+            </span>
           </Link>
         );
       })}

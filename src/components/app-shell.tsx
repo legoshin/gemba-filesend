@@ -3,10 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { motion } from "motion/react";
 import { Icon } from "@/components/icon";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { useEmbed } from "@/components/embed-provider";
+import { transitions } from "@/lib/motion";
 
 const navLinks = [
   { href: "/", label: "Home", icon: "Home01" },
@@ -57,14 +59,23 @@ export function AppShell({ children }: AppShellProps) {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 ${
+                  className={`relative flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 ${
                     active
-                      ? "gemba-body-strong bg-[var(--surface-subdued)] text-[var(--text-primary)]"
+                      ? "gemba-body-strong text-[var(--text-primary)]"
                       : "gemba-body text-[var(--text-primary)] hover:bg-[var(--surface-subdued)]"
                   }`}
                 >
-                  <Icon name={link.icon} size={20} />
-                  {link.label}
+                  {active && (
+                    <motion.span
+                      layoutId="sidebar-nav-active"
+                      className="absolute inset-0 rounded-[var(--radius-sm)] bg-[var(--surface-subdued)]"
+                      transition={transitions.snappy}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Icon name={link.icon} size={20} />
+                    {link.label}
+                  </span>
                 </Link>
               );
             })}

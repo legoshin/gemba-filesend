@@ -2,21 +2,94 @@
 
 import * as React from "react"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
+import { AnimatePresence, motion } from "motion/react"
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { transitions, variants } from "@/lib/motion"
+import { useMotionPreset } from "@/lib/use-motion-preset"
+
+// Motion's drag/animation event props have signatures incompatible with the
+// native DOM handlers of the same name (see chip.tsx's NativeSpanProps) —
+// omit them from Radix's own Content props before spreading onto
+// `MotionContent`.
+type NativeMotionConflicts =
+  | "onDrag"
+  | "onDragStart"
+  | "onDragEnd"
+  | "onAnimationStart"
+  | "onAnimationEnd"
+  | "onAnimationIteration"
+
+// Hoisted once — never call motion.create() inside a render function
+// (react-hooks/static-components, Pattern 1). DropdownMenuPrimitive.Content
+// forwards its ref to the underlying DOM node, so wrapping it directly is
+// valid (no `asChild` indirection needed here, unlike Dialog/Sheet).
+const MotionContent = motion.create(DropdownMenuPrimitive.Content)
+
+// Shares the wrapper-owned resolved `open` (plus the AnimatePresence
+// exit-complete callback) from `DropdownMenu` down to `DropdownMenuContent`
+// without gating `DropdownMenuTrigger` — unlike Dialog/Sheet, DropdownMenu's
+// children always include a Trigger that must stay mounted while closed.
+const DropdownMenuMotionContext = React.createContext<{
+  isOpen: boolean
+  onContentExitComplete: () => void
+}>({ isOpen: false, onContentExitComplete: () => {} })
 
 function DropdownMenu({
+  open,
+  onOpenChange,
+  children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+  // Same forceMount+AnimatePresence resolved-open ownership as Dialog/Sheet
+  // (RESEARCH Pattern 2), overlay-less — DropdownMenu has no backdrop.
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  const isControlled = open !== undefined
+  const isOpen = isControlled ? open : internalOpen
+  const [showContent, setShowContent] = React.useState(false)
+  const prevOpenRef = React.useRef(false)
+  React.useEffect(() => {
+    if (isOpen && !prevOpenRef.current) setShowContent(true)
+    prevOpenRef.current = !!isOpen
+  }, [isOpen])
+
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      if (!isControlled) setInternalOpen(next)
+      onOpenChange?.(next)
+    },
+    [isControlled, onOpenChange]
+  )
+
+  const motionContext = React.useMemo(
+    () => ({ isOpen, onContentExitComplete: () => setShowContent(false) }),
+    [isOpen]
+  )
+
+  return (
+    <DropdownMenuPrimitive.Root
+      data-slot="dropdown-menu"
+      open={isOpen || showContent}
+      onOpenChange={handleOpenChange}
+      {...props}
+    >
+      <DropdownMenuMotionContext.Provider value={motionContext}>
+        {children}
+      </DropdownMenuMotionContext.Provider>
+    </DropdownMenuPrimitive.Root>
+  )
 }
 
 function DropdownMenuPortal({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Portal>) {
   return (
-    <DropdownMenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />
+    <DropdownMenuPrimitive.Portal
+      data-slot="dropdown-menu-portal"
+      forceMount
+      {...props}
+    />
   )
 }
 
@@ -35,19 +108,32 @@ function DropdownMenuContent({
   className,
   sideOffset = 4,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+}: Omit<
+  React.ComponentProps<typeof DropdownMenuPrimitive.Content>,
+  NativeMotionConflicts
+>) {
+  const { isOpen, onContentExitComplete } = React.useContext(
+    DropdownMenuMotionContext
+  )
+  const menuMotion = useMotionPreset(variants.menu, transitions.snappy)
   return (
-    <DropdownMenuPrimitive.Portal>
-      <DropdownMenuPrimitive.Content
-        data-slot="dropdown-menu-content"
-        sideOffset={sideOffset}
-        className={cn(
-          "bg-[var(--surface-card)] text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-[var(--radius-sm)] p-1 shadow-[var(--ring-border),var(--shadow-popover)]",
-          className
-        )}
-        {...props}
-      />
-    </DropdownMenuPrimitive.Portal>
+    <DropdownMenuPortal>
+      <AnimatePresence onExitComplete={onContentExitComplete}>
+        {isOpen ? (
+          <MotionContent
+            data-slot="dropdown-menu-content"
+            sideOffset={sideOffset}
+            forceMount
+            className={cn(
+              "bg-[var(--surface-card)] text-popover-foreground z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-[var(--radius-sm)] p-1 shadow-[var(--ring-border),var(--shadow-popover)]",
+              className
+            )}
+            {...menuMotion}
+            {...props}
+          />
+        ) : null}
+      </AnimatePresence>
+    </DropdownMenuPortal>
   )
 }
 

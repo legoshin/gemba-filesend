@@ -10,6 +10,9 @@ import {
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
+import { cn } from "@/lib/utils"
+import { shape } from "@/lib/shape"
+
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
 
@@ -32,6 +35,21 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }
+      toastOptions={{
+        // Sonner's injected styles win the cascade, so these Tailwind
+        // utilities need the `!` override marker (sonner's own styling
+        // docs). CSS-surface re-skin only — sonner renders/animates its
+        // own portal DOM and already ships its own reduced-motion media
+        // query, so no motion/react wrap and no custom reduced-motion
+        // handling here (10-RESEARCH.md Pitfall 2).
+        classNames: {
+          toast: cn(
+            `!${shape.card}`,
+            `!${shape.ring}`,
+            "!shadow-[var(--shadow-popover)]"
+          ),
+        },
+      }}
       {...props}
     />
   )
