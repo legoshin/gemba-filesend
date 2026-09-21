@@ -77,6 +77,16 @@ Every variant is a `{ full, reduced }` pair — `full` is the real motion,
 | `toast` | Fade + scale + lateral slide → opacity-only | Toast enter/exit |
 | `progress` | Fade + scale reveal → opacity-only | Progress bar container reveal (paired with `transitions.fill`; the live fill amount itself is a Phase 10/11 consumer concern, not part of this preset) |
 | `menu` | Fade + scale + vertical offset → opacity-only | Dropdown/dialog open-close |
+| `focusPop` | `whileFocus: { scale: 1.01 }` → `whileFocus: {}` | Input focus pop |
+
+### Helper functions
+
+- **`getSlideOffset(side)`** (`src/lib/motion.ts`) — a pure function, not a
+  variant pair, returning the off-screen `{ x, y }` transform for one of
+  Sheet's 4 slide directions (`"top" | "right" | "bottom" | "left"`). Feeds
+  Sheet's per-side `initial`/`exit` motion; same "structural constant" helper
+  category as `clipCorner` in `src/lib/shape.ts`. Example:
+  `getSlideOffset("right")` → `{ x: "100%", y: 0 }`.
 
 ### Resolving a preset
 

@@ -138,7 +138,32 @@ export const variants = {
       exit: { opacity: 0, transition: { duration: 0 } },
     },
   },
+  // Input focus pop (`whileFocus`) — the only whileFocus pair. Reduced motion
+  // drops the scale entirely.
+  focusPop: {
+    full: { whileFocus: { scale: 1.01 } },
+    reduced: { whileFocus: {} },
+  },
 } as const;
+
+/**
+ * Off-screen `{ x, y }` transform for a Sheet's per-side slide `initial`/
+ * `exit` motion — a structural constant helper, same category as
+ * `clipCorner` in `src/lib/shape.ts`. Not a variant pair: Sheet composes
+ * this with its own transition, not `resolveMotionPreset`.
+ */
+export function getSlideOffset(side: "top" | "right" | "bottom" | "left") {
+  switch (side) {
+    case "top":
+      return { x: 0, y: "-100%" };
+    case "bottom":
+      return { x: 0, y: "100%" };
+    case "left":
+      return { x: "-100%", y: 0 };
+    case "right":
+      return { x: "100%", y: 0 };
+  }
+}
 
 /** A `{ full, reduced }` variant pair, generic over each branch's actual shape. */
 export type MotionPreset<F extends object = object, R extends object = object> = {
