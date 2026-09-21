@@ -8,6 +8,12 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { transitions, variants, useMotionPreset } from "@/lib/motion"
 
+// Stable module-level component identity: `motion.create()` returns a new
+// wrapped component object each call, so it must not be invoked during
+// render (react-hooks/static-components) — hoisting it here keeps `Comp`
+// identity stable across re-renders on the `asChild` path.
+const MotionSlot = motion.create(Slot.Root)
+
 const chipVariants = cva(
   "gemba-chip-label inline-flex w-fit shrink-0 items-center gap-[var(--space-2)] whitespace-nowrap uppercase h-5 rounded-[var(--radius-lg)] px-2.5 py-[3px] overflow-hidden",
   {
@@ -58,7 +64,7 @@ function Chip({
   children,
   ...props
 }: ChipProps) {
-  const Comp = asChild ? motion.create(Slot.Root) : motion.span
+  const Comp = asChild ? MotionSlot : motion.span
   const motionProps = useMotionPreset(variants.fadeSlideUp, transitions.snappy)
 
   return (
