@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
-import { transitions, variants } from "@/lib/motion";
+import { scale, transitions, variants } from "@/lib/motion";
 import { useMotionPreset } from "@/lib/use-motion-preset";
 import { shape } from "@/lib/shape";
 
@@ -164,7 +164,7 @@ export function FileDropzone({
 
   const dropzoneMotion = useMotionPreset(
     {
-      full: { animate: { scale: isDragging ? 1.02 : 1 } },
+      full: { animate: { scale: isDragging ? scale.hover : 1 } },
       reduced: { animate: {} },
     },
     transitions.micro,

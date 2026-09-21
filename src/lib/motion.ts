@@ -32,6 +32,17 @@ export const transitions = {
 } as const;
 
 /**
+ * Named scale factors reused across `variants` and one-off, state-driven
+ * component motion that can't be expressed as a `{full, reduced}` variant
+ * pair (e.g. file-dropzone's drag-lift, which conditions on `isDragging`
+ * rather than mount/unmount) — same category as `shape.ts`'s structural
+ * constants, keeps magic numbers out of individual components.
+ */
+export const scale = {
+  hover: 1.02,
+} as const;
+
+/**
  * Named variant pairs: `full` motion vs. `reduced` (opacity-only,
  * zero-duration) fallback. Resolved once per consumer via
  * `resolveMotionPreset`/`useMotionPreset` — never re-implemented inline.
@@ -70,7 +81,7 @@ export const variants = {
   },
   // Hover feedback (`whileHover`). Reduced motion drops the scale entirely.
   hover: {
-    full: { whileHover: { scale: 1.02 } },
+    full: { whileHover: { scale: scale.hover } },
     reduced: { whileHover: {} },
   },
   // List item entrance for a staggered container. The container itself sets
