@@ -1,7 +1,7 @@
 ---
 phase: 12
 name: verification-parity
-status: human_needed
+status: passed
 automated_status: passed
 requirements: [INV-01, INV-02, INV-03]
 date: 2026-09-21
@@ -56,4 +56,4 @@ Fixed this phase (commits ec72146a…16ac17bb):
 
 ## Verdict
 
-Code-complete and automated-verified across INV-01/02/03. **Blocking on human visual + on-device sign-off** for final milestone closure.
+Code-complete and automated-verified across INV-01/02/03. Human visual + on-device sign-off RECEIVED 2026-09-21 (user: "tested UI, all ok"). Milestone verified.

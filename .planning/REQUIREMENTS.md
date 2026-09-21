@@ -100,9 +100,9 @@ Re-shape the entire **web** UI (root `src/` Next.js app) onto the **SmoothUI** c
 | SHELL-01 | Phase 10 | Complete |
 | SHELL-02 | Phase 10 | Complete |
 | DOC-01 | Phase 9 | Complete |
-| INV-01 | Phase 12 | Pending |
-| INV-02 | Phase 12 | Pending |
-| INV-03 | Phase 12 | Pending |
+| INV-01 | Phase 12 | Complete |
+| INV-02 | Phase 12 | Complete |
+| INV-03 | Phase 12 | Complete |
 
 **Coverage:**
 
