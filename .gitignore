@@ -74,3 +74,5 @@ macos/**/*.xcuserstate
 .build-dist/
 macos/.verify/
 macos/.build-logs/
+macos/.build-release/
+macos/dist/

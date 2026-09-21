@@ -1,12 +1,13 @@
 # Gemba Filesend for macOS
 
 A native send-first client for [send.gemba.uk](https://send.gemba.uk). Pick or
-drop files, they are encrypted on this Mac, uploaded, and collapsed into one
-share link whose key lives only in the URL fragment.
+drop files **or folders**, they are encrypted on this Mac, uploaded, and
+collapsed into one share link whose key lives only in the URL fragment. Also in
+Finder's Share menu, for files and folders alike.
 
 Links are interchangeable with the web app in both directions: a link made here
 opens in a browser, and a link made in a browser is the same shape this app
-produces. That is verified, not assumed — see **Verifying interop** below.
+produces. That is verified, not assumed — see **Verifying interop**.
 
 ## Layout
 
@@ -14,23 +15,28 @@ produces. That is verified, not assumed — see **Verifying interop** below.
 macos/
 ├─ GembaKit/                  Swift package — the whole non-UI core
 │  ├─ Sources/GembaCrypto     AES-128-GCM packed format, base64url, share links
-│  ├─ Sources/GembaUpload     storage mode, blob client, part upload, finalize, notify
+│  ├─ Sources/GembaUpload     storage mode, blob client, folder zipping, finalize, notify
 │  ├─ Sources/gemba-send      CLI front end to the same core (used for e2e tests)
-│  └─ Tests/                  35 tests, including the web-generated crypto vectors
+│  └─ Tests/                  41 tests, including the web-generated crypto vectors
 ├─ GembaFilesend/             SwiftUI app target (+ AppIcon.icns)
+│  └─ SmoothUI/               the component kit — see "Design"
 ├─ ShareExtension/            Finder / Share-menu extension
 ├─ Configs/Signing.xcconfig   the one place signing is configured
+├─ installer/                 install.sh (command-line installer) + DMG background
 ├─ GembaFilesend.xcodeproj    generated — see scripts/generate-project.rb
 └─ scripts/
+   ├─ build-app.sh            test, build, install to /Applications, register
+   ├─ make-release.sh         universal build → DMG, zip, checksums, install.sh
+   ├─ package-dmg.sh          the Developer ID + notarization route (unused)
    ├─ generate-project.rb     regenerates the Xcode project from these sources
    ├─ gen-vectors.mjs         regenerates crypto vectors from the web WebCrypto path
    ├─ verify-interop.mjs      downloads + decrypts a Mac-made link with the web's crypto
-   ├─ make-icon.sh            builds AppIcon.icns from the brand mark
-   └─ package-dmg.sh          sign → notarize → staple → DMG
+   └─ make-icon.sh            builds AppIcon.icns from the brand mark
 ```
 
-`GembaCrypto` and `GembaUpload` are linked into both the app and the extension,
-so there is exactly one implementation of the wire format.
+`GembaCrypto`, `GembaUpload` and `SmoothUI` are compiled into both the app and
+the extension, so there is exactly one implementation of the wire format and
+one of the interface.
 
 ## Build and run
 
@@ -39,39 +45,38 @@ cd macos
 ./scripts/build-app.sh                # test, build Release, install, register
 ./scripts/build-app.sh --debug        # Debug build (adds the --demo hook)
 ./scripts/build-app.sh --no-install   # build only, leave /Applications alone
-./scripts/build-app.sh --skip-tests   # skip the GembaKit tests (not advised)
 ```
 
-That is the whole loop: it runs the tests, regenerates the Xcode project if
-sources changed, builds the icon if missing, builds, installs to
-`/Applications`, and does the three-step Share Extension registration that
-macOS needs (LaunchServices, enable, restart Finder) — miss any of those and
-the Share menu entry silently never appears. It finishes by verifying the
-signature and, for Release, that no debug entitlement slipped in.
+It runs the tests, regenerates the Xcode project if source files were added or
+removed, builds, installs to `/Applications`, and does the three-step Share
+Extension registration macOS needs (LaunchServices, enable, restart Finder) —
+miss any of those and the Share menu entry silently never appears. It also
+unregisters the build-directory copy afterwards: a second registered copy with
+the same bundle id can shadow the installed extension.
 
-The pieces on their own, if you want them:
+Requires Xcode 27 / Swift 6 and a macOS 14+ deployment target. The `xcodeproj`
+gem is only needed to regenerate the project (`gem install --user-install
+xcodeproj`); `project.pbxproj` is committed and generated reproducibly, so a
+diff in it always means something changed.
 
-```sh
-cd macos/GembaKit && swift test                  # the core, including interop vectors
-cd macos && ruby scripts/generate-project.rb     # after adding or removing a source file
-xcodebuild -project GembaFilesend.xcodeproj -scheme GembaFilesend -configuration Debug build
-```
+## Folders
 
-Requires Xcode 27 / Swift 6 and a macOS 14+ deployment target. The project is
-ad-hoc signed by default, so it builds and runs on any Mac with no certificate.
+A folder travels as one `.zip`. Just before encrypting, the uploader compresses
+it with `NSFileCoordinator`'s `.forUploading` read — the mechanism behind
+Finder's own Compress, so no subprocess and nothing third-party, which is what
+lets it run inside the sandboxed Share Extension. The zip keeps the folder as its
+top level, and opens with Finder, Windows and `unzip`.
 
-The `xcodeproj` gem is **not** needed to build a checkout — `project.pbxproj` is
-committed. It is only needed to regenerate the project, which the script does
-when the source files on disk no longer match the ones the project references
-(that is, when a file has been added or removed). If the gem is missing at that
-point the script warns and builds with the committed project rather than
-stopping. Install it with `gem install --user-install xcodeproj` when you need
-it.
+The temporary zip is only ever created inside the uploader's own working
+directory, and that directory is removed on every exit path. It is also deleted
+as soon as its encrypted part has uploaded, so a large share doesn't hold every
+zip on disk at once. Verified both ways: after a successful share and after one
+forced to fail mid-upload, no working directory remains — including inside the
+extension's sandbox container.
 
-`project.pbxproj` is generated with numbered object ids rather than the random
-ones xcodeproj normally assigns, so regenerating is reproducible — run the
-generator twice and the bytes match. A diff in that file therefore means
-something actually changed, instead of appearing after every build.
+Two folders with the same name each get their own slot, so they can't overwrite
+each other. The recipient sees `Photos.zip`; the sender sees `Photos · 12 files
+· sent as Photos.zip`. Size limits apply to the zip that is actually sent.
 
 ## The crypto contract
 
@@ -111,15 +116,16 @@ Mirrors the web app exactly, because the server depends on the ordering:
 
 1. `GET /api/storage-mode` — `blob` in production, `fs` for a local dev server.
 2. One share id and one key for the whole selection.
-3. Per file: encrypt to a temp part, then
+3. Each folder is zipped into the uploader's temporary directory (see *Folders*).
+4. Per file: encrypt to a temp part, then
    - **blob**: `POST /api/files` with a `blob.generate-client-token` event to
      mint a token scoped to `gemba/blob/{id}/`, then `PUT` the bytes straight to
      Vercel Blob. The file never passes through the app's server.
    - **fs**: `POST /api/files` with `x-file-id` / `x-file-index` headers.
-4. `POST /api/files/finalize` once — the single meta write and the single
+5. `POST /api/files/finalize` once — the single meta write and the single
    download-counter seed for the whole share. Claim-once on the server.
-5. Build the link, with the key after the `#`.
-6. Optionally `POST /api/notify`.
+6. Build the link, with the key after the `#`.
+7. Optionally `POST /api/notify`.
 
 There is no Swift equivalent of `@vercel/blob/client`, so `BlobClient` speaks
 that protocol directly. It pins two constants from that package — the API URL
@@ -136,55 +142,86 @@ cd ../..
 node macos/scripts/verify-interop.mjs "<that link>" ~/some-file.pdf
 ```
 
+Pass a folder instead of a file and the verifier unzips what arrived and
+compares every file in the tree.
+
 The verifier downloads through the real API and decrypts with the web app's own
 crypto code, then compares against the original bytes. It also checks the packed
 layout is `IV + ciphertext + tag`.
 
-## Window layout: nothing scrolls
+## Design: SmoothUI, natively
 
-The window never scrolls. Everything that can grow is collapsible or bounded,
-and the window sizes itself to its content
-(`.windowResizability(.contentSize)`), so opening a section makes the window
-taller instead of growing a scrollbar.
+The interface is built from [SmoothUI](https://smoothui.dev) components (MIT,
+© 2024 Eduardo Calvo). SmoothUI is React + Motion, so nothing is ported code:
+each component is rebuilt in SwiftUI to the motion values in SmoothUI's own
+source — `spring(duration: 0.25, bounce: 0.1)` as the house spring, which
+SwiftUI expresses one-to-one. Colours stay Gemba's (`GembaTheme.swift`): SmoothUI
+supplies behaviour, Gemba the palette. Every animated component honours Reduce
+Motion, as SmoothUI does with `prefers-reduced-motion`.
 
-- **One section open at a time.** Opening Files closes Share settings and vice
-  versa. Collapsed sections keep a one-line summary — `6 files · 32.2 MB`,
-  `7 days · 3 downloads · password · 4 recipients` — so collapsing hides
-  nothing, it only compresses.
-- **The drop zone shrinks** to a single row once files are added; a big target
-  only earns its space when there is nothing to send.
-- **Two bounded exceptions**, both inside an obvious list rather than on the
-  window: the file list shows five rows and scrolls internally beyond that (a
-  share holds up to 25), and the recipient chips wrap three per row up to the
-  server's cap of ten.
+| Where | SmoothUI component |
+|---|---|
+| Drop zone (scale 1.02, icon float, hint swap) | Animated File Upload |
+| File rows in / out (x −16 → 0, out to x 24) | Animated File Upload, Animated List |
+| Folder rows | Folder Reveal |
+| Files / Share settings cards, one open at a time | Accordion |
+| Item count on the Files card | Notification Badge |
+| Total size, progress percentage | Number Flow |
+| Expiry (amount + hours/days/months) | Duration Picker, Animated Tabs, Animated Number Input |
+| Download limit (roll, shake at bounds, drag to scrub) | Animated Number Input |
+| Password, recipient email | Animated Input (floating label) |
+| Option switches | Animated Toggle |
+| Recipient chips | Animated Tags |
+| Buttons | Smooth Button |
+| Send button label, progress label | Text Morph |
+| Upload progress | Animated Progress Bar, Border Beam, Motion Loader |
+| Compose ⇄ result | Swap Panel |
+| Result: tick, title, link | Spring Scale In, Soft Blur In, Scramble Hover (as a reveal) |
+| Copy link | Button Copy |
+| Header entrance | Shimmer Sweep |
+| Errors, confirmations | Basic Toast |
+| Encryption-failed question | Basic Modal / Dialog |
+| Icon help | Animated Tooltip |
+| Appearance | Theme Toggle |
+| Extension: loading | Skeleton |
+| Every surface | Squircle (continuous corners) |
 
-Measured window heights: 475pt empty, 514pt with files, 727pt at maximum —
-every option on, six files, four recipients. That is the tallest the window can
-get.
+Not used, because nothing in a file sender needs them: the AI and orb
+components, the WebGL shader transitions and surfaces, media and gallery
+components, the scroll-driven ones (this window never scrolls), pointer effects,
+most of the 37 text effects, and single-purpose cards (tweets, jobs, wallets,
+pricing and similar). OTP input doesn't apply either — recipient codes are
+entered on the web download page.
+
+### Window layout: nothing scrolls
+
+The window sizes to its content and never scrolls. At most one accordion is open;
+toasts and the modal are overlays, so neither changes the window's height; the
+two lists that can grow are bounded (five file rows, then that list scrolls on
+its own; recipient chips wrap). Measured: 415pt empty, 495pt with files, 721pt
+with every setting on — the tallest it gets. Toasts appear top-right, so they
+never sit on the send button.
 
 To check the layout in every state without clicking through it, a DEBUG-only
-launch argument seeds the UI (it does not exist in a Release build):
+launch argument seeds the UI (it does not exist in Release builds):
 
 ```sh
-".build-xcode/Build/Products/Debug/Gemba Filesend.app/Contents/MacOS/Gemba Filesend" --demo full
-# states: files, settings, full, result
+open -n ".build-xcode/Build/Products/Debug/Gemba Filesend.app" --args --demo full --theme light
+# --demo: files, settings, full, uploading, result, modal   --theme: light, dark, system
 ```
 
 ## Share Extension
 
-The extension does the whole job itself — encrypt, upload, finalize, copy the
-link — rather than handing files to the main app through an App Group. That
-keeps it to one step for the user and avoids a group container, which needs a
-real provisioning profile to work. It uses the app's first-run defaults
-(24 hours, one download, encrypted); passwords and recipients stay in the app.
+Accepts up to 25 files and folders from Finder's Share menu, and does the whole
+job itself — zip folders, encrypt, upload, finalize, copy the link — rather than
+handing files to the main app through an App Group, which would need a real
+provisioning profile. It holds security-scoped access to what was shared for the
+whole upload, so a folder's contents stay readable while it is zipped. It uses
+the app's first-run defaults (1 day, one download, encrypted); passwords and
+recipients stay in the app.
 
-macOS only offers an extension in the Share menu once the containing app has
-been registered, which means moving `Gemba Filesend.app` into `/Applications`
-and launching it once.
-
-**If it still doesn't appear in the Share menu**, the registry and Finder's menu
-have gone out of sync — `pluginkit` will happily report the extension as
-registered and enabled while Finder serves a cached list. Three steps fix it:
+If the entry doesn't appear, the registry and Finder's menu are out of sync —
+`build-app.sh` and `install.sh` both handle it, and by hand it is:
 
 ```sh
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister \
@@ -193,97 +230,68 @@ pluginkit -e use -i uk.gemba.filesend.mac.ShareExtension
 killall Finder
 ```
 
-To check what the system is actually offering — this is the same list Finder's
-menu is built from, so it answers the question directly:
-
-```sh
-cat > /tmp/services.swift <<'EOF'
-import AppKit
-let url = URL(fileURLWithPath: "/etc/hosts")
-for s in NSSharingService.sharingServices(forItems: [url]) { print(s.title) }
-EOF
-swift /tmp/services.swift
-```
-
-## Installing it locally (the current setup)
-
-This app is signed **locally** — ad-hoc, no Apple team identity — by choice. That
-is a real signature with the hardened runtime on and the sandbox enforced; it
-simply isn't tied to a developer account, and needs nothing from Apple.
+## Distribution
 
 ```sh
 cd macos
-xcodebuild -project GembaFilesend.xcodeproj -scheme GembaFilesend \
-  -configuration Release -derivedDataPath .build-xcode build
-cp -R ".build-xcode/Build/Products/Release/Gemba Filesend.app" /Applications/
-open "/Applications/Gemba Filesend.app"          # registers the Share Extension
-pluginkit -e use -i uk.gemba.filesend.mac.ShareExtension   # tick it in the Share menu
+./scripts/make-release.sh --url https://downloads.example.com/filesend
 ```
 
-The last line is the command-line equivalent of System Settings ▸ General ▸
-Login Items & Extensions ▸ Sharing. `pluginkit -e ignore -i …` undoes it.
-Check with `pluginkit -m -p com.apple.share-services | grep gemba` — a leading
-`+` means enabled.
-
-A locally built app carries no quarantine attribute, so Gatekeeper never
-challenges it on this Mac. **A copy given to anyone else will be blocked** —
-it arrives quarantined, and an ad-hoc signature won't satisfy Gatekeeper. If the
-app ever needs to leave this machine, that's what the next section is for.
-
-## Distribution (not used — ready if needed)
+Produces `macos/dist/`: a styled drag-to-Applications **DMG**, a **zip**, both
+under versioned and stable names, a `.sha256` beside each, and **`install.sh`**
+with your URL and the zip's SHA-256 written into it. Upload the whole folder
+together; people then install with
 
 ```sh
-cd macos
-./scripts/package-dmg.sh                 # test, sign, notarize, staple, verify
-./scripts/package-dmg.sh --no-notarize   # stop after signing
+curl -fsSL https://downloads.example.com/filesend/install.sh | bash
 ```
 
-Nothing in the repo needs editing to sign. The script finds the
-`Developer ID Application` certificate in the keychain and reads the Team ID out
-of the certificate's common name, so a new machine works as soon as the
-certificate is imported. Without a certificate it stops immediately and tells
-you how to install one.
+The build is **universal** (Apple silicon and Intel) and ad-hoc signed.
 
-Notarization credentials, either form, checked in this order:
+`install.sh` — the download location is one line at the top (`DOWNLOAD_URL`),
+or `--url`, or `GEMBA_DOWNLOAD_URL`; it accepts a `.zip` or a `.dmg`. It refuses
+plain http, refuses any file whose SHA-256 doesn't match the pinned value (or,
+unpinned, the `.sha256` beside it), checks the bundle id, the signature and that
+the build runs on this Mac's architecture, then installs, registers the Share
+Extension, and restarts Finder. `--user` installs to `~/Applications`,
+`--uninstall` removes everything, `--purge` also removes saved data. Tested end
+to end over HTTPS, including the tampered-file, unset-URL, plain-http and
+checksum-sidecar refusals, the `.dmg` path, and uninstall.
 
-```sh
-# 1. App Store Connect API key — preferred, no password, works in CI
-export GEMBA_NOTARY_KEY=~/private_keys/AuthKey_XXXXXXXXXX.p8
-export GEMBA_NOTARY_KEY_ID=XXXXXXXXXX
-export GEMBA_NOTARY_ISSUER=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+### Gatekeeper — which route to give people
 
-# 2. or a stored notarytool profile
-xcrun notarytool store-credentials gemba-notary \
-  --apple-id you@example.com --team-id ABCDE12345 --password <app-specific-password>
-export GEMBA_NOTARY_PROFILE=gemba-notary
-```
+This build is not notarized. Verified on this Mac: Gatekeeper's policy rejects
+it (`spctl --assess` says *rejected*), and Gatekeeper enforces that at launch
+only for files carrying the quarantine flag.
 
-With neither set you still get a signed DMG — fine on your own machines,
-blocked by Gatekeeper on anyone else's.
+- **Command-line installer** — `curl` does not set the quarantine flag, so the
+  app opens with no prompt. This is the route to give other people.
+- **DMG** — downloaded in a browser, it *is* quarantined, so the first launch is
+  blocked until the person opens System Settings ▸ Privacy & Security ▸ **Open
+  Anyway**. The DMG window says so, at the bottom.
 
-Two things the script checks before spending a round trip to Apple, because both
-are silent rejections otherwise: the hardened runtime must be on, and the build
-must not carry `com.apple.security.get-task-allow`. Xcode injects that
-entitlement into signed builds by default, so Release sets
-`CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO` while Debug keeps it — without it the
-debugger cannot attach.
+To remove that prompt for DMG users, the app has to be notarized: install a
+Developer ID Application certificate and use `scripts/package-dmg.sh`, which is
+ready and needs nothing else. Mac App Store is not set up.
 
-Mac App Store is a different route (App Store provisioning profile, review) and
-is not set up here.
+## Installing it locally
+
+`./scripts/build-app.sh` from a checkout, or the one-line installer. A locally
+built app has no quarantine flag, so it opens without any prompt.
 
 ## What is not done yet
 
-- **No Developer ID build has ever been produced.** No certificate is installed
-  — deliberately — so everything from `xcodebuild archive` onward in
-  `package-dmg.sh` is written and reviewed but unexecuted.
+- **No notarized build has been produced.** No Developer ID certificate is
+  installed, deliberately; `package-dmg.sh` is written and reviewed but unexecuted
+  past the certificate check.
+- **The Share Extension's redesigned panel hasn't been seen rendered.** It is
+  built from the same verified components and has done real folder shares
+  end to end, but invoked from a script its panel never becomes a capturable
+  window. Worth one look from Finder.
 - **Receive / download in the app.** `FileEncryptor.decrypt` and
-  `ShareLink(parsing:)` are already here and tested, so the missing part is the
-  UI and the verification-code flow.
-- **Recipient verification codes.** The app can require named recipients, but
-  entering the emailed code happens on the web download page.
-- **The icon's largest slot is upscaled.** `gemba-mark-512.png` is 512px and
-  macOS wants 1024; drop a 1024px (or vector) export of the mark in
-  `design-system/assets/` and rerun `scripts/make-icon.sh` for a sharper icon.
+  `ShareLink(parsing:)` exist and are tested; the missing part is the UI and the
+  verification-code flow.
+- **The icon's largest slot is upscaled** from the 512px brand mark.
 
 ## A note on the notify path
 

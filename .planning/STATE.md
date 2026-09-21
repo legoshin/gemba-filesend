@@ -6,14 +6,14 @@ current_phase: 08
 current_phase_name: macos-native-app
 status: complete
 stopped_at: Phase 08 complete — app installed locally; distribution deliberately out of scope
-last_updated: "2026-09-17T19:55:00.000Z"
-last_activity: 2026-09-17
-last_activity_desc: Phase 8 (macOS native app) complete — 35 tests green, cross-platform interop verified against production, app installed to /Applications with the Share Extension enabled. Signed locally (ad-hoc) by decision; Developer ID + notarization scripts are in the repo unused.
+last_updated: "2026-09-21T10:00:00.000Z"
+last_activity: 2026-09-21
+last_activity_desc: Phase 8 extended (08-05) — folder sharing in app + Share menu, SmoothUI-based redesign, command-line installer and DMG via make-release.sh. 41 tests green, verified end to end against production.
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 30
-  completed_plans: 30
+  total_plans: 31
+  completed_plans: 31
 ---
 
 # Project State
