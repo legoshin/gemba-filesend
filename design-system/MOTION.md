@@ -80,10 +80,43 @@ and `{ duration: 0 }` (reduced motion, via `useReducedMotion`).
 `PageEntranceItem` is the stagger ITEM — it reuses `variants.stagger`
 (full/reduced) and deliberately omits its own `initial`/`animate` props so it
 inherits the container's labels, which is what lets Motion propagate the
-stagger timing to each child. Renders once on mount; reduced motion collapses
-the whole group to an opacity-only fade. Home (`src/app/page.tsx`) wraps its
-hero and feature sections in this pair; Wave 2 reuses the same components on
-the upload/download pages.
+stagger timing to each child. Reduced motion collapses the whole group to an
+opacity-only fade. Home (`src/app/page.tsx`) wraps its hero and feature
+sections in this pair; Wave 2 reuses the same components on the
+upload/download pages.
+
+**`PageEntranceItem` plays its entrance transition on its own mount, not the
+page's.** If children are conditionally swapped (e.g. a multi-branch state
+machine), each newly-mounted branch independently replays the entrance —
+Motion has no memory of a previous sibling having already animated in. Keep
+motion-wrapped content structurally stable across state changes if a single
+once-per-page-load animation is intended:
+
+- **Download page** (`src/app/download/page.tsx`): the 8 `state === "..."`
+  branches are NOT individually wrapped in `PageEntranceItem`. Instead, a
+  single `PageEntranceItem` wraps the whole state-card region; only its
+  *children* swap as `state` changes, so the wrapper itself mounts once
+  (with the page) and the entrance plays exactly once regardless of how many
+  times the user's download state transitions (including the repeating
+  `downloading ⇄ preview` loop in a multi-file share).
+- **Upload page** (`src/app/upload/page.tsx`): the Select Files/Options
+  cards and the Upload button are each individually `PageEntranceItem`-
+  wrapped to get a deliberate staggered entrance on true initial load; the
+  Upload-Complete card (behind the `uploadState === "done" && result`
+  ternary) is a separate, later mount, so it plays its own entrance a second
+  time when it appears — accepted as-is rather than consolidated, since
+  consolidating would collapse the intentional per-card stagger into one
+  block. The `isBusy` progress card is deliberately left *unwrapped* (no
+  `PageEntranceItem`) because it isn't present at initial mount either; an
+  unwrapped sibling of a `variants`-driven `motion.div` just renders with no
+  entrance/stagger of its own, which avoids yet another mid-flow replay at
+  the cost of that one card having no entrance treatment at all.
+
+Before reusing `PageEntrance`/`PageEntranceItem` on a new page, decide
+up front whether the wrapped region is structurally stable (safe to wrap
+directly) or conditionally branching (wrap the STABLE outer region in one
+`PageEntranceItem` and let only its children swap, per the download page
+above) — don't assume "once on mount" is automatic.
 
 ### Scroll progress
 
