@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import { decryptPacked, importKeyBase64 } from "@/lib/crypto";
 import { transitions, variants } from "@/lib/motion";
 import { useMotionPreset } from "@/lib/use-motion-preset";
+import { PageEntrance, PageEntranceItem } from "@/components/page-entrance";
+import { ScrollProgress } from "@/components/scroll-progress";
 
 type DownloadState =
   | "input"
@@ -602,7 +604,8 @@ export default function DownloadPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
+    <PageEntrance className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
+      <ScrollProgress />
       <div className="mb-8 text-center">
         <h1 className="gemba-h2">Download File</h1>
         <p className="mt-2 text-muted-foreground">
@@ -611,52 +614,57 @@ export default function DownloadPage() {
       </div>
 
       {state === "input" && isFetchingInfo && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="gemba-h4">Fetching File Info</CardTitle>
-            <CardDescription>Loading file details…</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-            </div>
-          </CardContent>
-        </Card>
+        <PageEntranceItem>
+          <Card>
+            <CardHeader>
+              <CardTitle className="gemba-h4">Fetching File Info</CardTitle>
+              <CardDescription>Loading file details…</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+        </PageEntranceItem>
       )}
 
       {state === "input" && !isFetchingInfo && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="gemba-h4">Enter Share Link</CardTitle>
-            <CardDescription>
-              Paste the link you received to access the shared file.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="link">Share Link</Label>
-              <Input
-                id="link"
-                placeholder="https://example.com/download?id=..."
-                value={link}
-                onChange={(e) => setLink(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleFetchInfo()}
-              />
-            </div>
-            <Button
-              className="w-full gap-2"
-              disabled={!link.trim()}
-              onClick={handleFetchInfo}
-            >
-              <Icon name="Download01" size={16} />
-              Fetch file info
-            </Button>
-          </CardContent>
-        </Card>
+        <PageEntranceItem>
+          <Card>
+            <CardHeader>
+              <CardTitle className="gemba-h4">Enter Share Link</CardTitle>
+              <CardDescription>
+                Paste the link you received to access the shared file.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="link">Share Link</Label>
+                <Input
+                  id="link"
+                  placeholder="https://example.com/download?id=..."
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleFetchInfo()}
+                />
+              </div>
+              <Button
+                className="w-full gap-2"
+                disabled={!link.trim()}
+                onClick={handleFetchInfo}
+              >
+                <Icon name="Download01" size={16} />
+                Fetch file info
+              </Button>
+            </CardContent>
+          </Card>
+        </PageEntranceItem>
       )}
 
       {state === "preview" && fileInfo && (
+        <PageEntranceItem>
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -869,9 +877,11 @@ export default function DownloadPage() {
             </Button>
           </div>
         </div>
+        </PageEntranceItem>
       )}
 
       {state === "downloading" && (
+        <PageEntranceItem>
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-4 text-center">
@@ -893,9 +903,11 @@ export default function DownloadPage() {
             </div>
           </CardContent>
         </Card>
+        </PageEntranceItem>
       )}
 
       {state === "done" && (
+        <PageEntranceItem>
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-6 text-center">
@@ -914,9 +926,11 @@ export default function DownloadPage() {
             </div>
           </CardContent>
         </Card>
+        </PageEntranceItem>
       )}
 
       {state === "invalid-link" && (
+        <PageEntranceItem>
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-4 text-center">
@@ -940,9 +954,11 @@ export default function DownloadPage() {
             </div>
           </CardContent>
         </Card>
+        </PageEntranceItem>
       )}
 
       {state === "file-not-found" && (
+        <PageEntranceItem>
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-4 text-center">
@@ -966,9 +982,11 @@ export default function DownloadPage() {
             </div>
           </CardContent>
         </Card>
+        </PageEntranceItem>
       )}
 
       {state === "expired" && (
+        <PageEntranceItem>
         <Card>
           <CardContent className="py-12">
             <div className="mx-auto max-w-sm space-y-4 text-center">
@@ -992,7 +1010,8 @@ export default function DownloadPage() {
             </div>
           </CardContent>
         </Card>
+        </PageEntranceItem>
       )}
-    </div>
+    </PageEntrance>
   );
 }
