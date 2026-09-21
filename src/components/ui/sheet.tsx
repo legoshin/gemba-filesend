@@ -21,6 +21,16 @@ type NativeMotionConflicts =
   | "onAnimationEnd"
   | "onAnimationIteration"
 
+// Shares the wrapper-owned resolved `open` (plus the AnimatePresence
+// exit-complete callback) from `Sheet` down to `SheetOverlay`/
+// `SheetContent` without gating `SheetTrigger` — unlike the previous
+// implementation, which gated all of `children` and unmounted the trigger
+// whenever the sheet was closed. Mirrors `DropdownMenuMotionContext`.
+const SheetMotionContext = React.createContext<{
+  isOpen: boolean
+  onContentExitComplete: () => void
+}>({ isOpen: false, onContentExitComplete: () => {} })
+
 function Sheet({
   open,
   onOpenChange,
@@ -47,6 +57,11 @@ function Sheet({
     [isControlled, onOpenChange]
   )
 
+  const motionContext = React.useMemo(
+    () => ({ isOpen, onContentExitComplete: () => setShowContent(false) }),
+    [isOpen]
+  )
+
   return (
     <SheetPrimitive.Root
       data-slot="sheet"
@@ -54,9 +69,9 @@ function Sheet({
       onOpenChange={handleOpenChange}
       {...props}
     >
-      <AnimatePresence onExitComplete={() => setShowContent(false)}>
-        {isOpen ? children : null}
-      </AnimatePresence>
+      <SheetMotionContext.Provider value={motionContext}>
+        {children}
+      </SheetMotionContext.Provider>
     </SheetPrimitive.Root>
   )
 }
@@ -96,11 +111,15 @@ function SheetOverlay({
     transitions.backdrop
   )
   return (
-    <SheetPrimitive.Overlay data-slot="sheet-overlay" asChild forceMount>
+    <SheetPrimitive.Overlay
+      data-slot="sheet-overlay"
+      asChild
+      forceMount
+      {...props}
+    >
       <motion.div
         className={cn("fixed inset-0 z-50 bg-black/50", className)}
         {...overlayMotion}
-        {...props}
       />
     </SheetPrimitive.Overlay>
   )
@@ -119,6 +138,14 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
 }) {
+  // Only the panel (+ its overlay) gate on `isOpen` — `SheetTrigger` lives
+  // outside this component, as a direct sibling in `Sheet`'s `children`, so
+  // it stays mounted while closed. Both are exiting members of the same
+  // `AnimatePresence` boundary so `onContentExitComplete` fires once both
+  // finish, matching the pre-fix single-boundary timing.
+  const { isOpen, onContentExitComplete } = React.useContext(
+    SheetMotionContext
+  )
   const offset = getSlideOffset(side)
   const panelMotion = useMotionPreset(
     {
@@ -137,29 +164,40 @@ function SheetContent({
   )
   return (
     <SheetPortal>
-      <SheetOverlay />
-      <SheetPrimitive.Content data-slot="sheet-content" asChild forceMount>
-        <motion.div
-          className={cn(
-            "bg-background fixed z-50 flex flex-col gap-4 shadow-lg",
-            side === "right" && "inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm",
-            side === "left" && "inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm",
-            side === "top" && "inset-x-0 top-0 h-auto border-b",
-            side === "bottom" && "inset-x-0 bottom-0 h-auto border-t",
-            className
-          )}
-          {...panelMotion}
-          {...props}
-        >
-          {children}
-          {showCloseButton && (
-            <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
-              <XIcon className="size-4" />
-              <span className="sr-only">Close</span>
-            </SheetPrimitive.Close>
-          )}
-        </motion.div>
-      </SheetPrimitive.Content>
+      <AnimatePresence onExitComplete={onContentExitComplete}>
+        {isOpen
+          ? [
+              <SheetOverlay key="overlay" />,
+              <SheetPrimitive.Content
+                key="content"
+                data-slot="sheet-content"
+                asChild
+                forceMount
+                {...props}
+              >
+                <motion.div
+                  className={cn(
+                    "bg-background fixed z-50 flex flex-col gap-4 shadow-lg",
+                    side === "right" && "inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm",
+                    side === "left" && "inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm",
+                    side === "top" && "inset-x-0 top-0 h-auto border-b",
+                    side === "bottom" && "inset-x-0 bottom-0 h-auto border-t",
+                    className
+                  )}
+                  {...panelMotion}
+                >
+                  {children}
+                  {showCloseButton && (
+                    <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
+                      <XIcon className="size-4" />
+                      <span className="sr-only">Close</span>
+                    </SheetPrimitive.Close>
+                  )}
+                </motion.div>
+              </SheetPrimitive.Content>,
+            ]
+          : null}
+      </AnimatePresence>
     </SheetPortal>
   )
 }

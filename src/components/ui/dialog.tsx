@@ -23,6 +23,16 @@ type NativeMotionConflicts =
   | "onAnimationEnd"
   | "onAnimationIteration"
 
+// Shares the wrapper-owned resolved `open` (plus the AnimatePresence
+// exit-complete callback) from `Dialog` down to `DialogOverlay`/
+// `DialogContent` without gating `DialogTrigger` — unlike the previous
+// implementation, which gated all of `children` and unmounted the trigger
+// whenever the dialog was closed. Mirrors `DropdownMenuMotionContext`.
+const DialogMotionContext = React.createContext<{
+  isOpen: boolean
+  onContentExitComplete: () => void
+}>({ isOpen: false, onContentExitComplete: () => {} })
+
 function Dialog({
   open,
   onOpenChange,
@@ -53,6 +63,11 @@ function Dialog({
     [isControlled, onOpenChange]
   )
 
+  const motionContext = React.useMemo(
+    () => ({ isOpen, onContentExitComplete: () => setShowContent(false) }),
+    [isOpen]
+  )
+
   return (
     <DialogPrimitive.Root
       data-slot="dialog"
@@ -60,9 +75,9 @@ function Dialog({
       onOpenChange={handleOpenChange}
       {...props}
     >
-      <AnimatePresence onExitComplete={() => setShowContent(false)}>
-        {isOpen ? children : null}
-      </AnimatePresence>
+      <DialogMotionContext.Provider value={motionContext}>
+        {children}
+      </DialogMotionContext.Provider>
     </DialogPrimitive.Root>
   )
 }
@@ -102,11 +117,15 @@ function DialogOverlay({
     transitions.backdrop
   )
   return (
-    <DialogPrimitive.Overlay data-slot="dialog-overlay" asChild forceMount>
+    <DialogPrimitive.Overlay
+      data-slot="dialog-overlay"
+      asChild
+      forceMount
+      {...props}
+    >
       <motion.div
         className={cn("fixed inset-0 z-50 bg-black/50", className)}
         {...overlayMotion}
-        {...props}
       />
     </DialogPrimitive.Overlay>
   )
@@ -123,32 +142,51 @@ function DialogContent({
 > & {
   showCloseButton?: boolean
 }) {
+  // Only the panel (+ its overlay) gate on `isOpen` — `DialogTrigger` lives
+  // outside this component, as a direct sibling in `Dialog`'s `children`,
+  // so it stays mounted while closed. Both are exiting members of the same
+  // `AnimatePresence` boundary so `onContentExitComplete` fires once both
+  // finish, matching the pre-fix single-boundary timing.
+  const { isOpen, onContentExitComplete } = React.useContext(
+    DialogMotionContext
+  )
   const panelMotion = useMotionPreset(variants.scaleIn, transitions.snappy)
   return (
     <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay />
-      <DialogPrimitive.Content data-slot="dialog-content" asChild forceMount>
-        <motion.div
-          className={cn(
-            "bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 border p-6 shadow-lg outline-none sm:max-w-lg",
-            shape.card,
-            className
-          )}
-          {...panelMotion}
-          {...props}
-        >
-          {children}
-          {showCloseButton && (
-            <DialogPrimitive.Close
-              data-slot="dialog-close"
-              className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
-            >
-              <XIcon />
-              <span className="sr-only">Close</span>
-            </DialogPrimitive.Close>
-          )}
-        </motion.div>
-      </DialogPrimitive.Content>
+      <AnimatePresence onExitComplete={onContentExitComplete}>
+        {isOpen
+          ? [
+              <DialogOverlay key="overlay" />,
+              <DialogPrimitive.Content
+                key="content"
+                data-slot="dialog-content"
+                asChild
+                forceMount
+                {...props}
+              >
+                <motion.div
+                  className={cn(
+                    "bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 border p-6 shadow-lg outline-none sm:max-w-lg",
+                    shape.card,
+                    className
+                  )}
+                  {...panelMotion}
+                >
+                  {children}
+                  {showCloseButton && (
+                    <DialogPrimitive.Close
+                      data-slot="dialog-close"
+                      className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+                    >
+                      <XIcon />
+                      <span className="sr-only">Close</span>
+                    </DialogPrimitive.Close>
+                  )}
+                </motion.div>
+              </DialogPrimitive.Content>,
+            ]
+          : null}
+      </AnimatePresence>
     </DialogPortal>
   )
 }
