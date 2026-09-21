@@ -166,7 +166,7 @@ function DialogContent({
               >
                 <motion.div
                   className={cn(
-                    "bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 border p-6 shadow-lg outline-none sm:max-w-lg",
+                    "bg-[var(--surface-card)] fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 p-6 shadow-[var(--ring-border),var(--shadow-popover)] outline-none sm:max-w-lg",
                     shape.card,
                     className
                   )}
