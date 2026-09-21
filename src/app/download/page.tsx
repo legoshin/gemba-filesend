@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "@/components/icon";
 import { Chip } from "@/components/chip";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { decryptPacked, importKeyBase64 } from "@/lib/crypto";
+import { transitions, variants } from "@/lib/motion";
+import { useMotionPreset } from "@/lib/use-motion-preset";
 
 type DownloadState =
   | "input"
@@ -50,6 +53,54 @@ interface FileInfo {
 
 /** Result of downloading one file: null on success, else a classified error. */
 type DownloadFailure = { kind: "password" | "verify" | "other"; message: string };
+
+// Extracted so `useMotionPreset` is called once per row instance rather than
+// inside `fileInfo.files.map(...)` — calling a hook inside a loop with a
+// variable iteration count violates the Rules of Hooks (RESEARCH Pitfall 4).
+function DownloadFileRow({
+  file,
+  index,
+  showDownloadButton,
+  disabled,
+  onDownload,
+}: {
+  file: FileInfo["files"][number];
+  index: number;
+  showDownloadButton: boolean;
+  disabled: boolean;
+  onDownload: (index: number) => void;
+}) {
+  const rowMotion = useMotionPreset(variants.stagger, transitions.snappy);
+  return (
+    <motion.div
+      layout
+      {...rowMotion}
+      className="flex items-center gap-4 rounded-[var(--radius-md)] bg-[var(--surface-card)] p-4 shadow-[var(--ring-border)]"
+    >
+      <div className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-subdued)]">
+        <Icon name="File01" size={24} className="text-[var(--icon-subdued)]" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="gemba-body-strong truncate">{file.name}</p>
+        <p className="gemba-body-sm text-[var(--text-subdued)]">
+          {file.size} &middot; {file.type}
+        </p>
+      </div>
+      {showDownloadButton && (
+        <Button
+          type="button"
+          variant="secondary"
+          className="shrink-0 gap-1"
+          disabled={disabled}
+          onClick={() => onDownload(index)}
+        >
+          <Icon name="Download01" size={16} />
+          Download
+        </Button>
+      )}
+    </motion.div>
+  );
+}
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -598,34 +649,18 @@ export default function DownloadPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                {fileInfo.files.map((f, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-4 rounded-[var(--radius-md)] bg-[var(--surface-card)] p-4 shadow-[var(--ring-border)]"
-                  >
-                    <div className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-subdued)]">
-                      <Icon name="File01" size={24} className="text-[var(--icon-subdued)]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="gemba-body-strong truncate">{f.name}</p>
-                      <p className="gemba-body-sm text-[var(--text-subdued)]">
-                        {f.size} &middot; {f.type}
-                      </p>
-                    </div>
-                    {fileInfo.files.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="shrink-0 gap-1"
-                        disabled={!!fileInfo.unavailable}
-                        onClick={() => handleDownloadOne(i)}
-                      >
-                        <Icon name="Download01" size={16} />
-                        Download
-                      </Button>
-                    )}
-                  </div>
-                ))}
+                <AnimatePresence initial={false}>
+                  {fileInfo.files.map((f, i) => (
+                    <DownloadFileRow
+                      key={i}
+                      file={f}
+                      index={i}
+                      showDownloadButton={fileInfo.files.length > 1}
+                      disabled={!!fileInfo.unavailable}
+                      onDownload={handleDownloadOne}
+                    />
+                  ))}
+                </AnimatePresence>
               </div>
 
               <div className="flex flex-wrap gap-2">

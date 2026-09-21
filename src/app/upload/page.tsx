@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,8 @@ import {
   readFileWithProgress,
 } from "@/lib/crypto";
 import { RecipientChipInput } from "@/components/upload/recipient-chip-input";
+import { transitions, variants } from "@/lib/motion";
+import { useMotionPreset } from "@/lib/use-motion-preset";
 
 type UploadState = "idle" | "preparing" | "uploading" | "done";
 type ExpiryUnit = "hours" | "days" | "months";
@@ -54,6 +57,22 @@ type EncryptionFallbackChoice = "retry" | "unencrypted" | "cancel";
 interface ShareFile {
   name: string;
   size: number;
+}
+
+// Extracted so `useMotionPreset` is called once per row instance rather than
+// inside `result.files.map(...)` — calling a hook inside a loop with a
+// variable iteration count violates the Rules of Hooks (RESEARCH Pitfall 4).
+function ShareResultRow({ file }: { file: ShareFile }) {
+  const rowMotion = useMotionPreset(variants.stagger, transitions.snappy);
+  return (
+    <motion.div layout {...rowMotion} className="flex items-center gap-2">
+      <Icon name="File01" size={16} className="shrink-0 text-[var(--icon-subdued)]" />
+      <span className="gemba-body-strong truncate">{file.name}</span>
+      <span className="gemba-body-sm ml-auto shrink-0 text-[var(--text-subdued)]">
+        {formatSize(file.size)}
+      </span>
+    </motion.div>
+  );
 }
 
 /**
@@ -548,15 +567,11 @@ export default function UploadPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-1.5">
-              {result.files.map((f) => (
-                <div key={f.name} className="flex items-center gap-2">
-                  <Icon name="File01" size={16} className="shrink-0 text-[var(--icon-subdued)]" />
-                  <span className="gemba-body-strong truncate">{f.name}</span>
-                  <span className="gemba-body-sm ml-auto shrink-0 text-[var(--text-subdued)]">
-                    {formatSize(f.size)}
-                  </span>
-                </div>
-              ))}
+              <AnimatePresence initial={false}>
+                {result.files.map((f) => (
+                  <ShareResultRow key={f.name} file={f} />
+                ))}
+              </AnimatePresence>
             </div>
 
             {!result.encrypted && (
