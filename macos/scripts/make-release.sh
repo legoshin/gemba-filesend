@@ -80,6 +80,14 @@ VERSION="$(defaults read "$APP/Contents/Info" CFBundleShortVersionString)"
 LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 pluginkit -r "$APP/Contents/PlugIns/ShareExtension.appex" 2>/dev/null || true
 "$LSREGISTER" -u "$APP" 2>/dev/null || true
+# Unregistering the build copy can drop the installed app's extension too (same
+# bundle id), so put an installed copy back and keep it switched on.
+INSTALLED="/Applications/$APP_NAME.app"
+if [ -d "$INSTALLED" ]; then
+  "$LSREGISTER" -f -R -trusted "$INSTALLED" 2>/dev/null || true
+  pluginkit -a "$INSTALLED/Contents/PlugIns/ShareExtension.appex" 2>/dev/null || true
+  pluginkit -e use -i uk.gemba.filesend.mac.ShareExtension 2>/dev/null || true
+fi
 echo "  $APP_NAME $VERSION · $(lipo -archs "$APP/Contents/MacOS/$APP_NAME") · $(du -sh "$APP" | cut -f1)"
 
 rm -rf "$DIST"; mkdir -p "$DIST"
