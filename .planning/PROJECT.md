@@ -2,20 +2,11 @@
 
 ## What This Is
 
-Gemba Filesend is an anonymous, client-side-encrypted file-sharing web app: a user drops files, they're encrypted in the browser (the key never leaves the client — it lives in the share link's URL fragment), and the recipient decrypts on download. It ships as a web app, an installable PWA, and an Android app (TWA) on Google Play, with a native macOS sender app. The app is already re-skinned to the **Gemba design system** (`design-system/`) with full light/dark mode and hardened security. This milestone re-shapes the entire web UI onto the **SmoothUI** component language (motion-forward geometry) while keeping the existing colour and type tokens unchanged.
+Gemba Filesend is an anonymous, client-side-encrypted file-sharing web app: a user drops files, they're encrypted in the browser (the key never leaves the client — it lives in the share link's URL fragment), and the recipient decrypts on download. It ships as a web app, an installable PWA, and an Android app (TWA) on Google Play, with a native macOS sender app. The app is re-skinned to the **Gemba design system** (`design-system/`) with full light/dark mode and hardened security, and (v1.1) the entire web UI is re-shaped onto the **SmoothUI** component language — motion-forward geometry — with colours and Public Sans type unchanged.
 
 ## Core Value
 
 Anyone can share a file securely — encrypted end-to-end, no account, no friction — through a single link. Everything else serves that.
-
-## Current Milestone: v1.1 SmoothUI Re-shape
-
-**Goal:** Re-shape every web UI component onto the SmoothUI component library — new geometry (radii/borders/shape) and SmoothUI motion — while keeping the existing colour palette and Public Sans type, without weakening client-side encryption or breaking web/PWA/TWA parity.
-
-**Target features:**
-- Re-shape the shared component layer (forms, buttons, cards, toasts, progress, dialog/sheet/drawer, dropdown, tabs, badge/chip, avatar, separator, lists, file-dropzone) onto SmoothUI geometry + motion, restyling the existing shadcn/Radix components in place (no parallel UI kit).
-- Add SmoothUI page/section motion, scroll progress, and animated list/image treatments across home, upload, and download.
-- Keep colour + type tokens unchanged; document the new shape + motion language in `design-system/`; hold theme + asset parity across web, PWA, and Android TWA; keep the E2E-encryption boundary intact.
 
 ## Requirements
 
@@ -41,26 +32,16 @@ Anyone can share a file securely — encrypted end-to-end, no account, no fricti
 - ✓ Notify recipient by email (Mailgun) — Validated in Phase 6
 - ✓ Multiple files under a single download link + key — Validated in Phase 7
 - ✓ Native macOS sender app (SwiftUI + CryptoKit; SmoothUI-based redesign, folder sharing, DMG/installer) matching the web AES-GCM wire format — Validated in Phase 8
+- ✓ **SmoothUI re-shape of the entire web UI** — `motion` dependency + shared shape/motion preset layer (reduced-motion-aware); all 20 shared + app-specific components re-shaped in place on Radix (forms, buttons, surfaces incl. dialog/sheet/dropdown, feedback, file-dropzone/lists, shell, tabs); page entrance motion + scroll-progress across home/upload/download; `design-system/MOTION.md` — **v1.1** (Phases 9–11)
+- ✓ Invariants held through the re-shape: colours + Public Sans type unchanged, light/dark/system theming correct, client-side E2E encryption boundary intact (security-audited SECURED), web/PWA/TWA parity; human visual + on-device sign-off received — **v1.1** (Phase 12, INV-01/02/03)
 
 ### Active
 
-<!-- Current scope. This milestone: v1.1 SmoothUI Re-shape (web UI). -->
+<!-- Next milestone scope — TBD. Run /gsd-new-milestone to define. -->
 
-**Re-shape the web UI onto SmoothUI (keep colours + type):**
-- [ ] Add the `motion` dependency and a small SmoothUI motion/shape utility layer (respecting `prefers-reduced-motion`)
-- [ ] Re-shape shared form controls onto SmoothUI: Input, Checkbox, Radio, Switch/Toggle, Label
-- [ ] Re-shape buttons onto SmoothUI (smooth/clip-corners geometry + press/hover motion) preserving button ranks
-- [ ] Re-shape surfaces onto SmoothUI: card, dialog, sheet/drawer, dropdown-menu, tabs, badge/chip, avatar, separator
-- [ ] Re-shape feedback/indicators onto SmoothUI: toasts (sonner), progress bar, skeleton/loading
-- [ ] Re-shape the file-dropzone (animated file upload) and file/list rows (animated list) onto SmoothUI
-- [ ] Add page/section entrance motion + scroll progress across home, upload, download
-- [ ] Re-shape app-shell/sidebar, mobile-tab-bar, and theme-toggle onto SmoothUI motion
-- [ ] Update `design-system/` docs: colour/type tokens unchanged; document the new shape + motion language
+(None — v1.1 shipped 2026-09-21. Define the next milestone with `/gsd-new-milestone`.)
 
-**Invariants (must remain true after the re-shape):**
-- [ ] Colour palette and Public Sans type tokens unchanged; light/dark/system theming still correct everywhere
-- [ ] Client-side E2E encryption boundary intact (key never reaches the server)
-- [ ] Web, PWA, and Android TWA parity (theme + assets render correctly in all three)
+Candidate next work (from backlog / carried-forward): embed mode (`260908-tv6-embed-mode`), recipient email-verification follow-ups, and the v1.1 tech-debt items (`clipCorner` orphan removal or clip-corners button variant; consolidate inline `rounded-[var(--radius-*)]` onto `shape.*` presets; home-page feature-grid design pass; skip-to-content link).
 
 ### Out of Scope
 
@@ -97,8 +78,9 @@ Anyone can share a file securely — encrypted end-to-end, no account, no fricti
 | Coarse phase granularity | Focused redesign; fewer broad phases (foundation → components → pages → dark mode/logos → hardening). | — Pending |
 | Author a dark token layer (not just toggle) | Design system tokens are light-only; dark mode needs real dark values mapped to semantic aliases. | — Pending |
 | Reuse existing shadcn/Radix component layer | Avoid a second divergent UI kit; lift design-system structure into current components. | ✓ Good |
-| Adopt SmoothUI by restyling existing components in place (v1.1) | SmoothUI ships as copy-paste source (Motion+GSAP+Tailwind), like shadcn — restyle Radix components in place rather than adding a parallel kit; keep Radix a11y behavior. | — Pending |
-| Keep colour + Public Sans tokens; change only shape + motion (v1.1) | User directive: keep the established Gemba palette/type; the SmoothUI change is geometry + animation only. | — Pending |
+| Adopt SmoothUI by restyling existing components in place (v1.1) | SmoothUI ships as copy-paste source (Motion+GSAP+Tailwind), like shadcn — restyle Radix components in place rather than adding a parallel kit; keep Radix a11y behavior. | ✓ Good — shipped v1.1; Radix a11y preserved, no parallel kit, `motion` only (GSAP not needed) |
+| Keep colour + Public Sans tokens; change only shape + motion (v1.1) | User directive: keep the established Gemba palette/type; the SmoothUI change is geometry + animation only. | ✓ Good — token diff empty across v1.1; design audit confirmed no new colour/type |
+| Centralize motion in a single preset layer, no per-component magic numbers (v1.1) | Reuse over divergence; reduced-motion handled once for all consumers. | ✓ Good — 17 components consume the shared presets; reduced-motion via one resolver |
 
 ## Evolution
 
@@ -118,4 +100,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-21 — started milestone v1.1 SmoothUI Re-shape (web UI onto SmoothUI geometry + motion; colours/type unchanged)*
+*Last updated: 2026-09-21 after v1.1 SmoothUI Re-shape milestone (shipped: web UI re-shaped onto SmoothUI motion+geometry; colours/type unchanged; encryption boundary SECURED; human sign-off received)*

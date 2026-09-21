@@ -4,6 +4,10 @@ phase: 04-security-reliability-test-hardening
 source: [04-VERIFICATION.md]
 started: 2026-07-11T21:45:00Z
 updated: 2026-07-11T21:45:00Z
+audit_acknowledged:
+  milestone: v1.1
+  at: 2026-09-21
+  gap_snapshot: "testing::scenarios=2"
 ---
 
 ## Current Test
@@ -21,11 +25,13 @@ awaiting: user response
 ## Tests
 
 ### 1. Live Upstash rate-limit + atomic counter behavior at deploy
+
 expected: 429 + Retry-After past thresholds; password limiter only on password-protected files; 410 Gone on the (N+1)-th download; N concurrent downloads yield exactly N successes.
 setup: Create an Upstash Redis DB, set UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN (+ optional RATE_LIMIT_* threshold vars) in the Vercel deploy env, then deploy.
 result: [pending]
 
 ### 2. Cross-platform CSP regression (web / PWA / Android TWA)
+
 expected: Public Sans font renders; next-themes light/dark toggle works with no CSP console errors; /sw.js registers and reaches "active"; Vercel Blob presigned-URL downloads succeed; Android TWA custom-tab flow unaffected by frame-ancestors 'none' + X-Frame-Options: DENY.
 result: [pending]
 

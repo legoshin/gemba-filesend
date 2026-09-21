@@ -5,12 +5,17 @@ status: human_needed
 score: 7/7 must-haves verified (code/test/build level)
 overrides_applied: 0
 human_verification:
+
   - test: "Live Upstash rate-limit + atomic counter behavior at deploy"
     expected: "With UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN set in the deploy environment: (1) the (limit+1)-th upload/download from one IP within a minute returns 429 + Retry-After; (2) password guesses past RATE_LIMIT_PASSWORD_PER_MIN return 429 only for password-protected files; (3) the (N+1)-th download of a limit-N file returns 410 Gone; (4) N concurrent downloads against a live store yield exactly N successes."
     why_human: "No live Upstash credentials are provisioned in this environment (explicit, accepted user decision to execute now and defer this to deploy). The logic is proven correct against a hermetic in-memory fake (TEST-03) and a mocked Ratelimit (rate-limit.test.ts), but the actual Upstash REST integration (network behavior, real sliding-window semantics, real TTL/eviction behavior) cannot be exercised without live credentials."
   - test: "Manual cross-platform CSP regression check (web/PWA/Android TWA)"
     expected: "Public Sans font renders, next-themes toggle works with no console errors, /sw.js registers and reaches 'active', blob downloads succeed, and the Android TWA custom-tab flow is unaffected by frame-ancestors 'none' + X-Frame-Options: DENY."
     why_human: "04-01-SUMMARY.md documents automated headless-Chrome verification (zero CSP violations, correct font, SW active) as a substitute, but explicitly defers live Android TWA packaging/rendering and a live end-to-end Vercel Blob presigned-URL download to a real device/deployment session — these require infra outside this repo's automated harness."
+audit_acknowledged:
+  milestone: v1.1
+  at: 2026-09-21
+  status: human_needed
 ---
 
 # Phase 4: Security, Reliability & Test Hardening Verification Report
@@ -94,6 +99,7 @@ None. No `TBD`/`FIXME`/`XXX`/`TODO`/`HACK`/`PLACEHOLDER` markers, no empty-imple
 ### Code Review Cycle
 
 A full code review (`04-REVIEW.md`) found 3 CRITICAL, 5 WARNING, 2 INFO issues after tracing the actual request flow (not just reading the diff in isolation) — including two real correctness regressions (CR-02: password limiter throttling non-password downloads at 5/min instead of 30/min; CR-03: blob-mode exhausted files silently un-reapable by the cleanup cron). All 10 findings were verified fixed in the codebase during this verification pass:
+
 - CR-01 (seed idempotency): `{ nx: true }` present in `redis.ts` line 79 — CONFIRMED
 - CR-02 (password limiter scope): `if (meta.passwordHash)` gate present in both handlers — CONFIRMED
 - CR-03 (blob cron visibility): `remaining === 0` write-back present — CONFIRMED

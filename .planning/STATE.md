@@ -1,21 +1,20 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.1
-current_phase: 9
-current_phase_name: SmoothUI Foundation
-current_plan: 2
-status: planning
+status: Awaiting next milestone
 stopped_at: Completed 10-01-PLAN.md (tracer wave)
-last_updated: "2026-09-21T11:40:36.432Z"
+last_updated: "2026-09-21T14:56:11.964Z"
 last_activity: 2026-09-21
-last_activity_desc: Plan 09-01 executed (motion dependency, shape/motion preset layer, chip.tsx proof, reduced-motion tests)
-state_head: f2e118fca466adfde2fbcba824e795b45303fcc2
+last_activity_desc: Milestone v1.1 completed and archived
+state_head: 1b614831c628f398a81306e8556f017a545a970b
 progress:
   total_phases: 11
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 3
+  total_plans: 12
+  completed_plans: 12
 milestone_name: SmoothUI Re-shape
+current_phase: 9
+current_phase_name: SmoothUI Foundation
 ---
 
 # Project State
@@ -29,11 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 ## Current Position
 
-Phase: 9 of 12 (SmoothUI Foundation) — in progress
-Current Plan: 2
-Total Plans in Phase: 2
-Status: Plan 09-01 (motion+shape foundation) complete; Plan 09-02 pending
-Last activity: 2026-09-21 — Plan 09-01 executed (motion dependency, shape/motion preset layer, chip.tsx proof, reduced-motion tests)
+Phase: Milestone v1.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-21 — Milestone v1.1 completed and archived
 
 ## Performance Metrics
 
@@ -158,3 +156,7 @@ Items acknowledged and carried forward from previous milestone close:
 Last session: 2026-09-21T11:40:36.413Z
 Stopped at: Completed 10-01-PLAN.md (tracer wave)
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
