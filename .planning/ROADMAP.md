@@ -253,7 +253,13 @@ Plans:
   1. Home, upload, and download pages each animate their primary content in with SmoothUI entrance motion when the page loads.
   2. A SmoothUI scroll-progress indicator is visible and accurately tracks scroll position on the scrollable page(s).
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Tracer: staggerContainer preset + PageEntrance wrapper + home entrance; reusable ScrollProgress component (build green)
+- [ ] 11-02-PLAN.md — Upload page: wrap primary content in PageEntrance + mount ScrollProgress
+- [ ] 11-03-PLAN.md — Download page: wrap primary content in PageEntrance + mount ScrollProgress
+
 **UI hint**: yes
 
 ### Phase 12: Verification & Parity
