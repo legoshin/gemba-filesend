@@ -870,7 +870,7 @@ export default function UploadPage() {
               Cancel
             </Button>
             <Button
-              variant="secondary"
+              variant="default"
               onClick={() => resolveEncryptionFallback("retry")}
             >
               Retry Encryption
