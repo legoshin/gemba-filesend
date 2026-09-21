@@ -4,6 +4,8 @@
 
 This milestone re-skins Gemba Filesend to the Gemba design system end-to-end and closes the highest-priority security/reliability gaps. Foundation tokens and the shared component layer land together with a fully-themed home page (Phase 1), then each remaining page — upload (Phase 2), download (Phase 3) — is redesigned in place reusing those components, with the download phase also closing out full light/dark/system theme coverage across the whole app. A final hardening phase (Phase 4) adds security headers, rate limiting, fixes the download-counter race, and brings the crypto/password/counter/metadata logic under test.
 
+**v1.1 SmoothUI Re-shape** (Phases 9-12): the entire web UI (root `src/` Next.js app) is re-shaped onto the SmoothUI component language — new geometry (radii/borders/shape) and SmoothUI motion built on `motion` — while keeping the existing Gemba colour palette and Public Sans type tokens unchanged. A foundation phase (Phase 9) installs the motion library and a shared shape+motion utility layer; every shared and app-specific component is then re-shaped onto it (Phase 10); page-level entrance motion and scroll progress land next (Phase 11); a final phase (Phase 12) verifies colours/type/theming, the client-side encryption boundary, and web/PWA/TWA parity are all unweakened, gated on human visual sign-off.
+
 ## Phases
 
 **Phase Numbering:**
@@ -17,6 +19,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Upload Page Redesign** - Redesign the upload flow (dropzone, options, share link) to the design system, theme-aware (completed 2026-07-10)
 - [x] **Phase 3: Download Page Redesign & Dark Mode Complete** - Redesign the download flow to the design system; verify light/dark/system theming across the entire app (completed 2026-07-11)
 - [x] **Phase 4: Security, Reliability & Test Hardening** - Security headers, rate limiting, fix the download-counter race, add unit test coverage (completed 2026-07-11)
+- [ ] **Phase 9: SmoothUI Foundation** - Install `motion` + build the shared shape/motion utility layer, reduced-motion handling, and document the new shape + motion language
+- [ ] **Phase 10: Component Re-shape** - Re-shape every shared + app-specific component (forms, buttons, surfaces, feedback, file/list, shell) onto SmoothUI geometry and motion
+- [ ] **Phase 11: Page Motion** - Add SmoothUI entrance motion and a scroll-progress indicator across home, upload, and download
+- [ ] **Phase 12: Verification & Parity** - Confirm colours/type/theming, the encryption boundary, and web/PWA/TWA parity are unweakened by the re-shape (human sign-off)
 
 ## Phase Details
 
@@ -135,7 +141,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -144,6 +150,10 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. Download Page Redesign & Dark Mode Complete | 4/4 | Complete    | 2026-07-11 |
 | 4. Security, Reliability & Test Hardening | 3/3 | Complete   | 2026-07-11 |
 | 5. Recipient Email Verification | 0/? | Planning | — |
+| 9. SmoothUI Foundation | 0/? | Not started | - |
+| 10. Component Re-shape | 0/? | Not started | - |
+| 11. Page Motion | 0/? | Not started | - |
+| 12. Verification & Parity | 0/? | Not started | - |
 
 ### Phase 5: Recipient Email Verification
 
@@ -183,3 +193,61 @@ Plans:
 - [x] 07-01-PLAN.md — Backend: multi-file meta schema + resolveFiles(), fs per-index storage, finalize route, index-addressable bytes/meta, one-per-id counter (Wave 1)
 - [ ] 07-02-PLAN.md — Upload client: N files → one id/key/link, single finalize, one-link result UI, notify one link (Wave 2)
 - [ ] 07-03-PLAN.md — Download client: list all files + per-file decrypt under one key + legacy compat + end-to-end verify (Wave 2)
+
+### Phase 9: SmoothUI Foundation
+
+**Goal**: The `motion` library and a shared SmoothUI shape + motion utility layer are installed and available app-wide, respecting `prefers-reduced-motion`, and the new shape/motion language is documented as the recorded source of truth.
+**Depends on**: Phase 8 (native macOS app; the root web app returns to focus as of v1.1)
+**Requirements**: FND-01, FND-02, FND-03, DOC-01
+**Success Criteria** (what must be TRUE):
+
+  1. The `motion` npm package is installed and successfully imported/used in the web app (`package.json` dependency + a working import).
+  2. A shared shape/motion utility module exists exporting reusable radii/border/shape tokens and reusable transition/variant presets, so no re-shaped component defines its own one-off motion values.
+  3. With the OS/browser `prefers-reduced-motion` setting enabled, any motion driven by the utility layer degrades to instant or opacity-only transitions.
+  4. `design-system/` documents the new SmoothUI shape + motion language (radii, borders, transition presets, reduced-motion behavior) and explicitly states colour/type tokens are unchanged.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 10: Component Re-shape
+
+**Goal**: Every shared UI primitive and app-specific component — form controls, buttons, surfaces, feedback/indicators, file/list, and the app shell — is re-shaped onto SmoothUI geometry and motion using the Phase 9 foundation layer, preserving existing Radix behaviour and a11y.
+**Depends on**: Phase 9
+**Requirements**: FORM-01, FORM-02, FORM-03, FORM-04, BTN-01, SURF-01, SURF-02, SURF-03, SURF-04, FDBK-01, FDBK-02, FDBK-03, FILE-01, FILE-02, SHELL-01, SHELL-02
+**Success Criteria** (what must be TRUE):
+
+  1. Form controls (Input, Checkbox, RadioGroup, Switch/Toggle, Label, and field/hint grouping) render with SmoothUI geometry and focus/check/select motion, preserving Radix behaviour, keyboard interaction, and validation states.
+  2. Buttons render with SmoothUI geometry and press/hover motion across every existing rank, variant, and size.
+  3. Surface components (Card, Dialog, Sheet/Drawer, Dropdown-menu, Tabs, Badge/Chip, Avatar, Separator) render with SmoothUI geometry and entrance/open-close/hover motion, preserving Radix focus-trap and a11y.
+  4. Feedback/indicator components (toasts, progress bar, skeleton/loading) render with SmoothUI geometry and enter/exit motion.
+  5. The file-dropzone, file/list rows, the app-shell/sidebar, mobile-tab-bar, and theme-toggle all render with SmoothUI geometry and motion — the dropzone and file rows still support multi-file selection and show client-side encryption progress; the theme-toggle keeps its 3-way light/dark/system control.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 11: Page Motion
+
+**Goal**: Home, upload, and download pages carry SmoothUI section/entrance motion and a scroll-progress indicator, built on the Phase 10 component layer.
+**Depends on**: Phase 10
+**Requirements**: MOT-01, MOT-02
+**Success Criteria** (what must be TRUE):
+
+  1. Home, upload, and download pages each animate their primary content in with SmoothUI entrance motion when the page loads.
+  2. A SmoothUI scroll-progress indicator is visible and accurately tracks scroll position on the scrollable page(s).
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 12: Verification & Parity
+
+**Goal**: The SmoothUI re-shape is verified to leave colours/type/theming intact, keep the client-side encryption boundary unweakened, and hold parity across web, PWA, and Android TWA, with human sign-off.
+**Depends on**: Phase 11
+**Requirements**: INV-01, INV-02, INV-03
+**Success Criteria** (what must be TRUE):
+
+  1. A human visual audit confirms the colour palette and Public Sans type tokens are unchanged, and light/dark/system theming still renders correctly on every re-shaped surface.
+  2. Upload and download flows are exercised end-to-end and confirm the decryption key never reaches the server — the client-side E2E-encryption boundary is unweakened by the re-shape.
+  3. The app is checked as an installed PWA and as the Android TWA (alongside the standard web view), confirming theme and brand assets render correctly in all three and the PWA app-shell cache remains valid.
+
+**Plans**: TBD
+**UI hint**: yes

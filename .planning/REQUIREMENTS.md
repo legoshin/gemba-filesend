@@ -76,41 +76,39 @@ Re-shape the entire **web** UI (root `src/` Next.js app) onto the **SmoothUI** c
 
 ## Traceability
 
-Populated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | TBD | Pending |
-| FND-02 | TBD | Pending |
-| FND-03 | TBD | Pending |
-| FORM-01 | TBD | Pending |
-| FORM-02 | TBD | Pending |
-| FORM-03 | TBD | Pending |
-| FORM-04 | TBD | Pending |
-| BTN-01 | TBD | Pending |
-| SURF-01 | TBD | Pending |
-| SURF-02 | TBD | Pending |
-| SURF-03 | TBD | Pending |
-| SURF-04 | TBD | Pending |
-| FDBK-01 | TBD | Pending |
-| FDBK-02 | TBD | Pending |
-| FDBK-03 | TBD | Pending |
-| FILE-01 | TBD | Pending |
-| FILE-02 | TBD | Pending |
-| MOT-01 | TBD | Pending |
-| MOT-02 | TBD | Pending |
-| SHELL-01 | TBD | Pending |
-| SHELL-02 | TBD | Pending |
-| DOC-01 | TBD | Pending |
-| INV-01 | TBD | Pending |
-| INV-02 | TBD | Pending |
-| INV-03 | TBD | Pending |
+| FND-01 | Phase 9 | Pending |
+| FND-02 | Phase 9 | Pending |
+| FND-03 | Phase 9 | Pending |
+| FORM-01 | Phase 10 | Pending |
+| FORM-02 | Phase 10 | Pending |
+| FORM-03 | Phase 10 | Pending |
+| FORM-04 | Phase 10 | Pending |
+| BTN-01 | Phase 10 | Pending |
+| SURF-01 | Phase 10 | Pending |
+| SURF-02 | Phase 10 | Pending |
+| SURF-03 | Phase 10 | Pending |
+| SURF-04 | Phase 10 | Pending |
+| FDBK-01 | Phase 10 | Pending |
+| FDBK-02 | Phase 10 | Pending |
+| FDBK-03 | Phase 10 | Pending |
+| FILE-01 | Phase 10 | Pending |
+| FILE-02 | Phase 10 | Pending |
+| MOT-01 | Phase 11 | Pending |
+| MOT-02 | Phase 11 | Pending |
+| SHELL-01 | Phase 10 | Pending |
+| SHELL-02 | Phase 10 | Pending |
+| DOC-01 | Phase 9 | Pending |
+| INV-01 | Phase 12 | Pending |
+| INV-02 | Phase 12 | Pending |
+| INV-03 | Phase 12 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 25 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-09-21*
-*Last updated: 2026-09-21 after milestone v1.1 initialization*
+*Last updated: 2026-09-21 — roadmap created (Phases 9-12), traceability filled, 25/25 requirements mapped*
