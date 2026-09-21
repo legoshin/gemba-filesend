@@ -143,18 +143,23 @@ export const variants = {
   },
 } as const;
 
-type MotionPreset = {
-  full: object;
-  reduced: object;
+/** A `{ full, reduced }` variant pair, generic over each branch's actual shape. */
+export type MotionPreset<F extends object = object, R extends object = object> = {
+  full: F;
+  reduced: R;
 };
 
 /**
  * Pure resolver: given a variants pair, a transition, and whether the user
  * prefers reduced motion, returns the props to spread onto a `motion.*`
  * element. No hook call inside — safe to unit test without a React render.
+ *
+ * Generic over the preset's branch shapes so the returned object keeps its
+ * spread properties (e.g. `initial`/`animate`/`exit`) under `tsc --strict`
+ * instead of widening to `object` (see 09-REVIEW.md WR-02).
  */
-export function resolveMotionPreset(
-  preset: MotionPreset,
+export function resolveMotionPreset<F extends object, R extends object>(
+  preset: MotionPreset<F, R>,
   transition: Transition,
   shouldReduceMotion: boolean
 ) {
