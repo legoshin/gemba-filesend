@@ -31,7 +31,6 @@ macos/
    ├─ build-app.sh            test, build, install to /Applications, register
    ├─ make-release.sh         universal build → DMG, zip, checksums, install.sh, version.json
    ├─ update-key.swift        the Ed25519 update-signing key: generate / public / sign
-   ├─ package-dmg.sh          the Developer ID + notarization route (unused)
    ├─ generate-project.rb     regenerates the Xcode project from these sources
    ├─ gen-vectors.mjs         regenerates crypto vectors from the web WebCrypto path
    ├─ verify-interop.mjs      downloads + decrypts a Mac-made link with the web's crypto
@@ -332,7 +331,27 @@ curl -fsSL https://send.gemba.uk/download/install.sh | bash
 installs it, and every installed copy updates itself. `--url` points everything
 at another host instead of `https://send.gemba.uk/download`.
 
-The build is **universal** (Apple silicon and Intel) and ad-hoc signed.
+The build is **universal** (Apple silicon and Intel), signed with the
+**Developer ID Application** certificate when one is in the keychain (the Team
+ID comes from the certificate — nothing to configure), and **notarized and
+stapled** when notarization credentials are available. Without a certificate it
+falls back to ad-hoc signing, and `--no-notarize` skips the Apple round trip.
+
+Notarization credentials are read from
+`~/.config/gemba-filesend/notary.env` (or the environment):
+
+```sh
+GEMBA_NOTARY_KEY=~/private_keys/AuthKey_XXXXXXXXXX.p8   # App Store Connect API key
+GEMBA_NOTARY_KEY_ID=XXXXXXXXXX
+GEMBA_NOTARY_ISSUER=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+# …or a stored notarytool profile instead:
+# GEMBA_NOTARY_PROFILE=gemba-notary
+```
+
+The app is notarized first and the ticket stapled into the bundle, so the zip,
+the DMG and every auto-update carry it; the DMG is then notarized and stapled in
+its own right. `spctl --assess` has to accept the app before the release is
+packaged — the script fails if it doesn't.
 
 `install.sh` — the download location is one line at the top (`DOWNLOAD_URL`),
 or `--url`, or `GEMBA_DOWNLOAD_URL`; it accepts a `.zip` or a `.dmg`. It refuses
@@ -344,21 +363,18 @@ Extension, and restarts Finder. `--user` installs to `~/Applications`,
 to end over HTTPS, including the tampered-file, unset-URL, plain-http and
 checksum-sidecar refusals, the `.dmg` path, and uninstall.
 
-### Gatekeeper — which route to give people
+### Gatekeeper
 
-This build is not notarized. Verified on this Mac: Gatekeeper's policy rejects
-it (`spctl --assess` says *rejected*), and Gatekeeper enforces that at launch
-only for files carrying the quarantine flag.
+A notarized release opens with no prompt by either route — the DMG downloaded
+in a browser included. `install.sh` says which it got: it prints whether the app
+is Developer ID-signed and whether `spctl` accepts it, and installs either way.
 
-- **Command-line installer** — `curl` does not set the quarantine flag, so the
-  app opens with no prompt. This is the route to give other people.
-- **DMG** — downloaded in a browser, it *is* quarantined, so the first launch is
-  blocked until the person opens System Settings ▸ Privacy & Security ▸ **Open
-  Anyway**. The DMG window says so, at the bottom.
+An **un-notarized** build (no certificate, or `--no-notarize`) behaves as before:
+`curl` sets no quarantine flag, so the command-line installer's copy opens
+normally, while a browser-downloaded DMG is blocked until the person uses System
+Settings ▸ Privacy & Security ▸ **Open Anyway**. The DMG window says so.
 
-To remove that prompt for DMG users, the app has to be notarized: install a
-Developer ID Application certificate and use `scripts/package-dmg.sh`, which is
-ready and needs nothing else. Mac App Store is not set up.
+Mac App Store is not set up, and is not the plan: the app updates itself.
 
 ## Installing it locally
 
@@ -367,9 +383,6 @@ built app has no quarantine flag, so it opens without any prompt.
 
 ## What is not done yet
 
-- **No notarized build has been produced.** No Developer ID certificate is
-  installed, deliberately; `package-dmg.sh` is written and reviewed but unexecuted
-  past the certificate check.
 - **Receive / download in the app.** `FileEncryptor.decrypt` and
   `ShareLink(parsing:)` exist and are tested; the missing part is the UI and the
   verification-code flow.

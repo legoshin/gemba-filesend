@@ -182,7 +182,19 @@ codesign --verify --deep --strict "$NEW_APP" 2>/dev/null || fail "the app's code
 ARCHS="$(lipo -archs "$NEW_APP/Contents/MacOS/$APP_NAME" 2>/dev/null || true)"
 case " $ARCHS " in *" $(uname -m) "*) ;; *) fail "this build runs on: $ARCHS — not on this Mac ($(uname -m))." ;; esac
 VERSION="$(defaults read "$NEW_APP/Contents/Info" CFBundleShortVersionString 2>/dev/null || echo "?")"
-note "$APP_NAME $VERSION · $ARCHS · signature verifies"
+# Who signed it, and whether Gatekeeper accepts it outright (a Developer ID
+# signature plus a stapled notarization ticket). An older, ad-hoc signed build
+# still installs — that is the owner's own choice, made by running this script.
+SIGNATURE="$(codesign -dvv "$NEW_APP" 2>&1 || true)"
+case "$SIGNATURE" in
+  *"Authority=Developer ID Application"*) SIGNED_BY="Developer ID" ;;
+  *) SIGNED_BY="ad-hoc" ;;
+esac
+if spctl --assess --type execute "$NEW_APP" >/dev/null 2>&1; then
+  note "$APP_NAME $VERSION · $ARCHS · $SIGNED_BY, notarized — Gatekeeper accepts it"
+else
+  note "$APP_NAME $VERSION · $ARCHS · $SIGNED_BY, not notarized"
+fi
 
 step "Installing into $DEST_ROOT"
 if [ ! -w "$DEST_ROOT" ] && [ "$DEST_ROOT" = /Applications ]; then
@@ -197,8 +209,8 @@ STAGED="$DEST_ROOT/.$APP_NAME.installing.app"
 rm -rf "$STAGED"
 ditto "$NEW_APP" "$STAGED"
 # A download made by curl carries no quarantine flag, but clear it in case the
-# archive was fetched another way first. This app is ad-hoc signed, not
-# notarized; installing it this way is the owner's explicit choice.
+# archive was fetched another way first — which also spares an un-notarized
+# build the "unidentified developer" prompt on first launch.
 xattr -dr com.apple.quarantine "$STAGED" 2>/dev/null || true
 rm -rf "$DEST_ROOT/$APP_NAME.app"
 mv "$STAGED" "$DEST_ROOT/$APP_NAME.app"

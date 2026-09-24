@@ -17,8 +17,28 @@ public enum UpdateInstaller {
     /// Extracts `zip` into `directory` and checks the app it contains is this
     /// app (`bundleIdentifier`), is exactly the version the manifest announced,
     /// and has an intact code signature.
+    /// The Apple Team ID a bundle is signed with, or nil when it is ad-hoc
+    /// signed (or unsigned), which is what a locally built copy is.
+    public static func teamIdentifier(of bundle: URL) -> String? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        process.arguments = ["-dv", bundle.path]
+        let pipe = Pipe()
+        process.standardError = pipe
+        process.standardOutput = FileHandle.nullDevice
+        guard (try? process.run()) != nil else { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        let text = String(decoding: data, as: UTF8.self)
+        for line in text.split(separator: "\n") where line.hasPrefix("TeamIdentifier=") {
+            let team = line.dropFirst("TeamIdentifier=".count).trimmingCharacters(in: .whitespaces)
+            return team == "not set" ? nil : team
+        }
+        return nil
+    }
+
     public static func prepare(zip: URL, manifest: UpdateManifest, bundleIdentifier: String,
-                               appName: String, into directory: URL) throws -> Prepared {
+                               appName: String, expectedTeam: String? = nil, into directory: URL) throws -> Prepared {
         let fm = FileManager.default
         try? fm.removeItem(at: directory)
         try fm.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -42,6 +62,15 @@ public enum UpdateInstaller {
             throw UpdateError.badBundle("its version doesn't match the one announced")
         }
         try run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path], failure: "its code signature is broken")
+        // When the installed app is signed with a Developer ID, the update has
+        // to come from the same team — a validly signed app from anyone else is
+        // still not this app.
+        if let expectedTeam {
+            let team = teamIdentifier(of: app)
+            guard team == expectedTeam else {
+                throw UpdateError.badBundle("it is signed by \(team ?? "no team"), not \(expectedTeam)")
+            }
+        }
         // Downloaded by this app, not a browser, so it shouldn't carry a
         // quarantine flag — but make sure: a quarantined ad-hoc app won't open.
         _ = try? runStatus("/usr/bin/xattr", ["-dr", "com.apple.quarantine", app.path])

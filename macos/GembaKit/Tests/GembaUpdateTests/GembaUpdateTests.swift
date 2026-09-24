@@ -192,6 +192,22 @@ final class GembaUpdateTests: XCTestCase {
         }
     }
 
+    func testPrepareRefusesAnotherTeamsSignature() throws {
+        let (_, zip) = try makeApp(marker: "team")
+        // The stand-in is ad-hoc signed, so it has no team: an installed copy
+        // signed by a real team must refuse it.
+        XCTAssertNil(UpdateInstaller.teamIdentifier(of: work.appendingPathComponent("src-team/Gemba Filesend.app")))
+        XCTAssertThrowsError(try UpdateInstaller.prepare(zip: zip, manifest: try manifest(for: zip),
+                                                         bundleIdentifier: "uk.gemba.test.fake", appName: "Gemba Filesend",
+                                                         expectedTeam: "YP6Y428R36", into: work.appendingPathComponent("stage-team"))) {
+            XCTAssertEqual($0 as? UpdateError, .badBundle("it is signed by no team, not YP6Y428R36"))
+        }
+        // …and with no team expected (a locally built copy), it is accepted.
+        XCTAssertNoThrow(try UpdateInstaller.prepare(zip: zip, manifest: try manifest(for: zip),
+                                                     bundleIdentifier: "uk.gemba.test.fake", appName: "Gemba Filesend",
+                                                     into: work.appendingPathComponent("stage-team2")))
+    }
+
     func testSwapScriptReplacesTheAppAfterItQuits() throws {
         let installed = work.appendingPathComponent("Applications/Gemba Filesend.app")
         try FileManager.default.createDirectory(at: installed.deletingLastPathComponent(), withIntermediateDirectories: true)

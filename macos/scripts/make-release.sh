@@ -31,9 +31,24 @@
 # which needs permission to control Finder the first time), --no-url (leave
 # install.sh's URL unset).
 #
-# The build is universal (Apple silicon + Intel) and ad-hoc signed, not
-# notarized — see "Gatekeeper" in macos/README.md for what that means for the
-# DMG versus the command-line installer.
+# The build is universal (Apple silicon + Intel). It is signed with the
+# "Developer ID Application" certificate when one is in the keychain (nothing to
+# configure — the Team ID comes from the certificate), and ad-hoc otherwise.
+#
+# It is also notarized and stapled when notarization credentials are available,
+# which is what lets anyone open it with no Gatekeeper warning. Credentials, in
+# the order they are tried:
+#
+#   1. ~/.config/gemba-filesend/notary.env — sourced if present, and the place
+#      to keep the three values below so a release needs no arguments.
+#   2. An App Store Connect API key:
+#        GEMBA_NOTARY_KEY=~/private_keys/AuthKey_XXXXXXXXXX.p8
+#        GEMBA_NOTARY_KEY_ID=XXXXXXXXXX
+#        GEMBA_NOTARY_ISSUER=aaaaaaaa-bbbb-…
+#   3. A stored notarytool keychain profile: GEMBA_NOTARY_PROFILE=<name>
+#
+# --no-notarize skips the Apple round trip. Without credentials the release is
+# still signed, and the script says what is missing.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -43,6 +58,7 @@ BUILD="$MACOS_DIR/.build-release"
 APP_NAME="Gemba Filesend"
 BASE_URL="https://send.gemba.uk/download"
 PUBLISH=0
+NOTARIZE=1
 NEW_VERSION=""
 NOTES=""
 RUN_TESTS=1
@@ -56,6 +72,7 @@ while [ $# -gt 0 ]; do
     --version) shift; NEW_VERSION="${1:-}"; [[ "$NEW_VERSION" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]] || { echo "--version needs a number like 1.2.0" >&2; exit 2; } ;;
     --notes) shift; NOTES="${1:-}" ;;
     --skip-tests) RUN_TESTS=0 ;;
+    --no-notarize) NOTARIZE=0 ;;
     --plain-dmg) STYLE_DMG=0 ;;
     -h|--help) sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
@@ -76,6 +93,50 @@ UPDATE_KEY="${GEMBA_UPDATE_KEY:-$HOME/.config/gemba-filesend/update-signing.key}
 if [ "$PUBLISH" = 1 ] && [ ! -f "$UPDATE_KEY" ]; then
   fail "no update signing key at $UPDATE_KEY — restore it from your backup (or, for the very first release, run: swift scripts/update-key.swift generate)"
 fi
+
+# ----------------------------------------------------------------- identity
+# Signing identity and Team ID come from the keychain, never from a file, so
+# there is nothing to edit on a new machine and nothing secret in the repo.
+IDENTITY_LINE="$(security find-identity -v -p codesigning 2>/dev/null | grep "Developer ID Application" | head -1 || true)"
+if [ -n "$IDENTITY_LINE" ]; then
+  IDENTITY_NAME="$(echo "$IDENTITY_LINE" | sed -E 's/.*"(.*)"$/\1/')"
+  TEAM_ID="$(echo "$IDENTITY_NAME" | sed -E 's/.*\(([A-Z0-9]+)\)$/\1/')"
+  SIGNING=(CODE_SIGN_IDENTITY="Developer ID Application" DEVELOPMENT_TEAM="$TEAM_ID"
+           CODE_SIGN_STYLE=Manual OTHER_CODE_SIGN_FLAGS="--timestamp")
+else
+  IDENTITY_NAME=""
+  TEAM_ID=""
+  # Ad-hoc, as Configs/Signing.xcconfig already says — spelled out because
+  # /bin/bash 3.2 (what macOS ships) can't expand an empty array under `set -u`.
+  SIGNING=(CODE_SIGN_IDENTITY="-")
+fi
+
+# Notarization credentials: a file first, then the environment.
+NOTARY_ENV="${GEMBA_NOTARY_ENV:-$HOME/.config/gemba-filesend/notary.env}"
+# shellcheck disable=SC1090
+[ -f "$NOTARY_ENV" ] && . "$NOTARY_ENV"
+NOTARY_ARGS=()
+if [ -n "${GEMBA_NOTARY_KEY:-}" ] && [ -n "${GEMBA_NOTARY_KEY_ID:-}" ] && [ -n "${GEMBA_NOTARY_ISSUER:-}" ]; then
+  NOTARY_ARGS=(--key "${GEMBA_NOTARY_KEY/#\~/$HOME}" --key-id "$GEMBA_NOTARY_KEY_ID" --issuer "$GEMBA_NOTARY_ISSUER")
+elif [ -n "${GEMBA_NOTARY_PROFILE:-}" ]; then
+  NOTARY_ARGS=(--keychain-profile "$GEMBA_NOTARY_PROFILE")
+fi
+[ "$NOTARIZE" = 1 ] && [ -n "$IDENTITY_NAME" ] && [ ${#NOTARY_ARGS[@]} -gt 0 ] && NOTARIZE=1 || NOTARIZE=0
+
+# Submits one file and waits. Apple usually answers in a minute or two.
+notarize_file() {
+  local file="$1"
+  xcrun notarytool submit "$file" "${NOTARY_ARGS[@]}" --wait --timeout 30m > "$LOG" 2>&1 || {
+    sed -n '1,40p' "$LOG" >&2
+    fail "notarization failed for $(basename "$file") — full output: $LOG"
+  }
+  grep -qiE "status: Accepted" "$LOG" || {
+    sed -n '1,40p' "$LOG" >&2
+    SUBMISSION="$(grep -m1 -oE '[0-9a-f-]{36}' "$LOG" || true)"
+    [ -n "$SUBMISSION" ] && xcrun notarytool log "$SUBMISSION" "${NOTARY_ARGS[@]}" 2>/dev/null | head -40 >&2
+    fail "Apple did not accept $(basename "$file")"
+  }
+}
 
 # ------------------------------------------------------------------ version
 set_plist_string() {  # file key value — edits the text, keeping the file's layout
@@ -117,15 +178,29 @@ for ruby in ruby /usr/bin/ruby; do
 done
 xcodebuild -project "$MACOS_DIR/GembaFilesend.xcodeproj" -scheme GembaFilesend \
   -configuration Release -derivedDataPath "$BUILD" \
-  ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO build > "$LOG" 2>&1 \
+  ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO "${SIGNING[@]}" build > "$LOG" 2>&1 \
   || { grep -E "error:" "$LOG" | grep -v "CoreDevice\|CoreSimulator\|DVTPlugIn\|SwiftCompile normal" | head -15 >&2; fail "build failed — full output: $LOG"; }
 APP="$BUILD/Build/Products/Release/$APP_NAME.app"
 [ -d "$APP" ] || fail "no app at $APP"
 codesign --verify --deep --strict "$APP" || fail "the built app's signature does not verify"
-if codesign -d --entitlements - --xml "$APP" 2>/dev/null | grep -q get-task-allow; then
-  fail "Release build carries get-task-allow"
-fi
+# Note: `… | grep -q` would be wrong here. grep exits at the first match and
+# `set -o pipefail` then reports the SIGPIPE from codesign, so a match would
+# look like a failure. Read the output into a variable and match on that.
+ENTITLEMENTS="$(codesign -d --entitlements - --xml "$APP" 2>/dev/null || true)"
+case "$ENTITLEMENTS" in
+  *get-task-allow*) fail "Release build carries get-task-allow" ;;
+esac
 VERSION="$(defaults read "$APP/Contents/Info" CFBundleShortVersionString)"
+if [ -n "$IDENTITY_NAME" ]; then
+  SIGNATURE="$(codesign -dvv "$APP" 2>&1 || true)"
+  case "$SIGNATURE" in
+    *"Authority=Developer ID Application"*) ;;
+    *) fail "the app is not signed with the Developer ID certificate" ;;
+  esac
+  echo "  signed: $IDENTITY_NAME"
+else
+  echo "  ad-hoc signed — no \"Developer ID Application\" certificate in the keychain"
+fi
 # LaunchServices registers any app it notices, build products included. A
 # second registered copy of the Share Extension can shadow the installed one,
 # so take this build copy out of both registries — it is only ever packaged.
@@ -148,6 +223,30 @@ echo "  $APP_NAME $VERSION · $(lipo -archs "$APP/Contents/MacOS/$APP_NAME") · 
 
 rm -rf "$DIST"; mkdir -p "$DIST"
 STEM="GembaFilesend-$VERSION"
+
+# -------------------------------------------------------------- notarization
+if [ "$NOTARIZE" = 1 ]; then
+  step "Notarizing the app"
+  SUBMIT_ZIP="$(mktemp -d -t gemba-notarize)/app.zip"
+  ditto -c -k --sequesterRsrc --keepParent "$APP" "$SUBMIT_ZIP"
+  notarize_file "$SUBMIT_ZIP"
+  # The ticket is stapled into the bundle, so Gatekeeper can check it with no
+  # network — and everything packaged below carries it.
+  xcrun stapler staple "$APP" >/dev/null || fail "couldn't staple the ticket to the app"
+  rm -rf "$(dirname "$SUBMIT_ZIP")"
+  spctl --assess --type execute "$APP" >/dev/null 2>&1 \
+    && echo "  notarized and stapled — Gatekeeper accepts it" \
+    || fail "Gatekeeper still rejects the app after stapling"
+elif [ -n "$IDENTITY_NAME" ]; then
+  step "Notarization skipped"
+  if [ ${#NOTARY_ARGS[@]} -eq 0 ]; then
+    echo "  no credentials — put GEMBA_NOTARY_KEY / _KEY_ID / _ISSUER in $NOTARY_ENV"
+  else
+    echo "  --no-notarize"
+  fi
+  echo "  the build is signed but not notarized: it opens on this Mac, and"
+  echo "  Gatekeeper blocks a browser-downloaded copy on anyone else's."
+fi
 
 # --------------------------------------------------------------------- zip
 step "Zipping"
@@ -244,6 +343,24 @@ DEVICE=""
 hdiutil convert "$WORK/rw.dmg" -format UDZO -imagekey zlib-level=9 -o "$DIST/$STEM.dmg" -quiet
 hdiutil verify "$DIST/$STEM.dmg" -quiet || fail "the finished disk image does not verify"
 echo "  $STEM.dmg ($(du -h "$DIST/$STEM.dmg" | cut -f1 | tr -d ' '))$( [ $STYLED -eq 1 ] || echo ', unstyled')"
+
+if [ -n "$IDENTITY_NAME" ]; then
+  # Sign the image itself too. A stapled ticket alone leaves Gatekeeper with
+  # "no usable signature" when the DMG is opened from a browser download.
+  codesign --force --sign "$IDENTITY_NAME" --timestamp "$DIST/$STEM.dmg" >/dev/null 2>&1 \
+    || fail "couldn't sign the disk image"
+fi
+if [ "$NOTARIZE" = 1 ]; then
+  step "Notarizing the disk image"
+  # The app inside is stapled already; stapling the DMG itself means the image
+  # also passes when it is checked before being opened.
+  notarize_file "$DIST/$STEM.dmg"
+  xcrun stapler staple "$DIST/$STEM.dmg" >/dev/null || fail "couldn't staple the ticket to the DMG"
+  # As a browser-downloaded copy is judged: signed, notarized, ticket attached.
+  spctl --assess --type open --context context:primary-signature "$DIST/$STEM.dmg" >/dev/null 2>&1 \
+    && echo "  signed, notarized and stapled — Gatekeeper accepts the image too" \
+    || fail "Gatekeeper rejects the disk image after stapling"
+fi
 
 # ----------------------------------------------------- stable names + sums
 step "Checksums"

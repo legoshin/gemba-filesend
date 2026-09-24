@@ -193,9 +193,11 @@ final class UpdateJob {
             phase = .verifying
             let stage = cache.appendingPathComponent("\(release.version)-\(release.build)", isDirectory: true)
             let (identifier, name) = (Self.bundleIdentifier, Self.appName)
+            // A Developer ID-signed app only updates to one from the same team.
+            let team = UpdateInstaller.teamIdentifier(of: app)
             let prepared = try await Task.detached {
                 try UpdateInstaller.prepare(zip: zip, manifest: release, bundleIdentifier: identifier,
-                                            appName: name, into: stage)
+                                            appName: name, expectedTeam: team, into: stage)
             }.value
             try? FileManager.default.removeItem(at: zip)
 
