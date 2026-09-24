@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AppShell } from "@/components/app-shell";
 import { EmbedProvider } from "@/components/embed-provider";
 import { AppMotionConfig } from "@/components/motion-config";
+import { MacDownloadShortcut } from "@/components/mac-download-shortcut";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -78,6 +79,7 @@ export default function RootLayout({
             <EmbedProvider>
               <AppShell>{children}</AppShell>
             </EmbedProvider>
+            <MacDownloadShortcut />
             <Toaster />
           </AppMotionConfig>
         </ThemeProvider>
